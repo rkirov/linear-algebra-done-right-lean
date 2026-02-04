@@ -1,1 +1,2 @@
 import LinearAlgebraDoneRightLean.Basic
+import LinearAlgebraDoneRightLean.Chapter1_VectorSpaces
