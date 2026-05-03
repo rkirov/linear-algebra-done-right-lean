@@ -17,28 +17,23 @@ namespace LADR.Section_1A
 open Complex
 
 /-! 1.1 Definition: complex numbers -/
+variable {a b c d : ℝ}
+example : ℂ := ⟨a, b⟩
+example : ⟨a, b⟩ + ⟨c, d⟩ = (⟨a + c, b + d⟩ : ℂ) := rfl
+example : ⟨a, b⟩ * ⟨c, d⟩ = (⟨a * c - b * d, a * d + b * c⟩ : ℂ) := rfl
 
-example : ℂ := ⟨1, 2⟩
-example : (⟨1, 2⟩ : ℂ).re = 1 := rfl
-example : (⟨1, 2⟩ : ℂ).im = 2 := rfl
-
-example : ℂ := I
+example : I = ⟨0,1⟩ := rfl
 example : I ^ 2 = -1 := I_sq
-
-recall Complex.re_add_im (z : ℂ) : (z.re : ℂ) + z.im * I = z
-
-example (z : ℂ) : ∃ a b : ℝ, z = a + b * I :=
-  ⟨z.re, z.im, (re_add_im z).symm⟩
-
-recall Complex.add_re (z w : ℂ) : (z + w).re = z.re + w.re
-recall Complex.add_im (z w : ℂ) : (z + w).im = z.im + w.im
-recall Complex.mul_re (z w : ℂ) : (z * w).re = z.re * w.re - z.im * w.im
-recall Complex.mul_im (z w : ℂ) : (z * w).im = z.re * w.im + z.im * w.re
+example : a + b * I = ⟨a, b⟩ := re_add_im ⟨a, b⟩
 
 /-! 1.2 Example: complex arithmetic -/
-
-example : (2 + 3 * I) * (4 + 5 * I) = -7 + 22 * I := by
-  apply Complex.ext <;> simp <;> ring
+example : (2 + 3*I) * (4 + 5*I) = -7 + 22*I := by
+  calc (2 + 3*I) * (4 + 5*I)
+      = 2 * (4 + 5*I) + 3*I * (4 + 5*I)       := by rw [add_mul]
+    _ = 2*4 + 2*(5*I) + (3*I)*4 + (3*I)*(5*I) := by rw [mul_add, mul_add, ←add_assoc]
+    _ = 8 + 10*I + 12*I + 15*I^2              := by ring
+    _ = 8 + 10*I + 12*I + 15*(-1)             := by rw [I_sq]
+    _ = -7 + 22*I                             := by ring
 
 /-! 1.3 Properties of complex arithmetic -/
 
