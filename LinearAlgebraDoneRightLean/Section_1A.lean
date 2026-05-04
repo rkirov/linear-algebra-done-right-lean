@@ -105,28 +105,25 @@ example (x : Fin n → F) (k : Fin n) : F := x k
 example (z₁ z₂ z₃ z₄ : ℂ) : Fin 4 → ℂ := ![z₁, z₂, z₃, z₄]
 
 /-! 1.13 Definition: addition in Fⁿ -/
-example (x y : Fin n → F) : x + y = fun i => x i + y i := rfl
+example (x y : Fin n → F) : x + y = fun i ↦ x i + y i := rfl
 
 /-! 1.14 Commutativity of addition in Fⁿ -/
-
-theorem add_comm_pi (x y : Fin n → F) : x + y = y + x := by
-  funext i
-  exact add_comm (x i) (y i)
+theorem add_comm_pi (x y : Fin n → F) : x + y = y + x :=
+  calc x + y
+      = fun i => x i + y i := rfl
+    _ = fun i => y i + x i := funext fun _ ↦ add_comm _ _
+    _ = y + x              := rfl
 
 /-! 1.15 Notation: 0 -/
-
 example : (0 : Fin n → F) = fun _ => 0 := rfl
 
 /-! 1.16 Example: context determines which 0 is intended -/
-
 example (x : Fin n → F) : x + 0 = x := add_zero x
 
 /-! 1.17 Definition: additive inverse in Fⁿ, −x -/
-
 example (x : Fin n → F) : -x = fun i => -(x i) := rfl
 
 /-! 1.18 Definition: scalar multiplication in Fⁿ -/
-
 example (a : F) (x : Fin n → F) : a • x = fun i => a * x i := rfl
 
 /-! # Exercises -/
