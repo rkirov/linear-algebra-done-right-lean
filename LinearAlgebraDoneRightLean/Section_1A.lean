@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Module.Pi
+import Mathlib.Analysis.Complex.Basic
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.Data.Real.Sqrt
@@ -128,6 +129,12 @@ example (a : F) (x : Fin n → F) : a • x = fun i => a * x i := rfl
 
 /-! # Exercises -/
 section
+-- These instances are removed so that the algebra of `ℂ` cannot be invoked
+-- as a one-line typeclass call (e.g. `add_comm α β`). Beyond the obvious
+-- `commRing` / `field` chain, several *normed* / *RCLike* instances also
+-- propagate `AddCommSemigroup ℂ`, `Semigroup ℂ`, `Distrib ℂ`, so they need
+-- to be removed too.  The reader is expected to destructure `α = ⟨a, b⟩`
+-- and reduce to `add_comm`, `add_assoc`, … on `ℝ`.
 attribute [-instance] Complex.addCommGroup
 attribute [-instance] Complex.addGroupWithOne
 attribute [-instance] Complex.commRing
@@ -136,6 +143,10 @@ attribute [-instance] Complex.instCommSemiring
 attribute [-instance] Complex.instSemiring
 attribute [-instance] Complex.instDivInvMonoid
 attribute [-instance] Complex.instField
+attribute [-instance] Complex.instNormedField
+attribute [-instance] Complex.instDenselyNormedField
+attribute [-instance] Complex.instRCLike
+attribute [-instance] Complex.instNormedAddCommGroup
 
 theorem exercise_1A_1 (α β : ℂ) : α + β = β + α := by sorry
 
@@ -148,12 +159,32 @@ end
 
 @[avoiding neg_eq_of_add_eq_zero_left, neg_eq_of_add_eq_zero_right,
     eq_neg_of_add_eq_zero_left, eq_neg_of_add_eq_zero_right,
-    add_left_cancel, add_right_cancel, Lean.Grind]
+    add_eq_zero_iff_eq_neg, add_eq_zero_iff_neg_eq,
+    add_eq_zero_iff_eq_neg', add_eq_zero_iff_neg_eq',
+    eq_neg_iff_add_eq_zero, neg_eq_iff_add_eq_zero,
+    add_neg_eq_zero, neg_add_eq_zero,
+    add_left_cancel, add_right_cancel,
+    add_left_cancel_iff, add_right_cancel_iff,
+    add_left_injective, add_right_injective,
+    add_left_inj, add_right_inj,
+    neg_unique, left_neg_eq_right_neg, Lean.Grind]
 theorem exercise_1A_5 (α : ℂ) : ∃! β : ℂ, α + β = 0 := by sorry
 
 @[avoiding inv_eq_of_mul_eq_one_left, inv_eq_of_mul_eq_one_right,
     eq_inv_of_mul_eq_one_left, eq_inv_of_mul_eq_one_right,
-    mul_left_cancel₀, mul_right_cancel₀, Lean.Grind]
+    mul_eq_one_iff_eq_inv, mul_eq_one_iff_inv_eq,
+    mul_eq_one_iff_eq_inv', mul_eq_one_iff_inv_eq',
+    eq_inv_iff_mul_eq_one, inv_eq_iff_mul_eq_one,
+    mul_inv_eq_one, inv_mul_eq_one,
+    mul_eq_one_iff_eq_inv₀, mul_eq_one_iff_inv_eq₀,
+    mul_inv_eq_one₀, inv_mul_eq_one₀,
+    mul_left_cancel, mul_right_cancel,
+    mul_left_cancel₀, mul_right_cancel₀,
+    mul_left_cancel_iff, mul_right_cancel_iff,
+    mul_left_injective, mul_right_injective,
+    mul_left_inj, mul_right_inj,
+    mul_left_inj', mul_right_inj',
+    inv_unique, left_inv_eq_right_inv, Lean.Grind]
 theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 := by sorry
 
 theorem exercise_1A_7 :
@@ -166,36 +197,46 @@ theorem exercise_1A_8 :
 
 theorem exercise_1A_9 :
     ∃ x : Fin 4 → ℝ,
-      (![4, -3, 1, 7] : Fin 4 → ℝ) + (2 : ℝ) • x = ![5, 9, -6, 8] := by
+      ![4, -3, 1, 7] + (2 : ℝ) • x = ![5, 9, -6, 8] := by
   sorry
 
 theorem exercise_1A_10 :
-    ¬ ∃ lam : ℂ, lam • (![2 - 3 * I, 5 + 4 * I, -6 + 7 * I] : Fin 3 → ℂ) =
-      ![12 - 5 * I, 7 + 22 * I, -32 - 9 * I] := by
+    ¬ ∃ z : ℂ, z • ![2 - 3*I, 5 + 4*I, -6 + 7*I] =
+      ![12 - 5*I, 7 + 22*I, -32 - 9*I] := by
   sorry
 
-@[avoiding add_assoc]
+section
+attribute [-instance] Pi.addSemigroup Pi.addCommSemigroup Pi.addMonoid
+  Pi.addCommMonoid Pi.addGroup Pi.addCommGroup Pi.addMonoidWithOne
+  Pi.addGroupWithOne Pi.addZeroClass Pi.subNegMonoid Pi.subtractionMonoid
+  Pi.subNegZeroMonoid Pi.instSubtractionCommMonoid
+  Pi.addCancelCommMonoid Pi.addCancelMonoid Pi.addLeftCancelSemigroup
+  Pi.addRightCancelSemigroup Pi.addLeftCancelMonoid Pi.addRightCancelMonoid
+  Pi.ring Pi.commRing Pi.semiring Pi.commSemiring Pi.nonAssocRing
+  Pi.nonAssocSemiring Pi.nonUnitalRing Pi.nonUnitalSemiring
+  Pi.nonUnitalNonAssocRing Pi.nonUnitalNonAssocSemiring Pi.nonUnitalCommRing
+  Pi.nonUnitalCommSemiring
+  Pi.mulAction Pi.distribMulAction Pi.module Pi.Function.module
+  Pi.mulActionWithZero Pi.distribSMul Pi.smulWithZero Pi.smulZeroClass
+
 theorem exercise_1A_11 (x y z : Fin n → F) :
     (x + y) + z = x + (y + z) := by
   sorry
 
-@[avoiding mul_smul, smul_smul]
 theorem exercise_1A_12 (a b : F) (x : Fin n → F) :
     (a * b) • x = a • (b • x) := by
   sorry
 
-@[avoiding one_smul]
 theorem exercise_1A_13 (x : Fin n → F) : (1 : F) • x = x := by
   sorry
 
-@[avoiding smul_add]
 theorem exercise_1A_14 (γ : F) (x y : Fin n → F) :
     γ • (x + y) = γ • x + γ • y := by
   sorry
 
-@[avoiding add_smul]
 theorem exercise_1A_15 (a b : F) (x : Fin n → F) :
     (a + b) • x = a • x + b • x := by
   sorry
+end
 
 end LADR.Section_1A
