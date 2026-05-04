@@ -19,12 +19,13 @@ open Complex
 /-! 1.1 Definition: complex numbers -/
 variable {a b c d : ℝ}
 example : ℂ := ⟨a, b⟩
+example : a + b * I = ⟨a, b⟩ := re_add_im ⟨a, b⟩
+
 example : ⟨a, b⟩ + ⟨c, d⟩ = (⟨a + c, b + d⟩ : ℂ) := rfl
 example : ⟨a, b⟩ * ⟨c, d⟩ = (⟨a * c - b * d, a * d + b * c⟩ : ℂ) := rfl
 
 example : I = ⟨0,1⟩ := rfl
 example : I ^ 2 = -1 := I_sq
-example : a + b * I = ⟨a, b⟩ := re_add_im ⟨a, b⟩
 
 /-! 1.2 Example: complex arithmetic -/
 example : (2 + 3*I) * (4 + 5*I) = -7 + 22*I := by
@@ -36,86 +37,74 @@ example : (2 + 3*I) * (4 + 5*I) = -7 + 22*I := by
     _ = -7 + 22*I                             := by ring
 
 /-! 1.3 Properties of complex arithmetic -/
-
-@[avoiding add_comm]
-theorem exercise_1A_1 (α β : ℂ) : α + β = β + α := by sorry
+variable {α β γ : ℂ}
+-- Commutativity
+example : α + β = β + α                     := add_comm α β
+example : α * β = β * α                     := mul_comm α β
+-- Associativity
+example : (α + β) + γ = α + (β + γ)         := add_assoc α β γ
+example : (α * β) * γ = α * (β * γ)         := mul_assoc α β γ
+-- Identities
+example : γ + 0 = γ                         := add_zero γ
+example : γ * 1 = γ                         := mul_one γ
+-- Inverses
+example : ∃! β : ℂ, α + β = 0               := ⟨-α, add_neg_cancel α,
+                                                fun _ => eq_neg_of_add_eq_zero_right⟩
+example (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1  := ⟨α⁻¹, mul_inv_cancel₀ hα,
+                                                fun _ => eq_inv_of_mul_eq_one_right⟩
+-- Distrbutive Property
+example : γ * (α + β) = γ * α + γ * β       := mul_add γ α β
 
 /-! 1.4 Example: commutativity of complex multiplication -/
-
-@[avoiding mul_comm]
-theorem mul_comm_example (α β : ℂ) : α * β = β * α := by
-  rw [← re_add_im α, ← re_add_im β]
-  apply Complex.ext
-  · ring_nf
-  · ring_nf
-
-@[avoiding add_assoc]
-theorem exercise_1A_2 (α β γ : ℂ) : (α + β) + γ = α + (β + γ) := by sorry
-
-@[avoiding mul_assoc]
-theorem exercise_1A_3 (α β γ : ℂ) : (α * β) * γ = α * (β * γ) := by sorry
-
-@[avoiding mul_add, left_distrib]
-theorem exercise_1A_4 (α β γ : ℂ) : γ * (α + β) = γ * α + γ * β := by sorry
-
-example (γ : ℂ) : γ + 0 = γ := add_zero γ
-example (γ : ℂ) : γ * 1 = γ := mul_one γ
-
-@[avoiding neg_eq_of_add_eq_zero_left, neg_eq_of_add_eq_zero_right,
-    eq_neg_of_add_eq_zero_left, eq_neg_of_add_eq_zero_right]
-theorem exercise_1A_5 (α : ℂ) : ∃! β : ℂ, α + β = 0 := by sorry
-
-@[avoiding inv_eq_of_mul_eq_one_left, inv_eq_of_mul_eq_one_right,
-    eq_inv_of_mul_eq_one_left, eq_inv_of_mul_eq_one_right]
-theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 := by sorry
+attribute [-instance] Complex.commRing in
+attribute [-instance] Complex.instCommSemiring in
+attribute [-instance] Complex.instField in
+example (α β : ℂ) : α * β = β * α := by
+  obtain ⟨a, b⟩ := α; obtain ⟨c, d⟩ := β
+  calc (⟨a, b⟩ : ℂ) * ⟨c, d⟩
+      = ⟨a*c - b*d, a*d + b*c⟩ := rfl
+    _ = ⟨c*a - d*b, c*b + d*a⟩ := by
+      rw [mul_comm, mul_comm b d, mul_comm a d, mul_comm c b, add_comm]
+    _ = ⟨c, d⟩ * ⟨a, b⟩        := rfl
 
 /-! 1.5 Definition: −α, subtraction, 1/α, division -/
-
-example (α β : ℂ) : α - β = α + (-β) := sub_eq_add_neg α β
-example (α : ℂ) : α⁻¹ = 1 / α := (one_div α).symm
-example (α β : ℂ) : β / α = β * α⁻¹ := div_eq_mul_inv β α
+variable {α β : ℂ}
+example : α + -α = 0               := add_neg_cancel α
+example : α - β = α + (-β)         := sub_eq_add_neg α β
+example : 1 / α = α⁻¹              := one_div α
+example (hα : α ≠ 0) : α * α⁻¹ = 1 := mul_inv_cancel₀ hα
+example : β / α = β * α⁻¹          := div_eq_mul_inv β α
 
 /-! 1.6 Notation: F -/
-
-variable {F : Type*} [Field F] {n : ℕ}
-
+variable {F : Type*} [Field F]
+example (a : F) (m : ℕ) : a ^ m = (List.replicate m a).prod := (List.prod_replicate m a).symm
 example (α : F) (m n : ℕ) : (α ^ m) ^ n = α ^ (m * n) := (pow_mul α m n).symm
-example (α β : F) (m : ℕ) : (α * β) ^ m = α ^ m * β ^ m := mul_pow α β m
+example (α β : F) (m : ℕ) : (α * β) ^ m = (α ^ m) * (β ^ m) := mul_pow α β m
 
 /-! 1.7 Example: ℝ² and ℝ³ -/
+example (x y : ℝ)   : Fin 2 → ℝ := ![x, y]
+example (x y z : ℝ) : Fin 3 → ℝ := ![x, y, z]
 
-example : Fin 2 → ℝ := ![1, 2]
-example : Fin 3 → ℝ := ![1, 2, 3]
-
-/-! 1.8 Definition: list, length
-
-Axler's *list of length `n` over `α`* is rendered here as `Fin n → α`, with
-the length encoded in the type. **Beware:** Lean has a separate built-in type
-`List α` (a variable-length linked list, written with the `[…]` notation
-instead of `![…]`) — it is *not* what Axler calls a list. -/
-
-example : Fin 0 → ℝ := ![]
-
-example {α : Type*} (x y : Fin n → α) : x = y ↔ ∀ i, x i = y i :=
-  ⟨fun h _ => h ▸ rfl, funext⟩
+/-! 1.8 Definition: list, length -/
+example : Fin 0 → F := ![]
+example {α : Type*} {n : ℕ} (x y : Fin n → α) : x = y ↔ ∀ i, x i = y i := ⟨fun h _ => h ▸ rfl, funext⟩
 
 /-! 1.9 Lists versus sets -/
-
-example : (![3, 5] : Fin 2 → ℕ) ≠ ![5, 3] := by decide
+example : ![3, 5] ≠ ![5, 3] := by decide
 example : ({3, 5} : Set ℕ) = ({5, 3} : Set ℕ) := by ext; simp; tauto
+-- `(4, 4) ≠ (4)` is type-enforced: `![4, 4] : Fin 2 → ℕ`, `![4] : Fin 1 → ℕ`.
 example : ({4, 4} : Set ℕ) = ({4} : Set ℕ) := by ext; simp
 
-/-! 1.11 Definition: Fⁿ, coordinate -/
+/-! 1.10 Notation: n -/
+variable {n : ℕ}
 
-example : (![10, 20, 30] : Fin 3 → ℕ) 0 = 10 := rfl
-example : (![10, 20, 30] : Fin 3 → ℕ) 2 = 30 := rfl
+/-! 1.11 Definition: F^n, coordinate -/
+example (x : Fin n → F) (k : Fin n) : F := x k
 
 /-! 1.12 Example: ℂ⁴ -/
-
-example : Fin 4 → ℂ := ![1 + 2 * I, 3, -I, 5 - 6 * I]
+example (z₁ z₂ z₃ z₄ : ℂ) : Fin 4 → ℂ := ![z₁, z₂, z₃, z₄]
 
 /-! 1.13 Definition: addition in Fⁿ -/
-
 example (x y : Fin n → F) : x + y = fun i => x i + y i := rfl
 
 /-! 1.14 Commutativity of addition in Fⁿ -/
@@ -140,9 +129,35 @@ example (x : Fin n → F) : -x = fun i => -(x i) := rfl
 
 example (a : F) (x : Fin n → F) : a • x = fun i => a * x i := rfl
 
-/-! # Exercises
+/-! # Exercises -/
+section
+attribute [-instance] Complex.addCommGroup
+attribute [-instance] Complex.addGroupWithOne
+attribute [-instance] Complex.commRing
+attribute [-instance] Complex.instRing
+attribute [-instance] Complex.instCommSemiring
+attribute [-instance] Complex.instSemiring
+attribute [-instance] Complex.instDivInvMonoid
+attribute [-instance] Complex.instField
 
-Exercises 1A.1–1A.6 are stated inline in Properties 1.3 above. -/
+theorem exercise_1A_1 (α β : ℂ) : α + β = β + α := by sorry
+
+theorem exercise_1A_2 (α β γ : ℂ) : (α + β) + γ = α + (β + γ) := by sorry
+
+theorem exercise_1A_3 (α β γ : ℂ) : (α * β) * γ = α * (β * γ) := by sorry
+
+theorem exercise_1A_4 (α β γ : ℂ) : γ * (α + β) = γ * α + γ * β := by sorry
+end
+
+@[avoiding neg_eq_of_add_eq_zero_left, neg_eq_of_add_eq_zero_right,
+    eq_neg_of_add_eq_zero_left, eq_neg_of_add_eq_zero_right,
+    add_left_cancel, add_right_cancel, Lean.Grind]
+theorem exercise_1A_5 (α : ℂ) : ∃! β : ℂ, α + β = 0 := by sorry
+
+@[avoiding inv_eq_of_mul_eq_one_left, inv_eq_of_mul_eq_one_right,
+    eq_inv_of_mul_eq_one_left, eq_inv_of_mul_eq_one_right,
+    mul_left_cancel₀, mul_right_cancel₀, Lean.Grind]
+theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 := by sorry
 
 theorem exercise_1A_7 :
     ((-1 + Real.sqrt 3 * I) / 2) ^ 3 = 1 := by
