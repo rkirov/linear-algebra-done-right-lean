@@ -36,14 +36,15 @@ variable {F : Type*} [Field F] {V : Type*} [AddCommGroup V] [Module F V]
 A subset of {lit}`V` is called a *subspace* of {lit}`V` if it is itself a vector
 space with the same additive identity, addition, and scalar multiplication.
 
-In Lean/mathlib the bundled object {name}`Submodule` carries the carrier set
+In Lean/mathlib the bundled object {name}`Subspace` (an abbreviation for
+{name}`Submodule` over a {name}`DivisionRing`) carries the carrier set
 together with the three closure proofs at once. -/
 
 /-! 1.34 Conditions for a subspace
 
 A subset is a subspace iff it contains {lit}`0`, is closed under addition, and is
 closed under scalar multiplication. These are exactly the three fields of
-{name}`Submodule`. -/
+{name}`Subspace`. -/
 
 recall Submodule.zero_mem {R : Type*} {M : Type*} [Semiring R] [AddCommMonoid M]
     [Module R M] (p : Submodule R M) : (0 : M) ∈ p
@@ -144,7 +145,7 @@ theorem sub_smul_zero (S : Set V) (h0 : (0 : V) ∈ S)
 /-! In particular every subspace is closed under additive inverses, since
 {lit}`-u = (-1) • u`. -/
 
-example (U : Submodule F V) {u : V} (hu : u ∈ U) : -u ∈ U := U.neg_mem hu
+example (U : Subspace F V) {u : V} (hu : u ∈ U) : -u ∈ U := U.neg_mem hu
 
 /-! 1.35 Example: subspaces / Exercise 1C.2
 
@@ -156,7 +157,7 @@ Verify that the sets in (a)–(e) are subspaces. We give the carrier, the
 subspace of {lit}`F⁴` iff {lit}`b = 0` (the {lit}`b = 0` direction is shown
 here; both directions are exercise 1C.1 above). -/
 
-example : Submodule F (Fin 4 → F) where
+example : Subspace F (Fin 4 → F) where
   carrier := {v | v 2 = 5 * v 3}
   zero_mem' := by simp
   add_mem' := by sorry
@@ -166,7 +167,7 @@ example : Submodule F (Fin 4 → F) where
 of {lit}`ℝ^[0,1]`. (Axler uses {lit}`[0, 1]`; we work over all of {lit}`ℝ` —
 the closure proofs are identical.) -/
 
-example : Submodule ℝ (ℝ → ℝ) where
+example : Subspace ℝ (ℝ → ℝ) where
   carrier := {f | Continuous f}
   zero_mem' := continuous_const
   add_mem' hf hg := by sorry
@@ -175,7 +176,7 @@ example : Submodule ℝ (ℝ → ℝ) where
 /-! 1.35(c) Differentiable real-valued functions on {lit}`ℝ` form a subspace
 of {lit}`ℝ^ℝ`. -/
 
-example : Submodule ℝ (ℝ → ℝ) where
+example : Subspace ℝ (ℝ → ℝ) where
   carrier := {f | Differentiable ℝ f}
   zero_mem' := differentiable_const 0
   add_mem' hf hg := by sorry
@@ -186,7 +187,7 @@ example : Submodule ℝ (ℝ → ℝ) where
 derivative at {lit}`2`; both addition and scalar multiplication preserve the
 derivative being zero at a point. -/
 
-example : Submodule ℝ (ℝ → ℝ) where
+example : Subspace ℝ (ℝ → ℝ) where
   carrier := {f | Differentiable ℝ f ∧ deriv f 2 = 0}
   zero_mem' := ⟨differentiable_const 0, by simp⟩
   add_mem' := by sorry
@@ -196,7 +197,7 @@ example : Submodule ℝ (ℝ → ℝ) where
 of {lit}`ℂ^∞`. In Lean, "sequence" is {lit}`ℕ → ℂ` and "has limit {lit}`0`" is
 {lit}`Filter.Tendsto f Filter.atTop (𝓝 0)`. -/
 
-example : Submodule ℂ (ℕ → ℂ) where
+example : Subspace ℂ (ℕ → ℂ) where
   carrier := {f | Filter.Tendsto f Filter.atTop (nhds 0)}
   zero_mem' := tendsto_const_nhds
   add_mem' := by sorry
@@ -205,10 +206,10 @@ example : Submodule ℂ (ℕ → ℂ) where
 /-! Two distinguished subspaces every space has: the trivial subspace {lit}`{0}`
 ({name}`Bot.bot`) and the whole space {name}`Top.top`. -/
 
-example : Submodule F V := ⊥
-example : Submodule F V := ⊤
-example (v : V) : v ∈ (⊤ : Submodule F V) := Submodule.mem_top
-example (v : V) : v ∈ (⊥ : Submodule F V) ↔ v = 0 := Submodule.mem_bot F
+example : Subspace F V := ⊥
+example : Subspace F V := ⊤
+example (v : V) : v ∈ (⊤ : Subspace F V) := Submodule.mem_top
+example (v : V) : v ∈ (⊥ : Subspace F V) ↔ v = 0 := Submodule.mem_bot F
 
 /-! 1.36 Definition: sum of subspaces
 
@@ -218,27 +219,27 @@ For subspaces {lit}`V₁, …, Vₘ` of {lit}`V`, the sum
 For two subspaces, mathlib's lattice supremum {lit}`U ⊔ W` is exactly the sum,
 and {lit}`U + W` resolves to the same thing via {name}`Submodule.add_eq_sup`. -/
 
-example (U W : Submodule F V) : Submodule F V := U ⊔ W
-example (U W : Submodule F V) : U + W = U ⊔ W := Submodule.add_eq_sup U W
+example (U W : Subspace F V) : Subspace F V := U ⊔ W
+example (U W : Subspace F V) : U + W = U ⊔ W := Submodule.add_eq_sup U W
 
 /-! Membership in {lit}`U ⊔ W` is exactly the textbook formula. -/
 
-example (U W : Submodule F V) (x : V) :
+example (U W : Subspace F V) (x : V) :
     x ∈ U ⊔ W ↔ ∃ y ∈ U, ∃ z ∈ W, y + z = x := Submodule.mem_sup
 
 /-! Axler defines {lit}`V₁ + ⋯ + Vₘ` as a single n-ary operation. To make
 sense of an iterated binary {lit}`⊔` we need the binary sum to be associative
-and commutative — both inherit from {lit}`Submodule F V` being a lattice.
+and commutative — both inherit from {lit}`Subspace F V` being a lattice.
 (These are also exercises 1C.16 and 1C.17 below.) -/
 
-example (U W : Submodule F V) : U ⊔ W = W ⊔ U := sup_comm U W
-example (V₁ V₂ V₃ : Submodule F V) : (V₁ ⊔ V₂) ⊔ V₃ = V₁ ⊔ (V₂ ⊔ V₃) :=
+example (U W : Subspace F V) : U ⊔ W = W ⊔ U := sup_comm U W
+example (V₁ V₂ V₃ : Subspace F V) : (V₁ ⊔ V₂) ⊔ V₃ = V₁ ⊔ (V₂ ⊔ V₃) :=
   sup_assoc V₁ V₂ V₃
 
 /-! So {lit}`V₁ + V₂ + V₃` is unambiguous: the textbook formula
 {lit}`{v₁ + v₂ + v₃ : vₖ ∈ Vₖ}` matches either bracketing. -/
 
-example (V₁ V₂ V₃ : Submodule F V) (x : V) :
+example (V₁ V₂ V₃ : Subspace F V) (x : V) :
     x ∈ V₁ ⊔ V₂ ⊔ V₃ ↔ ∃ v₁ ∈ V₁, ∃ v₂ ∈ V₂, ∃ v₃ ∈ V₃, v₁ + v₂ + v₃ = x := by
   rw [Submodule.mem_sup]
   refine ⟨?_, ?_⟩
@@ -252,7 +253,7 @@ example (V₁ V₂ V₃ : Submodule F V) (x : V) :
 the role of Axler's {lit}`V₁ + ⋯ + Vₘ`. Membership recovers the textbook
 formula {lit}`{v₁ + ⋯ + vₘ : vₖ ∈ Vₖ}`. -/
 
-example (m : ℕ) (W : Fin m → Submodule F V) (x : V) :
+example (m : ℕ) (W : Fin m → Subspace F V) (x : V) :
     x ∈ ⨆ i, W i ↔ ∃ v : (i : Fin m) → W i, ∑ i, ((v i : V)) = x := by
   rw [show (⨆ i, W i) = ⨆ i ∈ (Finset.univ : Finset (Fin m)), W i by simp]
   rw [Submodule.mem_iSup_finset_iff_exists_sum]
@@ -265,7 +266,7 @@ is zero. -/
 
 namespace Example_1_37
 
-def U : Submodule F (Fin 3 → F) where
+def U : Subspace F (Fin 3 → F) where
   carrier := {v | v 1 = 0 ∧ v 2 = 0}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -275,7 +276,7 @@ def U : Submodule F (Fin 3 → F) where
     rintro a v ⟨h1, h2⟩
     exact ⟨by simp [Pi.smul_apply, h1], by simp [Pi.smul_apply, h2]⟩
 
-def W : Submodule F (Fin 3 → F) where
+def W : Subspace F (Fin 3 → F) where
   carrier := {v | v 0 = 0 ∧ v 2 = 0}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -285,7 +286,7 @@ def W : Submodule F (Fin 3 → F) where
     rintro a v ⟨h1, h2⟩
     exact ⟨by simp [Pi.smul_apply, h1], by simp [Pi.smul_apply, h2]⟩
 
-example : (U ⊔ W : Submodule F (Fin 3 → F)) =
+example : (U ⊔ W : Subspace F (Fin 3 → F)) =
     { carrier := {v | v 2 = 0}
       zero_mem' := rfl
       add_mem' := by
@@ -317,7 +318,7 @@ first two coordinates are equal. -/
 
 namespace Example_1_38
 
-def U : Submodule F (Fin 4 → F) where
+def U : Subspace F (Fin 4 → F) where
   carrier := {v | v 0 = v 1 ∧ v 2 = v 3}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -327,7 +328,7 @@ def U : Submodule F (Fin 4 → F) where
     rintro a v ⟨h1, h2⟩
     exact ⟨by simp [Pi.smul_apply, h1], by simp [Pi.smul_apply, h2]⟩
 
-def W : Submodule F (Fin 4 → F) where
+def W : Subspace F (Fin 4 → F) where
   carrier := {v | v 0 = v 1 ∧ v 1 = v 2}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -337,7 +338,7 @@ def W : Submodule F (Fin 4 → F) where
     rintro a v ⟨h1, h2⟩
     exact ⟨by simp [Pi.smul_apply, h1], by simp [Pi.smul_apply, h2]⟩
 
-example : (U ⊔ W : Submodule F (Fin 4 → F)) =
+example : (U ⊔ W : Subspace F (Fin 4 → F)) =
     { carrier := {v | v 0 = v 1}
       zero_mem' := rfl
       add_mem' := by
@@ -365,19 +366,19 @@ end Example_1_38
 /-! 1.40 Sum is the smallest containing subspace.
 
 Axler's argument has three steps:
-(i) The sum is itself a subspace — built into the type {lit}`U ⊔ W : Submodule F V`,
-    which 1.34 (the {name}`Submodule` constructor) already supplied.
+(i) The sum is itself a subspace — built into the type {lit}`U ⊔ W : Subspace F V`,
+    which 1.34 (the {name}`Subspace` constructor) already supplied.
 (ii) Each summand is contained in the sum: take {lit}`u = u + 0` and
     {lit}`w = 0 + w` (Axler's "consider sums where all except one are 0").
  -/
-example (U W : Submodule F V) : U ≤ U ⊔ W :=
+example (U W : Subspace F V) : U ≤ U ⊔ W :=
   fun u hu => Submodule.mem_sup.mpr ⟨u, hu, 0, W.zero_mem, add_zero u⟩
-example (U W : Submodule F V) : W ≤ U ⊔ W :=
+example (U W : Subspace F V) : W ≤ U ⊔ W :=
   fun w hw => Submodule.mem_sup.mpr ⟨0, U.zero_mem, w, hw, zero_add w⟩
 
 /-! (iii) Any subspace containing both summands contains the sum, because subspaces
     are closed under addition. -/
-example (U W X : Submodule F V) (h₁ : U ≤ X) (h₂ : W ≤ X) : U ⊔ W ≤ X := by
+example (U W X : Subspace F V) (h₁ : U ≤ X) (h₂ : W ≤ X) : U ⊔ W ≤ X := by
   intro x hx
   obtain ⟨y, hy, z, hz, rfl⟩ := Submodule.mem_sup.mp hx
   exact X.add_mem (h₁ hy) (h₂ hz)
@@ -387,7 +388,7 @@ example (U W X : Submodule F V) (h₁ : U ≤ X) (h₂ : W ≤ X) : U ⊔ W ≤ 
 The sum {lit}`V₁ + ⋯ + Vₘ` is a *direct sum* if each element has only one
 representation as {lit}`v₁ + ⋯ + vₘ` with each {lit}`vₖ ∈ Vₖ`. -/
 
-def IsDirectSum {m : ℕ} (W : Fin m → Submodule F V) : Prop :=
+def IsDirectSum {m : ℕ} (W : Fin m → Subspace F V) : Prop :=
   ∀ (u v : (i : Fin m) → W i),
     (∑ i, ((u i : V))) = (∑ i, ((v i : V))) → u = v
 
@@ -395,13 +396,13 @@ def IsDirectSum {m : ℕ} (W : Fin m → Submodule F V) : Prop :=
 
 namespace Example_1_42
 
-def U : Submodule F (Fin 3 → F) where
+def U : Subspace F (Fin 3 → F) where
   carrier := {v | v 2 = 0}
   zero_mem' := rfl
   add_mem' := by intro u v hu hv; show u 2 + v 2 = 0; rw [hu, hv, add_zero]
   smul_mem' := by intro a v hv; show a • v 2 = 0; rw [hv, smul_zero]
 
-def W : Submodule F (Fin 3 → F) where
+def W : Subspace F (Fin 3 → F) where
   carrier := {v | v 0 = 0 ∧ v 1 = 0}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -441,7 +442,7 @@ example : IsDirectSum (F := F) ![U, W] := by
     rw [hf0, hg0, zero_add, zero_add] at h
     exact h
 
-example : (U : Submodule F (Fin 3 → F)) ⊔ W = ⊤ := by
+example : (U : Subspace F (Fin 3 → F)) ⊔ W = ⊤ := by
   rw [eq_top_iff]
   intro v _
   refine Submodule.mem_sup.mpr ⟨![v 0, v 1, 0], rfl,
@@ -454,7 +455,7 @@ end Example_1_42
 
 namespace Example_1_43
 
-def Axis (n : ℕ) (k : Fin n) : Submodule F (Fin n → F) where
+def Axis (n : ℕ) (k : Fin n) : Subspace F (Fin n → F) where
   carrier := {v | ∀ i, i ≠ k → v i = 0}
   zero_mem' := by intro i _; rfl
   add_mem' := by
@@ -525,13 +526,13 @@ why 1.46 below characterizes direct sums only of *two* subspaces. -/
 
 namespace Example_1_44
 
-def V₁ : Submodule F (Fin 3 → F) where
+def V₁ : Subspace F (Fin 3 → F) where
   carrier := {v | v 2 = 0}
   zero_mem' := rfl
   add_mem' := by intro u v hu hv; show u 2 + v 2 = 0; rw [hu, hv, add_zero]
   smul_mem' := by intro a v hv; show a • v 2 = 0; rw [hv, smul_zero]
 
-def V₂ : Submodule F (Fin 3 → F) where
+def V₂ : Subspace F (Fin 3 → F) where
   carrier := {v | v 0 = 0 ∧ v 1 = 0}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -541,7 +542,7 @@ def V₂ : Submodule F (Fin 3 → F) where
     rintro a v ⟨h0, h1⟩
     exact ⟨by simp [Pi.smul_apply, h0], by simp [Pi.smul_apply, h1]⟩
 
-def V₃ : Submodule F (Fin 3 → F) where
+def V₃ : Subspace F (Fin 3 → F) where
   carrier := {v | v 0 = 0 ∧ v 1 = v 2}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -563,19 +564,20 @@ def V₃ : Submodule F (Fin 3 → F) where
 example : ¬ IsDirectSum (F := F) ![V₁, V₂, V₃] := by
   intro h
   -- The nontrivial witness, packaged member-by-member.
-  have m₀ : (![0, 1, 0] : Fin 3 → F) ∈ ![V₁, V₂, V₃] (0 : Fin 3) := rfl
-  have m₁ : (![0, 0, 1] : Fin 3 → F) ∈ ![V₁, V₂, V₃] (1 : Fin 3) := ⟨rfl, rfl⟩
-  have m₂ : (![0, -1, -1] : Fin 3 → F) ∈ ![V₁, V₂, V₃] (2 : Fin 3) := ⟨rfl, rfl⟩
-  let f : (i : Fin 3) → ![V₁, V₂, V₃] i := fun i =>
+  let W : Fin 3 → Subspace F (Fin 3 → F) := ![V₁, V₂, V₃]
+  have m₀ : (![0, 1, 0] : Fin 3 → F) ∈ W 0 := rfl
+  have m₁ : (![0, 0, 1] : Fin 3 → F) ∈ W 1 := ⟨rfl, rfl⟩
+  have m₂ : (![0, -1, -1] : Fin 3 → F) ∈ W 2 := ⟨rfl, rfl⟩
+  let f : (i : Fin 3) → W i := fun i =>
     match i with
     | ⟨0, _⟩ => ⟨_, m₀⟩
     | ⟨1, _⟩ => ⟨_, m₁⟩
     | ⟨2, _⟩ => ⟨_, m₂⟩
-  let g : (i : Fin 3) → ![V₁, V₂, V₃] i := fun i =>
-    ⟨(0 : Fin 3 → F), (![V₁, V₂, V₃] i).zero_mem⟩
+  let g : (i : Fin 3) → W i := fun i =>
+    ⟨(0 : Fin 3 → F), (W i).zero_mem⟩
   have hsum : (∑ i, ((f i : Fin 3 → F))) = (∑ i, ((g i : Fin 3 → F))) := by
     funext j
-    fin_cases j <;> simp [f, g, Fin.sum_univ_three]
+    fin_cases j <;> simp [f, g, W, Fin.sum_univ_three]
   have heq : f = g := h f g hsum
   -- f 0 = (0, 1, 0); reading coordinate 1 yields 1 = 0.
   have h1 : (f 0 : Fin 3 → F) 1 = (g 0 : Fin 3 → F) 1 := by rw [heq]
@@ -585,7 +587,7 @@ end Example_1_44
 
 /-! 1.45 Condition for a direct sum -/
 
-theorem isDirectSum_iff {m : ℕ} (W : Fin m → Submodule F V) :
+theorem isDirectSum_iff {m : ℕ} (W : Fin m → Subspace F V) :
     IsDirectSum W ↔ ∀ (u : (i : Fin m) → W i), (∑ i, ((u i : V))) = 0 ↔ u = 0 := by
   refine ⟨fun h u => ⟨fun hu => h u 0 (by simpa using hu), fun hu => by simp [hu]⟩, ?_⟩
   intro h u v huv
@@ -597,7 +599,7 @@ theorem isDirectSum_iff {m : ℕ} (W : Fin m → Submodule F V) :
 
 /-! 1.46 Direct sum of two subspaces -/
 
-theorem isDirectSum_pair_iff (U W : Submodule F V) :
+theorem isDirectSum_pair_iff (U W : Subspace F V) :
     IsDirectSum (F := F) ![U, W] ↔ U ⊓ W = ⊥ := by
   rw [isDirectSum_iff, Submodule.eq_bot_iff]
   refine ⟨?_, ?_⟩
@@ -629,28 +631,28 @@ theorem isDirectSum_pair_iff (U W : Submodule F V) :
 
 /-- 1C.1(a) -/
 def exercise_1C_1a :
-    Decidable (∃ U : Submodule F (Fin 3 → F),
+    Decidable (∃ U : Subspace F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 + 2 * v 1 + 3 * v 2 = 0}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.1(b) -/
 def exercise_1C_1b :
-    Decidable (∃ U : Submodule F (Fin 3 → F),
+    Decidable (∃ U : Subspace F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 + 2 * v 1 + 3 * v 2 = 4}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.1(c) -/
 def exercise_1C_1c :
-    Decidable (∃ U : Submodule F (Fin 3 → F),
+    Decidable (∃ U : Subspace F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 * v 1 * v 2 = 0}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.1(d) -/
 def exercise_1C_1d :
-    Decidable (∃ U : Submodule F (Fin 3 → F),
+    Decidable (∃ U : Subspace F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 = 5 * v 2}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
@@ -660,7 +662,7 @@ def exercise_1C_1d :
 mathlib's {name}`Differentiable` requires the source to be a normed space and
 the subtype {lit}`↥(Set.Ioo (-4) 4)` isn't one. -/
 theorem exercise_1C_3 :
-    ∃ U : Submodule ℝ (ℝ → ℝ),
+    ∃ U : Subspace ℝ (ℝ → ℝ),
       (U : Set (ℝ → ℝ)) =
         {f | DifferentiableOn ℝ f (Set.Ioo (-4) 4) ∧ deriv f (-1) = 3 * f 2} := by
   sorry
@@ -670,28 +672,28 @@ We use {lit}`ℝ → ℝ` instead so the integral reads as the familiar
 {lit}`∫ x in (0)..1, f x` via {name}`intervalIntegral`; the faithful subtype
 version would need measure theory. -/
 theorem exercise_1C_4 (b : ℝ) :
-    (∃ U : Submodule ℝ (ℝ → ℝ),
+    (∃ U : Subspace ℝ (ℝ → ℝ),
         (U : Set (ℝ → ℝ)) =
           {f | ContinuousOn f (Set.Icc 0 1) ∧ ∫ x in (0)..1, f x = b}) ↔ b = 0 := by
   sorry
 
 /-- 1C.5 -/
 def exercise_1C_5 :
-    Decidable (∃ U : Submodule ℂ (Fin 2 → ℂ),
+    Decidable (∃ U : Subspace ℂ (Fin 2 → ℂ),
       (U : Set (Fin 2 → ℂ)) = {v | ∀ i, (v i).im = 0}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.6(a) -/
 def exercise_1C_6a :
-    Decidable (∃ U : Submodule ℝ (Fin 3 → ℝ),
+    Decidable (∃ U : Subspace ℝ (Fin 3 → ℝ),
       (U : Set (Fin 3 → ℝ)) = {v | v 0 ^ 3 = v 1 ^ 3}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.6(b) -/
 def exercise_1C_6b :
-    Decidable (∃ U : Submodule ℂ (Fin 3 → ℂ),
+    Decidable (∃ U : Subspace ℂ (Fin 3 → ℂ),
       (U : Set (Fin 3 → ℂ)) = {v | v 0 ^ 3 = v 1 ^ 3}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
@@ -702,7 +704,7 @@ def exercise_1C_7 :
       U.Nonempty →
       (∀ u ∈ U, ∀ v ∈ U, u + v ∈ U) →
       (∀ u ∈ U, -u ∈ U) →
-      ∃ S : Submodule ℝ (Fin 2 → ℝ), (S : Set (Fin 2 → ℝ)) = U) := by
+      ∃ S : Subspace ℝ (Fin 2 → ℝ), (S : Set (Fin 2 → ℝ)) = U) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
@@ -711,50 +713,50 @@ theorem exercise_1C_8 :
     ∃ U : Set (Fin 2 → ℝ),
       U.Nonempty ∧
       (∀ (a : ℝ) (u), u ∈ U → a • u ∈ U) ∧
-      ¬ ∃ S : Submodule ℝ (Fin 2 → ℝ), (S : Set (Fin 2 → ℝ)) = U := by
+      ¬ ∃ S : Subspace ℝ (Fin 2 → ℝ), (S : Set (Fin 2 → ℝ)) = U := by
   sorry
 
 def Periodic (f : ℝ → ℝ) : Prop := ∃ p > 0, ∀ x, f x = f (x + p)
 
 /-- 1C.9 -/
 def exercise_1C_9 :
-    Decidable (∃ U : Submodule ℝ (ℝ → ℝ), (U : Set (ℝ → ℝ)) = {f | Periodic f}) := by
+    Decidable (∃ U : Subspace ℝ (ℝ → ℝ), (U : Set (ℝ → ℝ)) = {f | Periodic f}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.10 The intersection of two subspaces is a subspace. The student must
-build a {name}`Submodule` whose carrier is {lit}`(U : Set V) ∩ (W : Set V)`,
+build a {name}`Subspace` whose carrier is {lit}`(U : Set V) ∩ (W : Set V)`,
 i.e. prove the three closure axioms hold for the intersection. (In mathlib
-this submodule is the lattice infimum {lit}`U ⊓ W`, which the
-{name}`SemilatticeInf` instance on {name}`Submodule` produces automatically;
+this subspace is the lattice infimum {lit}`U ⊓ W`, which the
+{name}`SemilatticeInf` instance on {name}`Subspace` produces automatically;
 the exercise is to do that construction by hand.) -/
-theorem exercise_1C_10 (U W : Submodule F V) :
-    ∃ S : Submodule F V, (S : Set V) = (U : Set V) ∩ (W : Set V) := by
+theorem exercise_1C_10 (U W : Subspace F V) :
+    ∃ S : Subspace F V, (S : Set V) = (U : Set V) ∩ (W : Set V) := by
   sorry
 
 /-- 1C.11 The intersection of *any* collection of subspaces of {lit}`V` is a
-subspace. The student must build a {name}`Submodule` whose carrier is the
+subspace. The student must build a {name}`Subspace` whose carrier is the
 intersection {lit}`⋂ U ∈ 𝒞, (U : Set V)`, i.e. prove the three closure axioms
-hold for an arbitrary intersection. (In mathlib this submodule is the lattice
+hold for an arbitrary intersection. (In mathlib this subspace is the lattice
 infimum {name}`sInf` (or {name}`iInf` for an indexed family), which the
-{name}`CompleteLattice` instance on {name}`Submodule` produces automatically;
+{name}`CompleteLattice` instance on {name}`Subspace` produces automatically;
 the exercise is to do that construction by hand.) -/
-theorem exercise_1C_11 (𝒞 : Set (Submodule F V)) :
-    ∃ S : Submodule F V, (S : Set V) = ⋂ U ∈ 𝒞, (U : Set V) := by
+theorem exercise_1C_11 (𝒞 : Set (Subspace F V)) :
+    ∃ S : Subspace F V, (S : Set V) = ⋂ U ∈ 𝒞, (U : Set V) := by
   sorry
 
 /-- 1C.12 -/
 @[avoiding Submodule.union_eq_iff_le_or_le]
-theorem exercise_1C_12 (U W : Submodule F V) :
-    (∃ S : Submodule F V, (S : Set V) = (U : Set V) ∪ (W : Set V)) ↔
+theorem exercise_1C_12 (U W : Subspace F V) :
+    (∃ S : Subspace F V, (S : Set V) = (U : Set V) ∪ (W : Set V)) ↔
       U ≤ W ∨ W ≤ U := by
   sorry
 
 /-- 1C.13 To prove this we need a scalar in {lit}`F` other than {lit}`0` and
 {lit}`1`; we assume {lit}`[CharZero F]`, which forces {lit}`(n : F) ≠ 0` for
 every positive {lit}`n` and is satisfied by {lit}`ℝ` and {lit}`ℂ` (Axler's working fields). -/
-theorem exercise_1C_13 [CharZero F] (U W X : Submodule F V) :
-    (∃ S : Submodule F V, (S : Set V) = (U : Set V) ∪ W ∪ X) ↔
+theorem exercise_1C_13 [CharZero F] (U W X : Subspace F V) :
+    (∃ S : Subspace F V, (S : Set V) = (U : Set V) ∪ W ∪ X) ↔
       (W ≤ U ∧ X ≤ U) ∨ (U ≤ W ∧ X ≤ W) ∨ (U ≤ X ∧ W ≤ X) := by
   sorry
 
@@ -762,7 +764,7 @@ theorem exercise_1C_13 [CharZero F] (U W X : Submodule F V) :
 -- so the linter's `(simp; ring)` suggestion would fail with "no goals".
 /-- 1C.14 The student fills in the predicate (replacing the {lit}`sorry` in
 the right-hand side) and proves the equality. -/
-def exercise_1C_14_U : Submodule F (Fin 3 → F) where
+def exercise_1C_14_U : Subspace F (Fin 3 → F) where
   carrier := {v | ∃ x : F, v = ![x, -x, 2 * x]}
   zero_mem' := ⟨0, by
     funext i
@@ -787,7 +789,7 @@ def exercise_1C_14_U : Submodule F (Fin 3 → F) where
     · simp [smul_eq_mul]
     · simp [smul_eq_mul]; ring
 
-def exercise_1C_14_W : Submodule F (Fin 3 → F) where
+def exercise_1C_14_W : Subspace F (Fin 3 → F) where
   carrier := {v | ∃ x : F, v = ![x, x, 2 * x]}
   zero_mem' := ⟨0, by
     funext i
@@ -813,33 +815,33 @@ def exercise_1C_14_W : Submodule F (Fin 3 → F) where
     · simp [smul_eq_mul]; ring
 
 theorem exercise_1C_14 :
-    ((exercise_1C_14_U (F := F) ⊔ exercise_1C_14_W : Submodule F (Fin 3 → F))
+    ((exercise_1C_14_U (F := F) ⊔ exercise_1C_14_W : Subspace F (Fin 3 → F))
       : Set (Fin 3 → F)) = {v | sorry} := by
   sorry
 
 /-- 1C.15 -/
 @[avoiding sup_idem, sup_self]
-theorem exercise_1C_15 (U : Submodule F V) : U ⊔ U = sorry := by
+theorem exercise_1C_15 (U : Subspace F V) : U ⊔ U = sorry := by
   sorry
 
 /-- 1C.16 -/
 @[avoiding sup_comm]
 def exercise_1C_16 :
-    Decidable (∀ U W : Submodule F V, U ⊔ W = W ⊔ U) := by
+    Decidable (∀ U W : Subspace F V, U ⊔ W = W ⊔ U) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.17 -/
 @[avoiding sup_assoc]
 def exercise_1C_17 :
-    Decidable (∀ V₁ V₂ V₃ : Submodule F V, (V₁ ⊔ V₂) ⊔ V₃ = V₁ ⊔ (V₂ ⊔ V₃)) := by
+    Decidable (∀ V₁ V₂ V₃ : Subspace F V, (V₁ ⊔ V₂) ⊔ V₃ = V₁ ⊔ (V₂ ⊔ V₃)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.18(a) -/
 @[avoiding bot_sup_eq, sup_bot_eq]
 def exercise_1C_18_id :
-    Decidable (∃ E : Submodule F V, ∀ U : Submodule F V, U ⊔ E = U) := by
+    Decidable (∃ E : Subspace F V, ∀ U : Subspace F V, U ⊔ E = U) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
@@ -847,19 +849,19 @@ def exercise_1C_18_id :
 which {lit}`U` does there exist {lit}`W` with {lit}`U + W = ⊥`?) Fill in the
 right-hand side {lit}`sorry` with the conjectured characterization
 of {lit}`U`, and then then proves the equivalence. -/
-theorem exercise_1C_18_inv (U : Submodule F V) :
-    (∃ W : Submodule F V, U ⊔ W = ⊥) ↔ sorry := by
+theorem exercise_1C_18_inv (U : Subspace F V) :
+    (∃ W : Subspace F V, U ⊔ W = ⊥) ↔ sorry := by
   sorry
 
 /-- 1C.19 -/
 def exercise_1C_19 :
-    Decidable (∀ V₁ V₂ U : Submodule ℝ (Fin 2 → ℝ),
+    Decidable (∀ V₁ V₂ U : Subspace ℝ (Fin 2 → ℝ),
       V₁ ⊔ U = V₂ ⊔ U → V₁ = V₂) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 1C.20 -/
-def exercise_1C_20_U : Submodule F (Fin 4 → F) where
+def exercise_1C_20_U : Subspace F (Fin 4 → F) where
   carrier := {v | v 0 = v 1 ∧ v 2 = v 3}
   zero_mem' := ⟨rfl, rfl⟩
   add_mem' := by
@@ -870,11 +872,11 @@ def exercise_1C_20_U : Submodule F (Fin 4 → F) where
     exact ⟨by simp [Pi.smul_apply, h1], by simp [Pi.smul_apply, h2]⟩
 
 theorem exercise_1C_20 :
-    ∃ W : Submodule F (Fin 4 → F), IsCompl (exercise_1C_20_U (F := F)) W := by
+    ∃ W : Subspace F (Fin 4 → F), IsCompl (exercise_1C_20_U (F := F)) W := by
   sorry
 
 /-- 1C.21 -/
-def exercise_1C_21_U : Submodule F (Fin 5 → F) where
+def exercise_1C_21_U : Subspace F (Fin 5 → F) where
   carrier := {v | v 2 = v 0 + v 1 ∧ v 3 = v 0 - v 1 ∧ v 4 = 2 * v 0}
   zero_mem' := ⟨by simp, by simp, by simp⟩
   add_mem' := by
@@ -891,13 +893,13 @@ def exercise_1C_21_U : Submodule F (Fin 5 → F) where
     · show a • v 4 = 2 * (a • v 0); simp only [smul_eq_mul]; rw [h4]; ring
 
 theorem exercise_1C_21 :
-    ∃ W : Submodule F (Fin 5 → F), IsCompl (exercise_1C_21_U (F := F)) W := by
+    ∃ W : Subspace F (Fin 5 → F), IsCompl (exercise_1C_21_U (F := F)) W := by
   sorry
 
 /-- 1C.22 The direct-sum condition is captured by {name}`IsDirectSum` on the
 family {lit}`![U, W₁, W₂, W₃]`; the cover by {lit}`U ⊔ W₁ ⊔ W₂ ⊔ W₃ = ⊤`. -/
 theorem exercise_1C_22 :
-    ∃ W₁ W₂ W₃ : Submodule F (Fin 5 → F),
+    ∃ W₁ W₂ W₃ : Subspace F (Fin 5 → F),
       W₁ ≠ ⊥ ∧ W₂ ≠ ⊥ ∧ W₃ ≠ ⊥ ∧
       IsDirectSum ![exercise_1C_21_U (F := F), W₁, W₂, W₃] ∧
       exercise_1C_21_U (F := F) ⊔ W₁ ⊔ W₂ ⊔ W₃ = ⊤ := by
@@ -905,7 +907,7 @@ theorem exercise_1C_22 :
 
 /-- 1C.23 -/
 def exercise_1C_23 :
-    Decidable (∀ V₁ V₂ U : Submodule ℝ (Fin 2 → ℝ),
+    Decidable (∀ V₁ V₂ U : Subspace ℝ (Fin 2 → ℝ),
       IsCompl V₁ U → IsCompl V₂ U → V₁ = V₂) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
@@ -915,13 +917,13 @@ def exercise_1C_23 :
 def IsEven (f : ℝ → ℝ) : Prop := ∀ x, f (-x) = f x
 def IsOdd  (f : ℝ → ℝ) : Prop := ∀ x, f (-x) = -f x
 
-def evenFunctions : Submodule ℝ (ℝ → ℝ) where
+def evenFunctions : Subspace ℝ (ℝ → ℝ) where
   carrier := {f | IsEven f}
   zero_mem' := by sorry
   add_mem' := by sorry
   smul_mem' := by sorry
 
-def oddFunctions : Submodule ℝ (ℝ → ℝ) where
+def oddFunctions : Subspace ℝ (ℝ → ℝ) where
   carrier := {f | IsOdd f}
   zero_mem' := by sorry
   add_mem' := by sorry
