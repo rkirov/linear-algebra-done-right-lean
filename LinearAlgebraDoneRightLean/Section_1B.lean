@@ -44,7 +44,7 @@ structure LADRVectorSpace (F : Type*) [Field F] (V : Type*) where
 /-! Instead of using the definition above, we will use mathlib's definition.
 
 As usual, mathlib has a more general definition, but the special case of
-{lit}`Module F V{lit}` (over {lit}`[AddCommGroup V]{lit}`) where {lit}`[Field F]` is exactly
+{lit}`Module F V` (over {lit}`[AddCommGroup V]`) where {lit}`[Field F]` is exactly
 equivalent to Axler's "vector space over {lit}`F`". -/
 
 /-! You will learn what these mean in an abstract algebra course, but
@@ -72,14 +72,14 @@ Elements {lit}`v : V` are called vectors or points. -/
 
 /-! 1.22 Definition: real vector space, complex vector space
 
-A vector space over {lit}`ℝ{lit}` is a real vector space; over {lit}`ℂ`, a complex vector space.
+A vector space over {lit}`ℝ` is a real vector space; over {lit}`ℂ`, a complex vector space.
 In Lean, whenever we see {lit}`{V : Type*} [AddCommGroup V] [Module ℝ V]`, that is a
 real vector space; with {lit}`[Module ℂ V]`, a complex vector space. -/
 
 
 /-! 1.23 Example: F∞
 
-{lit}`F∞{lit}` is the set of all sequences of elements of {lit}`F{lit}`; in Lean, {lit}`ℕ → F`. -/
+{lit}`F∞` is the set of all sequences of elements of {lit}`F`; in Lean, {lit}`ℕ → F`. -/
 
 example : AddCommGroup (ℕ → F) := inferInstance
 example : Module F (ℕ → F) := inferInstance
@@ -95,7 +95,7 @@ example (v w : PUnit) : v = w := rfl
 
 /-! 1.24 Notation: F^S
 
-For a set {lit}`S{lit}`, {lit}`F^S{lit}` denotes the set of functions from {lit}`S{lit}` to {lit}`F`. In Lean we
+For a set {lit}`S`, {lit}`F^S` denotes the set of functions from {lit}`S` to {lit}`F`. In Lean we
 just write {lit}`S → F`. Addition and scalar multiplication are pointwise. -/
 
 example (S : Type*) (f g : S → F) (x : S) : (f + g) x = f x + g x := rfl
@@ -103,9 +103,9 @@ example (S : Type*) (c : F) (f : S → F) (x : S) : (c • f) x = c * f x := rfl
 
 /-! 1.25 Example: F^S is a vector space
 
-The additive identity of {lit}`F^S{lit}` is the function {lit}`0 : S → F` defined by
-{lit}`0 x = 0{lit}` for all {lit}`x ∈ S{lit}`. For {lit}`f : S → F{lit}`, the additive inverse {lit}`-f`
-is defined by {lit}`(-f) x = -(f x){lit}` for all {lit}`x ∈ S`. -/
+The additive identity of {lit}`F^S` is the function {lit}`0 : S → F` defined by
+{lit}`0 x = 0` for all {lit}`x ∈ S`. For {lit}`f : S → F`, the additive inverse {lit}`-f`
+is defined by {lit}`(-f) x = -(f x)` for all {lit}`x ∈ S`. -/
 
 example (S : Type*) : AddCommGroup (S → F) := inferInstance
 example (S : Type*) : Module F (S → F) := inferInstance
@@ -137,7 +137,7 @@ example (v w : V) : w - v = w + (-v) := sub_eq_add_neg w v
 
 /-! 1.29 Notation: V
 
-For the rest of this section, {lit}`V{lit}` denotes a vector space over {lit}`F` (declared
+For the rest of this section, {lit}`V` denotes a vector space over {lit}`F` (declared
 once at the top via {lit}`variable {V : Type*} [AddCommGroup V] [Module F V]`). -/
 
 /-! 1.30 The number 0 times a vector -/
