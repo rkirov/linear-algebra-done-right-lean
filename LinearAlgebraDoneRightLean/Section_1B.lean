@@ -249,7 +249,11 @@ theorem exercise_1B_6 : ¬ ∃ g : AddCommGroup EReal, g.add = addAxler := by
 /-- 1B.7: {lit}`V^S = (S → V)` is a vector space with pointwise operations. We
 pick the {lit}`Module F` subcomponent — the {lit}`AddCommGroup` part comes for free
 from Pi instances; the reader fills in the scalar-action axioms. -/
-@[implicit_reducible]
+@[implicit_reducible,
+  avoiding
+    Pi.smulZeroClass, Pi.addZeroClass, Pi.distribSMul,
+    Pi.Function.module, Pi.instZero, Pi.mulAction
+]
 def exercise_1B_7 (S : Type*) [Nonempty S] : Module F (S → V) where
   smul a f := fun s => a • f s
   one_smul := by sorry
