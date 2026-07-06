@@ -503,22 +503,45 @@ theorem range_aeval_invariant (T : V →ₗ[F] V) (p : Polynomial F) :
 /-- 5A.1 (a) -/
 theorem exercise_5A_1a (T : V →ₗ[F] V) (U : Submodule F V)
     (h : U ≤ ker T) : InvariantUnder T U := by
-  sorry
+  rw [InvariantUnder]
+  intro u hu
+  have : u ∈ ker T := h hu
+  have : T u = 0 := by rw [LinearMap.mem_ker] at this; exact this
+  rw [this]
+  exact Submodule.zero_mem U
 
 /-- 5A.1 (b) -/
 theorem exercise_5A_1b (T : V →ₗ[F] V) (U : Submodule F V)
     (h : range T ≤ U) : InvariantUnder T U := by
-  sorry
+  rw [InvariantUnder]
+  intro u hu
+  exact h (LinearMap.mem_range.mpr ⟨u, rfl⟩)
 
 /-- 5A.2 -/
 theorem exercise_5A_2 (T : V →ₗ[F] V) {m : ℕ} (W : Fin m → Submodule F V)
     (h : ∀ i, InvariantUnder T (W i)) : InvariantUnder T (⨆ i, W i) := by
-  sorry
+  rw [InvariantUnder]
+  intro u hu
+  classical
+  -- turn u into a finite sum ∑ i, wᵢ with each wᵢ ∈ W i
+  rw [show (⨆ i, W i) = ⨆ i ∈ (Finset.univ : Finset (Fin m)), W i by simp,
+      Submodule.mem_iSup_finset_iff_exists_sum] at hu
+  obtain ⟨w, rfl⟩ := hu
+  rw [map_sum]
+  apply Submodule.sum_mem
+  intro i hi
+  specialize h i
+  have := h (w i) (w i).2
+  exact Submodule.mem_iSup_of_mem i this
 
 /-- 5A.3 -/
 theorem exercise_5A_3 (T : V →ₗ[F] V) (𝒮 : Set (Submodule F V))
     (h : ∀ U ∈ 𝒮, InvariantUnder T U) : InvariantUnder T (sInf 𝒮) := by
-  sorry
+  intro u hu
+  rw [Submodule.mem_sInf] at hu ⊢
+  intro U hU
+  specialize h U hU
+  exact h u (hu U hU)
 
 /-- 5A.4 Prove or give a counterexample: if {lit}`U` is invariant under every
 operator on a finite-dimensional {lit}`V`, then {lit}`U = {0}` or
@@ -527,7 +550,33 @@ def exercise_5A_4 [Finite F V] :
     Decidable (∀ U : Submodule F V,
       (∀ T : V →ₗ[F] V, InvariantUnder T U) → U = ⊥ ∨ U = ⊤) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isTrue
+  intro U hU
+  -- proof by contradiction: assume U is invariant under every operator, yet
+  -- U ≠ ⊥ and U ≠ ⊤.
+  by_contra hcon
+  push Not at hcon
+  obtain ⟨hbot, htop⟩ := hcon
+  -- pick u ∈ U with u ≠ 0, and v ∉ U.
+  obtain ⟨u, huU, hu0⟩ := Submodule.exists_mem_ne_zero_of_ne_bot hbot
+  rw [ne_eq, Submodule.eq_top_iff'] at htop
+  push Not at htop
+  obtain ⟨v, hvU⟩ := htop
+  classical
+  -- Since u ≠ 0 the singleton {u} is linearly independent; extend it to a basis
+  -- w of V (2.32, `exists_basis_extending`), with u sitting at index castLE 0.
+  have hli : LinearIndependent F (fun _ : Fin 1 => u) :=
+    linearIndependent_unique_iff.mpr hu0
+  obtain ⟨n, w, hn, hbasis, hpres⟩ :=
+    LADR.Section_2B.exists_basis_extending (fun _ : Fin 1 => u) hli
+  have hwu : w (Fin.castLE hn 0) = u := hpres 0
+  -- The linear map lemma (3.4, `linearMap_lemma`) yields the operator sending
+  -- that basis vector to v and every other basis vector to 0; so T u = v.
+  obtain ⟨T, hT, -⟩ := LADR.Section_3A.linearMap_lemma w hbasis
+    (fun j => if j = Fin.castLE hn 0 then v else 0)
+  have hTu : T u = v := by rw [← hwu, hT (Fin.castLE hn 0)]; simp
+  -- Invariance forces v = T u ∈ U, contradicting v ∉ U.
+  exact hvU (hTu ▸ hU T u huU)
 
 /-- 5A.5 {lit}`T(x, y) = (−3y, x)` on {lit}`ℝ²`: find the eigenvalues. -/
 def T_ex_5A_5 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
@@ -545,11 +594,27 @@ def T_ex_5A_5 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
 
 /-- The set of eigenvalues of {lit}`T_ex_5A_5` — to be determined by the
 solver. -/
-def eigenvalues_5A_5 : Set ℝ := sorry
+def eigenvalues_5A_5 : Set ℝ := ∅
 
 theorem exercise_5A_5 (γ : ℝ) :
     HasEigenvalue T_ex_5A_5 γ ↔ γ ∈ eigenvalues_5A_5 := by
-  sorry
+  -- There are no (real) eigenvalues: `Tv = γv` forces `(γ² + 3)·v₁ = 0`, and
+  -- `γ² + 3 > 0`, so `v₁ = 0` and then `v₀ = γ·v₁ = 0`, i.e. `v = 0`.
+  rw [eigenvalues_5A_5, Set.mem_empty_iff_false, iff_false,
+    Module.End.hasEigenvalue_iff_exists]
+  rintro ⟨v, hv, hTv⟩
+  -- Read off the two coordinate equations of `T v = γ • v`.
+  have e0 : -(3 * v 1) = γ * v 0 := by
+    have := congrFun hTv 0; simpa [T_ex_5A_5] using this
+  have e1 : v 0 = γ * v 1 := by
+    have := congrFun hTv 1; simpa [T_ex_5A_5] using this
+  have key : (γ ^ 2 + 3) * v 1 = 0 := by linear_combination -e0 - γ * e1
+  have hv1 : v 1 = 0 := by
+    rcases mul_eq_zero.mp key with h | h
+    · exact absurd h (by positivity)
+    · exact h
+  have hv0 : v 0 = 0 := by rw [e1, hv1, mul_zero]
+  exact hv (by funext i; fin_cases i <;> simp [hv0, hv1])
 
 /-- 5A.6 {lit}`T(w, z) = (z, w)` on {lit}`F²`: find all eigenvalues and
 eigenvectors. -/
@@ -562,20 +627,86 @@ def T_ex_5A_6 : (Fin 2 → F) →ₗ[F] (Fin 2 → F) where
     funext i
     fin_cases i <;> simp
 
-/-- The set of eigenvalues of {lit}`T_ex_5A_6` — to be determined. -/
-def eigenvalues_5A_6 (F : Type*) [Field F] : Set F := sorry
+/-- The set of eigenvalues of {lit}`T_ex_5A_6`. Solving {lit}`T v = lam v`
+gives {lit}`lam² = 1`, so the eigenvalues are {lit}`1` and {lit}`-1`. -/
+def eigenvalues_5A_6 (F : Type*) [Field F] : Set F := {1, -1}
 
-/-- The set of eigenvectors of {lit}`T_ex_5A_6` for a scalar {lit}`lam` — to be
-determined (empty when {lit}`lam` is not an eigenvalue). -/
-def eigenvectors_5A_6 (F : Type*) [Field F] (lam : F) : Set (Fin 2 → F) := sorry
+/-- The set of eigenvectors of {lit}`T_ex_5A_6` for a scalar {lit}`lam` (empty
+when {lit}`lam` is not an eigenvalue). The {lit}`1`-eigenvectors are the nonzero
+multiples of {lit}`(1, 1)` (the vectors with {lit}`v₀ = v₁`); the
+{lit}`-1`-eigenvectors are the nonzero multiples of {lit}`(1, -1)`. -/
+noncomputable def eigenvectors_5A_6 (F : Type*) [Field F] (lam : F) :
+    Set (Fin 2 → F) :=
+  open Classical in
+  if lam = 1 then {v | v 0 = v 1 ∧ v ≠ 0}
+  else if lam = -1 then {v | v 1 = -v 0 ∧ v ≠ 0}
+  else ∅
+
+/-- {lit}`T v = lam • v` unpacks into the two coordinate equations of
+{lit}`T(w, z) = (z, w)`. -/
+private theorem T_ex_5A_6_apply_eq_smul (lam : F) (v : Fin 2 → F) :
+    (T_ex_5A_6 (F := F)) v = lam • v ↔ v 1 = lam * v 0 ∧ v 0 = lam * v 1 := by
+  constructor
+  · intro h
+    exact ⟨by have := congrFun h 0; simpa [T_ex_5A_6] using this,
+           by have := congrFun h 1; simpa [T_ex_5A_6] using this⟩
+  · rintro ⟨h0, h1⟩
+    funext i
+    fin_cases i
+    · simpa [T_ex_5A_6] using h0
+    · simpa [T_ex_5A_6] using h1
+
+/-- From the two coordinate equations and {lit}`v ≠ 0`, the scalar satisfies
+{lit}`lam² = 1`. -/
+private theorem T_ex_5A_6_sq (lam : F) (v : Fin 2 → F) (hne : v ≠ 0)
+    (h0 : v 1 = lam * v 0) (h1 : v 0 = lam * v 1) : lam * lam = 1 := by
+  have hor : v 0 ≠ 0 ∨ v 1 ≠ 0 := by
+    by_contra hc
+    push Not at hc
+    exact hne (by funext i; fin_cases i <;> simp [hc.1, hc.2])
+  rcases hor with h | h
+  · have hz : (lam * lam - 1) * v 0 = 0 := by linear_combination -lam * h0 - h1
+    exact sub_eq_zero.mp ((mul_eq_zero.mp hz).resolve_right h)
+  · have hz : (lam * lam - 1) * v 1 = 0 := by linear_combination -h0 - lam * h1
+    exact sub_eq_zero.mp ((mul_eq_zero.mp hz).resolve_right h)
 
 theorem exercise_5A_6a (lam : F) :
     HasEigenvalue (T_ex_5A_6 (F := F)) lam ↔ lam ∈ eigenvalues_5A_6 F := by
-  sorry
+  rw [Module.End.hasEigenvalue_iff_exists, eigenvalues_5A_6,
+    Set.mem_insert_iff, Set.mem_singleton_iff]
+  constructor
+  · rintro ⟨v, hv, hTv⟩
+    rw [T_ex_5A_6_apply_eq_smul] at hTv
+    exact mul_self_eq_one_iff.mp (T_ex_5A_6_sq lam v hv hTv.1 hTv.2)
+  · rintro (rfl | rfl)
+    · refine ⟨![1, 1], ?_, ?_⟩
+      · intro h; have := congrFun h 0; simp at this
+      · rw [T_ex_5A_6_apply_eq_smul]; constructor <;> simp
+    · refine ⟨![1, -1], ?_, ?_⟩
+      · intro h; have := congrFun h 0; simp at this
+      · rw [T_ex_5A_6_apply_eq_smul]; constructor <;> simp
 
 theorem exercise_5A_6b (lam : F) (v : Fin 2 → F) :
     HasEigenvector (T_ex_5A_6 (F := F)) lam v ↔ v ∈ eigenvectors_5A_6 F lam := by
-  sorry
+  rw [Module.End.hasEigenvector_iff, Module.End.mem_eigenspace_iff,
+    T_ex_5A_6_apply_eq_smul, eigenvectors_5A_6]
+  by_cases h1 : lam = 1
+  · subst h1
+    simp only [one_mul]
+    constructor
+    · rintro ⟨⟨ha, _⟩, hne⟩; exact ⟨ha.symm, hne⟩
+    · rintro ⟨h, hne⟩; exact ⟨⟨h.symm, h⟩, hne⟩
+  · by_cases h2 : lam = -1
+    · subst h2
+      simp only [if_neg h1, neg_one_mul]
+      constructor
+      · rintro ⟨⟨ha, _⟩, hne⟩; exact ⟨ha, hne⟩
+      · rintro ⟨h, hne⟩; exact ⟨⟨h, by rw [h, neg_neg]⟩, hne⟩
+    · simp only [if_neg h1, if_neg h2, Set.mem_empty_iff_false, iff_false]
+      rintro ⟨⟨ha, hb⟩, hne⟩
+      rcases mul_self_eq_one_iff.mp (T_ex_5A_6_sq lam v hne ha hb) with h | h
+      · exact h1 h
+      · exact h2 h
 
 /-- 5A.7 {lit}`T(z₁, z₂, z₃) = (2z₂, 0, 5z₃)` on {lit}`F³`: find all
 eigenvalues and eigenvectors. -/
@@ -589,24 +720,129 @@ def T_ex_5A_7 : (Fin 3 → F) →ₗ[F] (Fin 3 → F) where
     fin_cases i <;> simp <;> ring
 
 /-- The set of eigenvalues of {lit}`T_ex_5A_7` — to be determined. -/
-def eigenvalues_5A_7 (F : Type*) [Field F] : Set F := sorry
+-- 2 y = l x; 0 = l y; 5 z = l z
+-- l = 0 -> z = 0, y = 0, x arbitrary nonzero -> eigenv [x, 0, 0]
+-- l =/ 0 -> y = 0, x = 0, z arbitrary nonzero, l = 5 -> eigenv [0, 0, z]
+def eigenvalues_5A_7 (F : Type*) [Field F] : Set F := {0, 5}
 
-/-- The set of eigenvectors of {lit}`T_ex_5A_7` for a scalar {lit}`lam` — to be
-determined (empty when {lit}`lam` is not an eigenvalue). -/
-def eigenvectors_5A_7 (F : Type*) [Field F] (lam : F) : Set (Fin 3 → F) := sorry
+/-- The set of eigenvectors of {lit}`T_ex_5A_7` for a scalar {lit}`lam` (empty
+when {lit}`lam` is not an eigenvalue). For {lit}`lam = 0` these are the nonzero
+solutions of {lit}`2·v₁ = 0` and {lit}`5·v₂ = 0` (equations kept unsimplified so
+the description stays correct in every characteristic); for {lit}`lam = 5` they
+are the nonzero vectors with {lit}`v₀ = v₁ = 0`, i.e. the multiples of
+{lit}`(0, 0, 1)`. -/
+noncomputable def eigenvectors_5A_7 (F : Type*) [Field F] (lam : F) :
+    Set (Fin 3 → F) :=
+  open Classical in
+  if lam = 0 then {v | 2 * v 1 = 0 ∧ 5 * v 2 = 0 ∧ v ≠ 0}
+  else if lam = 5 then {v | v 0 = 0 ∧ v 1 = 0 ∧ v ≠ 0}
+  else ∅
+
+/-- {lit}`T v = lam • v` unpacks into the three coordinate equations of
+{lit}`T(z₁, z₂, z₃) = (2z₂, 0, 5z₃)`. -/
+private theorem T_ex_5A_7_apply_eq_smul (lam : F) (v : Fin 3 → F) :
+    (T_ex_5A_7 (F := F)) v = lam • v ↔
+      2 * v 1 = lam * v 0 ∧ lam * v 1 = 0 ∧ 5 * v 2 = lam * v 2 := by
+  constructor
+  · intro h
+    refine ⟨?_, ?_, ?_⟩
+    · have := congrFun h 0; simpa [T_ex_5A_7] using this
+    · have := congrFun h 1; simpa [T_ex_5A_7] using this.symm
+    · have := congrFun h 2; simpa [T_ex_5A_7] using this
+  · rintro ⟨h0, h1, h2⟩
+    funext i
+    fin_cases i
+    · simpa [T_ex_5A_7] using h0
+    · simpa [T_ex_5A_7] using h1.symm
+    · simpa [T_ex_5A_7] using h2
 
 theorem exercise_5A_7a (lam : F) :
     HasEigenvalue (T_ex_5A_7 (F := F)) lam ↔ lam ∈ eigenvalues_5A_7 F := by
-  sorry
+  rw [Module.End.hasEigenvalue_iff_exists, eigenvalues_5A_7,
+    Set.mem_insert_iff, Set.mem_singleton_iff]
+  constructor
+  · rintro ⟨v, hv, hTv⟩
+    rw [T_ex_5A_7_apply_eq_smul] at hTv
+    obtain ⟨h0, h1, h2⟩ := hTv
+    by_contra hc
+    push Not at hc
+    obtain ⟨hlam0, hlam5⟩ := hc
+    apply hv
+    have hv1 : v 1 = 0 := (mul_eq_zero.mp h1).resolve_left hlam0
+    have hv0 : v 0 = 0 := by
+      have : lam * v 0 = 0 := by rw [← h0, hv1, mul_zero]
+      exact (mul_eq_zero.mp this).resolve_left hlam0
+    have hv2 : v 2 = 0 := by
+      have h5 : (5 - lam) * v 2 = 0 := by linear_combination h2
+      rcases mul_eq_zero.mp h5 with h | h
+      · exact absurd (sub_eq_zero.mp h).symm hlam5
+      · exact h
+    funext i; fin_cases i <;> simp [hv0, hv1, hv2]
+  · rintro (rfl | rfl)
+    · refine ⟨![1, 0, 0], ?_, ?_⟩
+      · intro h; have := congrFun h 0; simp at this
+      · rw [T_ex_5A_7_apply_eq_smul]; refine ⟨?_, ?_, ?_⟩ <;> simp
+    · refine ⟨![0, 0, 1], ?_, ?_⟩
+      · intro h; have := congrFun h 2; simp at this
+      · rw [T_ex_5A_7_apply_eq_smul]; refine ⟨?_, ?_, ?_⟩ <;> simp
 
 theorem exercise_5A_7b (lam : F) (v : Fin 3 → F) :
     HasEigenvector (T_ex_5A_7 (F := F)) lam v ↔ v ∈ eigenvectors_5A_7 F lam := by
-  sorry
+  rw [Module.End.hasEigenvector_iff, Module.End.mem_eigenspace_iff,
+    T_ex_5A_7_apply_eq_smul, eigenvectors_5A_7]
+  by_cases h0 : lam = 0
+  · rw [if_pos h0, Set.mem_setOf_eq, h0]
+    simp only [zero_mul]
+    constructor
+    · rintro ⟨⟨ha, _, hc⟩, hne⟩; exact ⟨ha, hc, hne⟩
+    · rintro ⟨ha, hc, hne⟩; exact ⟨⟨ha, trivial, hc⟩, hne⟩
+  · rw [if_neg h0]
+    by_cases h5 : lam = 5
+    · rw [if_pos h5, Set.mem_setOf_eq, h5]
+      have h50 : (5 : F) ≠ 0 := h5 ▸ h0
+      constructor
+      · rintro ⟨⟨ha, hb, _⟩, hne⟩
+        have hv1 : v 1 = 0 := (mul_eq_zero.mp hb).resolve_left h50
+        have hv0 : v 0 = 0 := by
+          have : (5 : F) * v 0 = 0 := by rw [← ha, hv1, mul_zero]
+          exact (mul_eq_zero.mp this).resolve_left h50
+        exact ⟨hv0, hv1, hne⟩
+      · rintro ⟨hv0, hv1, hne⟩
+        exact ⟨⟨by rw [hv0, hv1, mul_zero, mul_zero],
+          by rw [hv1, mul_zero], rfl⟩, hne⟩
+    · rw [if_neg h5, Set.mem_empty_iff_false, iff_false]
+      rintro ⟨⟨ha, hb, hc⟩, hne⟩
+      apply hne
+      have hv1 : v 1 = 0 := (mul_eq_zero.mp hb).resolve_left h0
+      have hv0 : v 0 = 0 := by
+        have : lam * v 0 = 0 := by rw [← ha, hv1, mul_zero]
+        exact (mul_eq_zero.mp this).resolve_left h0
+      have hv2 : v 2 = 0 := by
+        have h5' : (5 - lam) * v 2 = 0 := by linear_combination hc
+        rcases mul_eq_zero.mp h5' with h | h
+        · exact absurd (sub_eq_zero.mp h).symm h5
+        · exact h
+      funext i; fin_cases i <;> simp [hv0, hv1, hv2]
 
 /-- 5A.8 -/
 theorem exercise_5A_8 (P : V →ₗ[F] V) (hP : P ∘ₗ P = P) (γ : F)
     (h : HasEigenvalue P γ) : γ = 0 ∨ γ = 1 := by
-  sorry
+  rw [Module.End.hasEigenvalue_iff_exists] at h
+  obtain ⟨v, hv, hne⟩ := h
+  have := congr_arg (P ·) hne
+  simp at this
+  rw [show P (P v) = (P ∘ₗ P) v by simp] at this
+  rw [hP] at this
+  -- Substituting `P v = γ • v` gives `γ • v = (γ * γ) • v`; since `v ≠ 0`,
+  -- `γ * γ = γ`, i.e. `γ * (γ - 1) = 0`, so `γ = 0` or `γ = 1`.
+  rw [hne, smul_smul] at this
+  have hz : (γ * γ - γ) • v = 0 := by rw [sub_smul, ← this, sub_self]
+  have hfac : γ * (γ - 1) = 0 := by
+    have := (smul_eq_zero.mp hz).resolve_right hv
+    linear_combination this
+  rcases mul_eq_zero.mp hfac with h0 | h1
+  · left; exact h0
+  · right; exact sub_eq_zero.mp h1
 
 /-- 5A.9 The differentiation operator on {lit}`𝒫(ℝ)`: find all eigenvalues and
 eigenvectors. -/
