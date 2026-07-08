@@ -1692,21 +1692,164 @@ theorem exercise_5A_25 (T : V →ₗ[F] V) (u w : V) (a b : F)
 theorem exercise_5A_26 (T : V →ₗ[F] V)
     (h : ∀ v : V, v ≠ 0 → ∃ γ : F, HasEigenvector T γ v) :
     ∃ c : F, T = c • LinearMap.id := by
-  sorry
+  -- use 25 to show all eigenvalues are the same, so now T v = lam v = (lam • I) v
+  by_cases hV : ∀ v : V, v = 0
+  · -- trivial space: `T = 0 = 0 • I`
+    exact ⟨0, LinearMap.ext fun v => by rw [hV v]; simp⟩
+  · rw [not_forall] at hV
+    obtain ⟨v0, hv0⟩ := hV
+    -- `v0` has some eigenvalue `c`; we show `T = c • I`.
+    obtain ⟨c, hcv0⟩ := h v0 hv0
+    refine ⟨c, LinearMap.ext fun v => ?_⟩
+    rw [LinearMap.smul_apply, LinearMap.id_apply]
+    have hTv0 : T v0 = c • v0 := (Module.End.hasEigenvector_iff_and.mp hcv0).2
+    by_cases hv : v = 0
+    · rw [hv, map_zero, smul_zero]
+    · by_cases hsum : v0 + v = 0
+      · -- `v = -v0`, so `T v = -(c • v0) = c • v` directly
+        have hvneg : v = -v0 := by rw [eq_neg_iff_add_eq_zero, add_comm]; exact hsum
+        rw [hvneg, map_neg, hTv0, smul_neg]
+      · -- `v0 + v ≠ 0` is an eigenvector, so by 5A.25 its eigenvalue forces `γ = c`
+        obtain ⟨γ, hγv⟩ := h v hv
+        have hcγ : c = γ := exercise_5A_25 T v0 v c γ hcv0 hγv (h (v0 + v) hsum)
+        rw [(Module.End.hasEigenvector_iff_and.mp hγv).2, hcγ]
+
+-- helpers for 27
+/-- In a finite-dimensional space, a subspace can be grown one dimension at a
+time: whenever {lit}`finrank P ≤ k ≤ finrank V` there is a {lit}`k`-dimensional
+{lit}`U ⊇ P`. -/
+private theorem exists_finrank_eq_of_le [Finite F V] (P : Submodule F V) :
+    ∀ k, finrank F P ≤ k → k ≤ finrank F V →
+      ∃ U : Submodule F V, P ≤ U ∧ finrank F U = k := by
+  intro k
+  induction k with
+  | zero => intro h0 _; exact ⟨P, le_refl _, Nat.le_zero.mp h0⟩
+  | succ m ih =>
+    intro hm hmn
+    rcases Nat.lt_or_ge (finrank F P) (m + 1) with hlt | hge
+    · -- grow an `m`-dimensional intermediate space by one dimension
+      obtain ⟨U0, hPU0, hU0⟩ := ih (Nat.lt_succ_iff.mp hlt) (Nat.le_of_succ_le hmn)
+      have hU0lt : finrank F U0 < finrank F V := by rw [hU0]; omega
+      obtain ⟨x, hx⟩ : ∃ x, x ∉ U0 := by
+        have hne : U0 ≠ ⊤ := fun hcon => by rw [hcon, finrank_top] at hU0lt; omega
+        by_contra hc; simp only [not_exists, not_not] at hc
+        exact hne (by ext y; simp [hc y])
+      exact ⟨U0 ⊔ Submodule.span F {x}, le_trans hPU0 le_sup_left, by
+        rw [Submodule.finrank_sup_span_singleton hx, hU0]⟩
+    · exact ⟨P, le_refl _, le_antisymm hm hge⟩
+
+/-- Given independent {lit}`v, w` ({lit}`w ∉ span v`) and {lit}`1 ≤ k ≤ finrank V − 1`,
+there is a {lit}`k`-dimensional subspace containing {lit}`v` but not {lit}`w`. -/
+-- TODO: is this an earlier exercise in the book?
+private theorem exists_finrank_mem_notMem [Finite F V] (v w : V) (hv : v ≠ 0)
+  (hw : w ∉ Submodule.span F {v}) (k : ℕ) (hk1 : 1 ≤ k) (hk : k ≤ finrank F V - 1) :
+    ∃ U : Submodule F V, v ∈ U ∧ w ∉ U ∧ finrank F U = k := by
+  -- A functional `φ` with `φ v = 0`, `φ w ≠ 0`: pass to `W ⧸ span v`, where the
+  -- image of `w` is nonzero, and pull back a functional nonzero there.
+  set q : V →ₗ[F] (V ⧸ Submodule.span F {v}) := Submodule.mkQ _
+  have hqw : q w ≠ 0 := by rw [Submodule.mkQ_apply, Ne, Submodule.Quotient.mk_eq_zero]; exact hw
+  obtain ⟨ψ, hψ⟩ : ∃ ψ : (V ⧸ Submodule.span F {v}) →ₗ[F] F, ψ (q w) ≠ 0 := by
+    by_contra hc; simp only [not_exists, not_not] at hc
+    exact hqw ((Module.forall_dual_apply_eq_zero_iff F (q w)).mp hc)
+  set φ := ψ.comp q with hφdef
+  have hφv : φ v = 0 := by
+    have hqv : q v = 0 := by
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+      exact Submodule.mem_span_singleton_self v
+    rw [hφdef, LinearMap.comp_apply, hqv, map_zero]
+  -- `ker φ` is a hyperplane: `v ∈ ker φ`, `w ∉ ker φ`, and `finrank ≥ finrank W − 1`.
+  have hvH : v ∈ LinearMap.ker φ := hφv
+  have hwH : w ∉ LinearMap.ker φ := hψ
+  have hkH : k ≤ finrank F (LinearMap.ker φ) := by
+    have hle1 : finrank F (LinearMap.range φ) ≤ 1 := by
+      have := Submodule.finrank_le (LinearMap.range φ); rwa [Module.finrank_self] at this
+    have hrank := φ.finrank_range_add_finrank_ker
+    omega
+  -- grow `span v` to a `k`-dimensional subspace inside `ker φ`, then push out to `W`.
+  have hvHne : (⟨v, hvH⟩ : LinearMap.ker φ) ≠ 0 :=
+    fun hcon => hv (by simpa using congrArg Subtype.val hcon)
+  obtain ⟨U', hPU', hU'⟩ := exists_finrank_eq_of_le
+    (Submodule.span F {(⟨v, hvH⟩ : LinearMap.ker φ)}) k
+    (by rw [finrank_span_singleton hvHne]; exact hk1) hkH
+  refine ⟨U'.map (LinearMap.ker φ).subtype, ⟨⟨v, hvH⟩,
+    hPU' (Submodule.mem_span_singleton_self _), rfl⟩, ?_, ?_⟩
+  · rintro ⟨⟨y, hyH⟩, -, hy⟩; exact hwH (hy ▸ hyH)
+  · rw [Submodule.finrank_map_subtype_eq]; exact hU'
 
 /-- 5A.27 -/
 theorem exercise_5A_27 [Finite F V] (T : V →ₗ[F] V) (k : ℕ+)
     (hk' : k ≤ finrank F V - 1)
     (h : ∀ U : Submodule F V, finrank F U = k → InvariantUnder T U) :
     ∃ c : F, T = c • LinearMap.id := by
-  sorry
+  -- by exercise 3, we can intersect any invariant spaces to get invariant
+  -- we need to show that any subspace of dimension k - 1 can be obtained
+  -- by intersecting subspaces of dimension k.
+  -- then by induction we get to 1. These are generated by all vectors
+  -- so every vector is an eigenvector so we can use 26.
+  apply exercise_5A_26
+  intro v hv
+  -- It suffices that the line `span v` is invariant: then `T v ∈ span v`.
+  suffices hinv : InvariantUnder T (Submodule.span F {v}) by
+    have hTv : T v ∈ Submodule.span F {v} := hinv v (Submodule.mem_span_singleton_self v)
+    rw [Submodule.mem_span_singleton] at hTv
+    obtain ⟨a, ha⟩ := hTv
+    exact ⟨a, Module.End.hasEigenvector_iff_and.mpr ⟨hv, ha.symm⟩⟩
+  -- `span v` is the intersection of the `k`-dimensional subspaces containing it:
+  -- any `x ∉ span v` is excluded by some such subspace (`exists_finrank_mem_notMem`).
+  have hspan_eq : Submodule.span F {v} =
+      sInf {U : Submodule F V | finrank F U = k ∧ Submodule.span F {v} ≤ U} := by
+    refine le_antisymm (le_sInf fun U hU => hU.2) fun x hx => ?_
+    by_contra hxspan
+    obtain ⟨U, hvU, hxU, hUk⟩ := exists_finrank_mem_notMem v x hv hxspan k k.pos hk'
+    exact hxU (Submodule.mem_sInf.mp hx U ⟨hUk, (Submodule.span_singleton_le_iff_mem v U).mpr hvU⟩)
+  -- Each of those subspaces is invariant, and an intersection of invariant
+  -- subspaces is invariant, so `span v` is invariant.
+  rw [hspan_eq]
+  intro x hx
+  rw [Submodule.mem_sInf] at hx ⊢
+  exact fun U hU => h U hU.1 x (hx U hU)
 
 /-- 5A.28 -/
 theorem exercise_5A_28 [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
     (γ : Fin m → F) (hγ : Function.Injective γ)
     (hev : ∀ k, HasEigenvalue T (γ k)) :
     m ≤ 1 + finrank F (range T) := by
-  sorry
+  -- we known the list of eigenvectors v i corresponding to unique eigenvalues is
+  -- linearly independent. Moreover, each T v i is in range T, so the list cannot
+  -- be more than rank range T. Extra 1 comes from accounting that if T v i is 0
+  -- the eigenvalue is zero, and we exclude that from the calculation.
+  classical
+  -- Pick an eigenvector for each eigenvalue; by 5.11 they are linearly independent.
+  simp only [Module.End.hasEigenvalue_iff_exists] at hev
+  choose v hv_ne hv_eq using hev
+  have hli : LinearIndependent F v :=
+    eigenvectors_linearIndependent T γ hγ v
+      fun k => Module.End.hasEigenvector_iff_and.mpr ⟨hv_ne k, hv_eq k⟩
+  -- On the nonzero eigenvalues, `T (v i) = γ i • v i` stays independent (nonzero scaling)…
+  have hsub : LinearIndependent F (fun i : {i // γ i ≠ 0} => v i.val) :=
+    hli.comp _ Subtype.val_injective
+  have hunit : LinearIndependent F
+      (fun i : {i // γ i ≠ 0} => (Units.mk0 (γ i.val) i.2 : F) • v i.val) :=
+    hsub.units_smul (fun i => Units.mk0 (γ i.val) i.2)
+  have hTvli : LinearIndependent F (fun i : {i // γ i ≠ 0} => T (v i.val)) := by
+    have hfe : (fun i : {i // γ i ≠ 0} => T (v i.val))
+        = (fun i : {i // γ i ≠ 0} => (Units.mk0 (γ i.val) i.2 : F) • v i.val) := by
+      funext i; rw [hv_eq]; simp
+    rw [hfe]; exact hunit
+  -- … and lies in `range T`, so their number bounds `finrank (range T)`.
+  have hspan_le : Submodule.span F (Set.range (fun i : {i // γ i ≠ 0} => T (v i.val)))
+      ≤ range T := by
+    rw [Submodule.span_le]; rintro _ ⟨i, rfl⟩; exact LinearMap.mem_range_self T _
+  have hcard : Fintype.card {i // γ i ≠ 0} ≤ finrank F (range T) := by
+    rw [← finrank_span_eq_card hTvli]; exact Submodule.finrank_mono hspan_le
+  -- Distinct eigenvalues ⟹ at most one is zero, so we lose at most one from the count.
+  have h1 : Fintype.card {i // γ i ≠ 0} = m - Fintype.card {i // γ i = 0} := by
+    have := Fintype.card_subtype_compl (p := fun i : Fin m => γ i = 0)
+    rwa [Fintype.card_fin] at this
+  have h2 : Fintype.card {i // γ i = 0} ≤ 1 := by
+    rw [Fintype.card_le_one_iff]; rintro ⟨i, hi⟩ ⟨j, hj⟩
+    exact Subtype.ext (hγ (hi.trans hj.symm))
+  omega
 
 /-- 5A.29 -/
 theorem exercise_5A_29 (T : (Fin 3 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ))
