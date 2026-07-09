@@ -1858,7 +1858,46 @@ theorem exercise_5A_29 (T : (Fin 3 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ))
     (h4 : HasEigenvalue T (-4)) (h5 : HasEigenvalue T 5)
     (h7 : HasEigenvalue T (Real.sqrt 7)) :
     ∃ x : Fin 3 → ℝ, T x - 9 • x = ![-4, 5, Real.sqrt 7] := by
-  sorry
+  -- 9 is not eigenvalue, because we have at most 3 for R3 transformation
+  -- by earlier theorem T x - 9 x is then bijection, thus x exists for any vector
+  -- in particular the given one.
+  have hs : (0 : ℝ) ≤ Real.sqrt 7 := Real.sqrt_nonneg 7
+  have hs5 : Real.sqrt 7 < 5 := by
+    have h := Real.sqrt_lt_sqrt (by norm_num : (0 : ℝ) ≤ 7) (by norm_num : (7 : ℝ) < 25)
+    rwa [show Real.sqrt 25 = 5 by
+      rw [show (25 : ℝ) = 5 ^ 2 by norm_num, Real.sqrt_sq (by norm_num)]] at h
+  -- the four numbers `-4, 5, √7, 9` are pairwise distinct
+  have d01 : (-4 : ℝ) ≠ 5 := by norm_num
+  have d09 : (-4 : ℝ) ≠ 9 := by norm_num
+  have d19 : (5 : ℝ) ≠ 9 := by norm_num
+  have d0s : (-4 : ℝ) ≠ Real.sqrt 7 := by intro h; nlinarith [hs]
+  have d1s : (5 : ℝ) ≠ Real.sqrt 7 := by intro h; nlinarith [hs5]
+  have ds9 : Real.sqrt 7 ≠ 9 := by intro h; nlinarith [hs5]
+  have h9 : ¬ HasEigenvalue T (9 : ℝ) := by
+    intro h9
+    have hlam : Function.Injective ![(-4 : ℝ), 5, Real.sqrt 7, 9] := by
+      intro i j hij
+      fin_cases i <;> fin_cases j <;> simp_all [Fin.ext_iff]
+    have hev : ∀ k, HasEigenvalue T (![(-4 : ℝ), 5, Real.sqrt 7, 9] k) := by
+      intro k; fin_cases k
+      · exact h4
+      · exact h5
+      · exact h7
+      · exact h9
+    have hle := card_eigenvalues_le_finrank T ![(-4 : ℝ), 5, Real.sqrt 7, 9] hlam hev
+    simp only [Module.finrank_pi, Fintype.card_fin] at hle
+    omega
+  -- `9` not an eigenvalue ⟹ `T - 9•I` is surjective (5.7, `tfae_isEigenvalue`).
+  have hsurj : Function.Surjective
+      (T - (9 : ℝ) • (LinearMap.id : (Fin 3 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ))) := by
+    by_contra hns
+    exact h9 (((tfae_isEigenvalue T 9).out 0 2).mpr hns)
+  -- Solve `(T - 9•I) x = ![-4, 5, √7]`.
+  obtain ⟨x, hx⟩ := hsurj ![(-4 : ℝ), 5, Real.sqrt 7]
+  refine ⟨x, ?_⟩
+  have h9x : (9 : ℕ) • x = (9 : ℝ) • x := by ext i; simp
+  rw [h9x]
+  simpa [LinearMap.sub_apply, LinearMap.smul_apply] using hx
 
 /-- 5A.30 -/
 theorem exercise_5A_30 (T : V →ₗ[F] V)
@@ -2609,10 +2648,118 @@ theorem exercise_5A_42b (n : ℕ) (U : Submodule ℝ (Fin n → ℝ)) :
     | add x y _ _ ihx ihy => rw [map_add]; exact Submodule.add_mem _ ihx ihy
     | smul a x _ ihx => rw [map_smul]; exact Submodule.smul_mem _ _ ihx
 
+/-- A polynomial in {lit}`T` acts on a {lit}`c`-eigenvector by the scalar {lit}`eval c p`. -/
+private theorem aeval_eq_of_eigenvector {T : V →ₗ[F] V} {c : F} {v : V}
+    (h : T v = c • v) (q : Polynomial F) : (aeval T q) v = Polynomial.eval c q • v := by
+  have hpow : ∀ k : ℕ, (T ^ k) v = c ^ k • v := by
+    intro k
+    induction k with
+    | zero => simp
+    | succ m ih => rw [pow_succ, Module.End.mul_apply, h, map_smul, ih, smul_smul, ← pow_succ']
+  rw [Polynomial.aeval_eq_sum_range, Polynomial.eval_eq_sum_range, LinearMap.sum_apply,
+    Finset.sum_smul]
+  refine Finset.sum_congr rfl fun k _ => ?_
+  rw [LinearMap.smul_apply, hpow, smul_smul]
+
 /-- 5A.43 -/
 theorem exercise_5A_43 [Finite F V] (hV : 1 < finrank F V)
     (T : V →ₗ[F] V) :
     ∃ S : V →ₗ[F] V, ∀ p : Polynomial F, aeval T p ≠ S := by
-  sorry
+  -- solution attempt 1)
+  -- case 1) 0 < R = range T < V, R is T invariant, so it is p(T) invariant too
+  -- so R is S invariant for all S, by exercise 4) it must be 0 or V contradition
+  -- case 2) R = 0, T = 0, so p(T) = 0, so S = I works
+  -- case 3) R = V, T is surjective, hence invertable
+  -- ???
+
+  -- solution 2)
+  -- null (p T) is T invariant for all p,
+  -- so null S is T invariant for all S
+  -- every 1d subspace is null S for some S by 27 then T is c I
+  -- but P(c I) = p(c) I so all S = c' I
+  -- if dim > 1, exists a transformation that is not I
+  -- take a basis, send v1 to v1 and v2 to 0.
+
+  -- Solution 2: assume every operator is a polynomial in `T`.  Then every operator commutes
+  -- with `T`, so every null space `null S` is `T`-invariant.  Every 1-dim subspace is `null S`
+  -- for some `S`, hence `T`-invariant, so by 5A.26 `T = c • I`.  Then every `aeval T p` is a
+  -- scalar `eval c p • I`, contradicting the existence of a non-scalar operator (`dim > 1`).
+  by_contra hcon
+  simp only [not_exists, not_forall, not_ne_iff] at hcon
+  -- Every nonzero `v` spans a null space (project along a complement); that null space is
+  -- `T`-invariant by `ker_aeval_invariant`, so `v` is an eigenvector.  By 5A.26, `T` is scalar.
+  obtain ⟨c, hc⟩ : ∃ c : F, T = c • LinearMap.id := by
+    apply exercise_5A_26
+    intro v hv
+    obtain ⟨Q, hQ⟩ := (Submodule.span F {v}).exists_isCompl
+    set S : V →ₗ[F] V :=
+      Q.subtype ∘ₗ Submodule.linearProjOfIsCompl Q (Submodule.span F {v}) hQ.symm with hS
+    have hkerS : LinearMap.ker S = Submodule.span F {v} := by
+      rw [hS, LinearMap.ker_comp, Submodule.ker_subtype, Submodule.comap_bot,
+        Submodule.linearProjOfIsCompl_ker]
+    obtain ⟨p, hp⟩ := hcon S
+    have hInv : InvariantUnder T (LinearMap.ker S) := hp ▸ ker_aeval_invariant T p
+    have hvker : v ∈ LinearMap.ker S := by
+      rw [hkerS]; exact Submodule.mem_span_singleton_self v
+    have hTvker : T v ∈ LinearMap.ker S := hInv v hvker
+    rw [hkerS, Submodule.mem_span_singleton] at hTvker
+    obtain ⟨a, ha⟩ := hTvker
+    exact ⟨a, Module.End.hasEigenvector_iff_and.mpr ⟨hv, ha.symm⟩⟩
+  -- Non-scalar operator from a basis: `b i0 ↦ b i1`.  It cannot equal a scalar `aeval T p`.
+  set n := finrank F V with hn
+  let b : Module.Basis (Fin n) F V := Module.finBasis F V
+  let i0 : Fin n := ⟨0, by omega⟩
+  let i1 : Fin n := ⟨1, by omega⟩
+  have hne : i1 ≠ i0 := by simp only [i0, i1, ne_eq, Fin.mk.injEq]; omega
+  set S : V →ₗ[F] V := b.constr F (fun i => if i = i0 then b i1 else 0) with hS
+  obtain ⟨p, hp⟩ := hcon S
+  have hSb0 : S (b i0) = b i1 := by rw [hS, Module.Basis.constr_basis]; simp
+  have hTb0 : T (b i0) = c • b i0 := by rw [hc]; simp
+  have hval : S (b i0) = Polynomial.eval c p • b i0 := by
+    rw [← hp]; exact aeval_eq_of_eigenvector hTb0 p
+  rw [hSb0] at hval
+  have hrep := congrArg (fun x => b.repr x i1) hval
+  simp [Module.Basis.repr_self, map_smul, smul_eq_mul, hne] at hrep
+
+/-- 5A.43, alternative proof: {lit}`F[T]` is commutative but {lit}`ℒ(V)` is not
+(when {lit}`dim ≥ 2`). -/
+theorem exercise_5A_43_alternative_sol [Finite F V] (hV : 1 < finrank F V)
+    (T : V →ₗ[F] V) :
+    ∃ S : V →ₗ[F] V, ∀ p : Polynomial F, aeval T p ≠ S := by
+  -- If every operator were a polynomial in `T`, all operators would
+  -- commute (`F[X]` is commutative), and every `null S` would be `T`-invariant — forcing `T`
+  -- to be a scalar and every operator with it.  We package the contradiction as: a space of
+  -- dimension `≥ 2` has two non-commuting operators, which cannot both be polynomials in `T`.
+  by_contra hcon
+  simp only [not_exists, not_forall, not_ne_iff] at hcon
+  -- Under the assumption, any two operators commute (both are polynomials in `T`).
+  have hcomm : ∀ S₁ S₂ : V →ₗ[F] V, S₁ * S₂ = S₂ * S₁ := by
+    intro S₁ S₂
+    obtain ⟨p₁, hp₁⟩ := hcon S₁
+    obtain ⟨p₂, hp₂⟩ := hcon S₂
+    rw [← hp₁, ← hp₂]
+    exact ((Commute.all p₁ p₂).map (aeval T)).eq
+  -- Build two non-commuting operators from a basis (using `dim V ≥ 2`).
+  set n := finrank F V with hn
+  let b : Module.Basis (Fin n) F V := Module.finBasis F V
+  let i0 : Fin n := ⟨0, by omega⟩
+  let i1 : Fin n := ⟨1, by omega⟩
+  have hne : i0 ≠ i1 := by simp only [i0, i1, ne_eq, Fin.mk.injEq]; omega
+  -- `S₁` sends `b i1 ↦ b i0`, and `S₂` is the projection onto `b i0`; they fail to commute.
+  let S₁ : V →ₗ[F] V := b.constr F (fun i => if i = i1 then b i0 else 0)
+  let S₂ : V →ₗ[F] V := b.constr F (fun i => if i = i0 then b i0 else 0)
+  have hs2b1 : S₂ (b i1) = 0 := by
+    show (b.constr F (fun i => if i = i0 then b i0 else 0)) (b i1) = 0
+    rw [Module.Basis.constr_basis]; simp [hne.symm]
+  have hs1b1 : S₁ (b i1) = b i0 := by
+    show (b.constr F (fun i => if i = i1 then b i0 else 0)) (b i1) = b i0
+    rw [Module.Basis.constr_basis]; simp
+  have hs2b0 : S₂ (b i0) = b i0 := by
+    show (b.constr F (fun i => if i = i0 then b i0 else 0)) (b i0) = b i0
+    rw [Module.Basis.constr_basis]; simp
+  have key : (S₁ * S₂) (b i1) ≠ (S₂ * S₁) (b i1) := by
+    rw [Module.End.mul_apply, Module.End.mul_apply, hs2b1, hs1b1, hs2b0, map_zero]
+    exact (b.ne_zero i0).symm
+  exact key (by rw [hcomm S₁ S₂])
 
 end LADR.Section_5A
