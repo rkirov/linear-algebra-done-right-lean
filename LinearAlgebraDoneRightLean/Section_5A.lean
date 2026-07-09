@@ -8,7 +8,9 @@ import Mathlib.Algebra.Polynomial.Basic
 import Mathlib.Algebra.Polynomial.Derivative
 import Mathlib.Algebra.Polynomial.Eval.Defs
 import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.Dual.Defs
@@ -1864,58 +1866,425 @@ theorem exercise_5A_30 (T : V →ₗ[F] V)
       (T - 4 • LinearMap.id) = 0)
     (γ : F) (hγ : HasEigenvalue T γ) :
     γ = 2 ∨ γ = 3 ∨ γ = 4 := by
-  sorry
+  -- T v = l v for some v, then
+  -- (T - 2 I) (T - 3 I) (T - 4 I) v = (T - 2 I) (T - 3 I) (l v - 4 v)
+  -- = (T - 2 I) (l - 4) (l v - 3 v) = (l - 4) (l - 3) (l - 2) = 0
+  -- by field axioms l is 2, 3 or 4
+  rw [Module.End.hasEigenvalue_iff_exists] at hγ
+  obtain ⟨v, hv, hTv⟩ := hγ
+  -- `(T - 2I)(T - 3I)(T - 4I) v = (γ-2)(γ-3)(γ-4) • v`, and it is `0` by `h`.
+  have hscalar : ((γ - 2) * (γ - 3) * (γ - 4)) • v = 0 := by
+    have hv0 := LinearMap.congr_fun h v
+    simp only [LinearMap.zero_apply, LinearMap.comp_apply, LinearMap.sub_apply,
+      LinearMap.smul_apply, LinearMap.id_apply, map_sub, map_smul, map_nsmul, hTv] at hv0
+    linear_combination (norm := module) hv0
+  -- `v ≠ 0`, so the scalar vanishes; by the field axioms `γ ∈ {2, 3, 4}`.
+  have hz : (γ - 2) * (γ - 3) * (γ - 4) = 0 := (smul_eq_zero.mp hscalar).resolve_right hv
+  rcases mul_eq_zero.mp hz with hab | h4
+  · rcases mul_eq_zero.mp hab with h2 | h3
+    · exact Or.inl (sub_eq_zero.mp h2)
+    · exact Or.inr (Or.inl (sub_eq_zero.mp h3))
+  · exact Or.inr (Or.inr (sub_eq_zero.mp h4))
 
 /-- 5A.31 -/
 theorem exercise_5A_31 :
     ∃ T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ), T ^ 4 = -LinearMap.id := by
-  sorry
+  -- use rotation by 45 deg
+  -- [[1 -1] [1 1]] normalized
+  -- `T` is rotation by 45°, so `T⁴` is rotation by 180° `= -I`.  The `√2` normalization
+  -- gives `‖T‖ = 1`; concretely `√2 ^ 4 = 4` cancels the four divisions.
+  have hs2 : Real.sqrt 2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+  have hs4 : Real.sqrt 2 ^ 4 = 4 := by rw [show (4 : ℕ) = 2 * 2 from rfl, pow_mul, hs2]; norm_num
+  have hs0 : Real.sqrt 2 ≠ 0 := by positivity
+  refine ⟨{
+    toFun := fun v => ![(v 0 - v 1) / Real.sqrt 2, (v 0 + v 1) / Real.sqrt 2]
+    map_add' := by intro x y; funext i; fin_cases i <;> simp <;> ring
+    map_smul' := by intro a x; funext i; fin_cases i <;> simp <;> ring }, ?_⟩
+  refine LinearMap.ext fun v => ?_
+  funext i
+  simp only [pow_succ, pow_zero, Module.End.mul_apply, Module.End.one_apply,
+    LinearMap.coe_mk, AddHom.coe_mk, LinearMap.neg_apply, LinearMap.id_coe, id_eq, Pi.neg_apply]
+  fin_cases i <;>
+    simp only [Fin.zero_eta, Fin.mk_one, Matrix.cons_val_zero, Matrix.cons_val_one] <;>
+    field_simp <;>
+    ring_nf <;>
+    rw [hs4]
 
 /-- 5A.32 -/
 theorem exercise_5A_32 (T : V →ₗ[F] V)
     (h : ∀ γ : F, ¬ HasEigenvalue T γ) (h4 : T ^ 4 = LinearMap.id) :
     T ^ 2 = -LinearMap.id := by
-  sorry
+  -- if T ^ 2 v = v, then T (v + T v) = Tv + v, so 1 is eigenvalue, by hyp, can't happen, unless v = 0
+  -- now T ^ 2 (T ^ 2 v + v) = I v + T ^ 2 v, so T ^ 2 u = u, contradicting, unless = 0
+  -- only way it can happen is if T ^ 2 v = -v, for all v.
+
+  -- No eigenvalue means no fixed/anti-fixed vectors: `T w = γ w` forces `w = 0`.
+  have hker0 : ∀ (γ : F) (w : V), T w - γ • w = 0 → w = 0 := fun γ w hw => by
+    by_contra hwne
+    exact h γ (Module.End.hasEigenvalue_iff_exists.mpr ⟨w, hwne, sub_eq_zero.mp hw⟩)
+  -- If `T (T u) = u` then `u = 0`: `T u + u` would be fixed (eigenvalue `1`), forcing it to
+  -- be `0`, and then `u` would satisfy `T u = -u` (eigenvalue `-1`), forcing `u = 0`.
+  have step : ∀ u, T (T u) - u = 0 → u = 0 := by
+    intro u hu
+    have h1 : T (T u + u) - (T u + u) = 0 := by
+      rw [map_add]; linear_combination (norm := module) hu
+    have hz : T u + u = 0 := hker0 1 (T u + u) (by rw [one_smul]; exact h1)
+    exact hker0 (-1) u (by rw [neg_smul, one_smul, sub_neg_eq_add]; exact hz)
+  -- Apply this to `u = T² v + v`: since `T⁴ v = v`, we get `T (T u) = u`, hence `u = 0`,
+  -- i.e. `T² v = -v` for every `v`.
+  ext v
+  simp only [pow_two, Module.End.mul_apply, LinearMap.neg_apply, LinearMap.id_apply]
+  have h4v : T (T (T (T v))) = v := by
+    have := LinearMap.congr_fun h4 v
+    simpa [pow_succ, pow_zero, Module.End.mul_apply, Module.End.one_apply] using this
+  have hu : T (T (T (T v) + v)) - (T (T v) + v) = 0 := by rw [map_add, map_add, h4v]; abel
+  exact eq_neg_of_add_eq_zero_left (step (T (T v) + v) hu)
 
 /-- 5A.33 (a) -/
 theorem exercise_5A_33a (T : V →ₗ[F] V) (m : ℕ+) :
     Function.Injective T ↔ Function.Injective (T ^ m.val) := by
-  sorry
+  -- -> trivial, composition of inj is inj
+  -- <- true in general for all functions
+  -- f ^ m =  f ^ (m - 1) ∘ f, if f is not injective f ^ m cannot be.
+  constructor
+  · intro hT
+    rw [Module.End.coe_pow]
+    exact hT.iterate m.val
+  · intro hTm
+    rw [← Nat.succ_pred_eq_of_pos m.pos, pow_succ, Module.End.coe_mul] at hTm
+    exact hTm.of_comp
 
 /-- 5A.33 (b) -/
 theorem exercise_5A_33b (T : V →ₗ[F] V) (m : ℕ+) :
     Function.Surjective T ↔ Function.Surjective (T ^ m.val) := by
-  sorry
+  -- -> trivial , composition of surj is surj
+  -- <- true in general, f ^ m = f ∘ f ^ (m - 1), if f is not surj, f^m cannot be.
+  constructor
+  · intro hT
+    rw [Module.End.coe_pow]
+    exact hT.iterate m.val
+  · intro hTm
+    rw [← Nat.succ_pred_eq_of_pos m.pos, pow_succ', Module.End.coe_mul] at hTm
+    exact hTm.of_comp
 
 /-- 5A.34 -/
-theorem exercise_5A_34 [Finite F V] {m : ℕ} (v : Fin m → V) :
+theorem exercise_5A_34 [CharZero F] [Finite F V] {m : ℕ} (v : Fin m → V) :
     LinearIndependent F v ↔
       ∃ (T : V →ₗ[F] V) (γ : Fin m → F), Function.Injective γ ∧
         ∀ k, HasEigenvector T (γ k) (v k) := by
-  sorry
+  -- <- already proved in the chapter
+  -- -> complete v to a basis
+  -- take T corresponding the matrix with i at the ith diagonal spot, and 0 elsewhere.
+  -- T v i = i v i, so v i is an eigenvector with eigenvalue i, and the eigenvalues are distinct, so injective.
+  constructor
+  · intro hv
+    obtain ⟨n, w, hn, hw, hpres⟩ := LADR.Section_2B.exists_basis_extending v hv
+    set b := hw.toModuleBasis with hb
+    -- Diagonal operator: scale the {lit}`i`th basis vector by the scalar {lit}`i`.
+    set T : V →ₗ[F] V := b.constr F (fun i : Fin n => (i.val : F) • w i) with hT
+    refine ⟨T, fun k : Fin m => (k.val : F), ?_, ?_⟩
+    · -- Distinct indices give distinct eigenvalues (needs {lit}`CharZero F`).
+      intro i j hij
+      exact Fin.val_injective (Nat.cast_injective hij)
+    · intro k
+      have hTw : ∀ i : Fin n, T (w i) = (i.val : F) • w i := by
+        intro i
+        have h : T (b i) = (i.val : F) • w i := by
+          rw [hT]; exact Module.Basis.constr_basis b F _ i
+        rwa [hb, hw.toModuleBasis_apply] at h
+      have h1 := hTw (Fin.castLE hn k)
+      rw [hpres k, Fin.val_castLE] at h1
+      exact ⟨Module.End.mem_eigenspace_iff.mpr h1, hv.ne_zero k⟩
+  · rintro ⟨T, γ, hγ, hev⟩
+    exact eigenvectors_linearIndependent T γ hγ v hev
+
+/-- The functions {lit}`x ↦ exp(γₖ x)` whose independence is the content of 5A.35. -/
+private noncomputable def expFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) : ℝ → ℝ :=
+  fun x => Real.exp (γ k * x)
+
+private theorem differentiable_expFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) :
+    Differentiable ℝ (expFun γ k) := by
+  unfold expFun; fun_prop
+
+/-- Each generator is an eigenvector of {lit}`d/dx`: {lit}`(exp(γₖ ·))' = γₖ exp(γₖ ·)`. -/
+private theorem deriv_expFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) :
+    deriv (expFun γ k) = γ k • expFun γ k := by
+  funext x
+  have h1 : HasDerivAt (fun y => γ k * y) (γ k) x := by
+    simpa using (hasDerivAt_id x).const_mul (γ k)
+  have h2 : HasDerivAt (expFun γ k) (Real.exp (γ k * x) * γ k) x := HasDerivAt.exp h1
+  rw [HasDerivAt.deriv h2]
+  simp only [expFun, Pi.smul_apply, smul_eq_mul]
+  ring
+
+/-- The span of the exponentials {lit}`x ↦ exp(γₖ x)`. -/
+private noncomputable def expSpan {n : ℕ} (γ : Fin n → ℝ) : Submodule ℝ (ℝ → ℝ) :=
+  Submodule.span ℝ (Set.range (expFun γ))
+
+/-- Elements of the span are differentiable and the span is closed under {lit}`d/dx`
+(each generator is an eigenvector, and differentiation is linear on differentiable
+functions), so differentiation restricts to an operator on it. -/
+private theorem expSpan_prop {n : ℕ} (γ : Fin n → ℝ) :
+    ∀ w ∈ expSpan γ, Differentiable ℝ w ∧ deriv w ∈ expSpan γ := by
+  intro w hw
+  induction hw using Submodule.span_induction with
+  | mem x hx =>
+      obtain ⟨k, rfl⟩ := hx
+      exact ⟨differentiable_expFun γ k, by
+        rw [deriv_expFun]; exact (expSpan γ).smul_mem _ (Submodule.subset_span ⟨k, rfl⟩)⟩
+  | zero =>
+      refine ⟨differentiable_const 0, ?_⟩
+      have : deriv (0 : ℝ → ℝ) = 0 := by funext t; simp
+      rw [this]; exact (expSpan γ).zero_mem
+  | add x y _ _ ihx ihy =>
+      obtain ⟨dx, mx⟩ := ihx
+      obtain ⟨dy, my⟩ := ihy
+      refine ⟨dx.add dy, ?_⟩
+      have : deriv (x + y) = deriv x + deriv y := by
+        funext t; exact deriv_add (dx t) (dy t)
+      rw [this]; exact (expSpan γ).add_mem mx my
+  | smul a x _ ihx =>
+      obtain ⟨dx, mx⟩ := ihx
+      refine ⟨dx.const_smul a, ?_⟩
+      have : deriv (a • x) = a • deriv x := by
+        funext t; simp only [Pi.smul_apply, smul_eq_mul]; exact deriv_const_mul a (dx t)
+      rw [this]; exact (expSpan γ).smul_mem a mx
+
+/-- Differentiation as a genuine linear operator on the span {name}`expSpan` of the
+exponentials — the operator {lit}`T = d/dx` used in the sketch, defined only on the
+functions in question. -/
+private noncomputable def expDeriv {n : ℕ} (γ : Fin n → ℝ) :
+    expSpan γ →ₗ[ℝ] expSpan γ where
+  toFun w := ⟨deriv (w : ℝ → ℝ), (expSpan_prop γ w.1 w.2).2⟩
+  map_add' w z := by
+    apply Subtype.ext
+    show deriv ((w : ℝ → ℝ) + (z : ℝ → ℝ)) = deriv (w : ℝ → ℝ) + deriv (z : ℝ → ℝ)
+    funext t; exact deriv_add ((expSpan_prop γ w.1 w.2).1 t) ((expSpan_prop γ z.1 z.2).1 t)
+  map_smul' a w := by
+    apply Subtype.ext
+    show deriv (a • (w : ℝ → ℝ)) = a • deriv (w : ℝ → ℝ)
+    funext t; simp only [Pi.smul_apply, smul_eq_mul]
+    exact deriv_const_mul a ((expSpan_prop γ w.1 w.2).1 t)
 
 /-- 5A.35 -/
 theorem exercise_5A_35 {n : ℕ} (γ : Fin n → ℝ)
     (hγ : Function.Injective γ) :
     LinearIndependent ℝ (fun k => fun x : ℝ => Real.exp (γ k * x)) := by
-  sorry
+  -- will use the eigenvectors_linearIndependent if eigenvectors with distinct eigenvalues for some T
+  -- use T = d/dx, then the the fn are eigenvectors with eigenvalues γ k.
+  -- The exponentials are eigenvectors of `expDeriv` on their span, with the distinct
+  -- eigenvalues γ k, hence linearly independent by 5.11; transfer back along W ↪ (ℝ → ℝ).
+  set W := expSpan γ with hW
+  have hmem : ∀ k, expFun γ k ∈ W := fun k => Submodule.subset_span ⟨k, rfl⟩
+  set v : Fin n → W := fun k => ⟨expFun γ k, hmem k⟩ with hv
+  have hev : ∀ k, HasEigenvector (expDeriv γ) (γ k) (v k) := by
+    intro k
+    refine ⟨Module.End.mem_eigenspace_iff.mpr ?_, ?_⟩
+    · apply Subtype.ext
+      show deriv (expFun γ k) = γ k • expFun γ k
+      exact deriv_expFun γ k
+    · intro h
+      have h0 : Real.exp (γ k * 0) = 0 := congrFun (congrArg (Subtype.val) h) 0
+      exact Real.exp_ne_zero _ h0
+  have hli : LinearIndependent ℝ v :=
+    eigenvectors_linearIndependent (expDeriv γ) γ hγ v hev
+  have := hli.map' W.subtype (Submodule.ker_subtype W)
+  exact this
+
+/-- The functions {lit}`x ↦ cos(γₖ x)` whose independence is the content of 5A.36. -/
+private noncomputable def cosFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) : ℝ → ℝ :=
+  fun x => Real.cos (γ k * x)
+
+private theorem differentiable_cosFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) :
+    Differentiable ℝ (cosFun γ k) := by
+  unfold cosFun; fun_prop
+
+private theorem deriv_cosFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) :
+    deriv (cosFun γ k) = fun x => -(γ k) * Real.sin (γ k * x) := by
+  funext x
+  have h1 : HasDerivAt (fun y => γ k * y) (γ k) x := by
+    simpa using (hasDerivAt_id x).const_mul (γ k)
+  have h2 : HasDerivAt (cosFun γ k) (-Real.sin (γ k * x) * γ k) x := HasDerivAt.cos h1
+  rw [HasDerivAt.deriv h2]; ring
+
+private theorem differentiable_deriv_cosFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) :
+    Differentiable ℝ (deriv (cosFun γ k)) := by
+  rw [deriv_cosFun]; fun_prop
+
+/-- The cosine span is not closed under {lit}`d/dx` (that yields sines), but it is closed
+under the *second* derivative, where each generator is an eigenvector:
+{lit}`(cos(γₖ ·))'' = -γₖ² cos(γₖ ·)`. -/
+private theorem deriv2_cosFun {n : ℕ} (γ : Fin n → ℝ) (k : Fin n) :
+    deriv (deriv (cosFun γ k)) = (-(γ k) ^ 2) • cosFun γ k := by
+  rw [deriv_cosFun]
+  funext x
+  have h1 : HasDerivAt (fun y => γ k * y) (γ k) x := by
+    simpa using (hasDerivAt_id x).const_mul (γ k)
+  have hsin : HasDerivAt (fun y => Real.sin (γ k * y)) (Real.cos (γ k * x) * γ k) x :=
+    HasDerivAt.sin h1
+  have h2 : HasDerivAt (fun y => -(γ k) * Real.sin (γ k * y))
+      (-(γ k) * (Real.cos (γ k * x) * γ k)) x := HasDerivAt.const_mul (-(γ k)) hsin
+  rw [HasDerivAt.deriv h2]
+  simp only [cosFun, Pi.smul_apply, smul_eq_mul]
+  ring
+
+/-- The span of the cosines {lit}`x ↦ cos(γₖ x)`. -/
+private noncomputable def cosSpan {n : ℕ} (γ : Fin n → ℝ) : Submodule ℝ (ℝ → ℝ) :=
+  Submodule.span ℝ (Set.range (cosFun γ))
+
+/-- Elements of the cosine span are twice differentiable and the span is closed under
+the second derivative, so {lit}`d²/dx²` restricts to an operator on it. -/
+private theorem cosSpan_prop {n : ℕ} (γ : Fin n → ℝ) :
+    ∀ w ∈ cosSpan γ,
+      Differentiable ℝ w ∧ Differentiable ℝ (deriv w) ∧ deriv (deriv w) ∈ cosSpan γ := by
+  intro w hw
+  induction hw using Submodule.span_induction with
+  | mem x hx =>
+      obtain ⟨k, rfl⟩ := hx
+      refine ⟨differentiable_cosFun γ k, differentiable_deriv_cosFun γ k, ?_⟩
+      rw [deriv2_cosFun]
+      exact (cosSpan γ).smul_mem _ (Submodule.subset_span ⟨k, rfl⟩)
+  | zero =>
+      have h0 : deriv (0 : ℝ → ℝ) = 0 := by funext t; simp
+      exact ⟨differentiable_const 0, by rw [h0]; exact differentiable_const 0, by
+        rw [h0, h0]; exact (cosSpan γ).zero_mem⟩
+  | add x y _ _ ihx ihy =>
+      obtain ⟨dx, dx2, mx⟩ := ihx
+      obtain ⟨dy, dy2, my⟩ := ihy
+      have hd : deriv (x + y) = deriv x + deriv y := by funext t; exact deriv_add (dx t) (dy t)
+      refine ⟨dx.add dy, by rw [hd]; exact dx2.add dy2, ?_⟩
+      rw [hd]
+      have hdd : deriv (deriv x + deriv y) = deriv (deriv x) + deriv (deriv y) := by
+        funext t; exact deriv_add (dx2 t) (dy2 t)
+      rw [hdd]; exact (cosSpan γ).add_mem mx my
+  | smul a x _ ihx =>
+      obtain ⟨dx, dx2, mx⟩ := ihx
+      have hd : deriv (a • x) = a • deriv x := by
+        funext t; simp only [Pi.smul_apply, smul_eq_mul]; exact deriv_const_mul a (dx t)
+      refine ⟨dx.const_smul a, by rw [hd]; exact dx2.const_smul a, ?_⟩
+      rw [hd]
+      have hdd : deriv (a • deriv x) = a • deriv (deriv x) := by
+        funext t; simp only [Pi.smul_apply, smul_eq_mul]; exact deriv_const_mul a (dx2 t)
+      rw [hdd]; exact (cosSpan γ).smul_mem a mx
+
+/-- The second-derivative operator on the span {name}`cosSpan` of the cosines — the
+{lit}`T = d²/dx²` used in the sketch, defined only on the functions in question. -/
+private noncomputable def cosDeriv2 {n : ℕ} (γ : Fin n → ℝ) :
+    cosSpan γ →ₗ[ℝ] cosSpan γ where
+  toFun w := ⟨deriv (deriv (w : ℝ → ℝ)), (cosSpan_prop γ w.1 w.2).2.2⟩
+  map_add' w z := by
+    apply Subtype.ext
+    show deriv (deriv ((w : ℝ → ℝ) + (z : ℝ → ℝ)))
+      = deriv (deriv (w : ℝ → ℝ)) + deriv (deriv (z : ℝ → ℝ))
+    have hw := cosSpan_prop γ w.1 w.2
+    have hz := cosSpan_prop γ z.1 z.2
+    have hd : deriv ((w : ℝ → ℝ) + (z : ℝ → ℝ)) = deriv (w : ℝ → ℝ) + deriv (z : ℝ → ℝ) := by
+      funext t; exact deriv_add (hw.1 t) (hz.1 t)
+    rw [hd]; funext t; exact deriv_add (hw.2.1 t) (hz.2.1 t)
+  map_smul' a w := by
+    apply Subtype.ext
+    show deriv (deriv (a • (w : ℝ → ℝ))) = a • deriv (deriv (w : ℝ → ℝ))
+    have hw := cosSpan_prop γ w.1 w.2
+    have hd : deriv (a • (w : ℝ → ℝ)) = a • deriv (w : ℝ → ℝ) := by
+      funext t; simp only [Pi.smul_apply, smul_eq_mul]; exact deriv_const_mul a (hw.1 t)
+    rw [hd]; funext t; simp only [Pi.smul_apply, smul_eq_mul]
+    exact deriv_const_mul a (hw.2.1 t)
 
 /-- 5A.36  -/
 theorem exercise_5A_36 {n : ℕ} (γ : Fin n → ℝ)
     (hγ : Function.Injective γ) (hpos : ∀ k, 0 < γ k) :
     LinearIndependent ℝ (fun k => fun x : ℝ => Real.cos (γ k * x)) := by
-  sorry
+  -- same trick but use double derivative, then the fn are eigenvectors with eigenvalues -γ^2
+  -- which are distinct and negative, so we can apply eigenvectors_linearIndependent
+  set W := cosSpan γ with hW
+  have hmem : ∀ k, cosFun γ k ∈ W := fun k => Submodule.subset_span ⟨k, rfl⟩
+  set v : Fin n → W := fun k => ⟨cosFun γ k, hmem k⟩ with hv
+  -- The eigenvalues -(γ k)² are distinct: γ k > 0, so squaring is injective here.
+  have hlam : Function.Injective (fun k => -(γ k) ^ 2) := by
+    intro i j h
+    have hsq : γ i ^ 2 = γ j ^ 2 := by simpa only [neg_inj] using h
+    apply hγ
+    rcases lt_trichotomy (γ i) (γ j) with h1 | h1 | h1
+    · exfalso; nlinarith [hpos i, hpos j]
+    · exact h1
+    · exfalso; nlinarith [hpos i, hpos j]
+  have hev : ∀ k, HasEigenvector (cosDeriv2 γ) (-(γ k) ^ 2) (v k) := by
+    intro k
+    refine ⟨Module.End.mem_eigenspace_iff.mpr ?_, ?_⟩
+    · apply Subtype.ext
+      show deriv (deriv (cosFun γ k)) = (-(γ k) ^ 2) • cosFun γ k
+      exact deriv2_cosFun γ k
+    · intro h
+      have h0 : Real.cos (γ k * 0) = 0 := congrFun (congrArg (Subtype.val) h) 0
+      rw [mul_zero, Real.cos_zero] at h0
+      exact one_ne_zero h0
+  have hli : LinearIndependent ℝ v :=
+    eigenvectors_linearIndependent (cosDeriv2 γ) (fun k => -(γ k) ^ 2) hlam v hev
+  have := hli.map' W.subtype (Submodule.ker_subtype W)
+  exact this
 
 /-- 5A.37 -/
 theorem exercise_5A_37 [Finite F V] (T : V →ₗ[F] V) (γ : F) :
     HasEigenvalue (LinearMap.mulLeft F T : (V →ₗ[F] V) →ₗ[F] (V →ₗ[F] V)) γ ↔
       HasEigenvalue T γ := by
-  sorry
+  constructor
+  · -- -> T S = γ S for some S, take some v s.t. S v ≠ 0 to get T (S v) = γ (S v), so γ is eigenvalue of T
+    -- S v = 0 for all v , then S = 0, contradiction
+    intro h
+    obtain ⟨S, hSmem, hSne⟩ := h.exists_hasEigenvector
+    rw [Module.End.mem_eigenspace_iff] at hSmem
+    obtain ⟨w, hw⟩ := DFunLike.ne_iff.mp hSne
+    have hwne : S w ≠ 0 := by simpa using hw
+    have key : T (S w) = γ • S w := by
+      have := LinearMap.congr_fun hSmem w
+      simpa [LinearMap.mulLeft_apply, Module.End.mul_apply] using this
+    exact Module.End.hasEigenvalue_of_hasEigenvector
+      ⟨Module.End.mem_eigenspace_iff.mpr key, hwne⟩
+  · -- <- T v = γ v for some non-zero v
+    -- extend v to a basis, and take linear op S that sends c v + ... to c v.
+    -- T (S w) = c T v = c γ v = γ (S w), so S is an eigenvector of mulLeft T with eigenvalue γ
+    -- S is not zero because v is in its image.
+    intro h
+    obtain ⟨v, hvmem, hvne⟩ := h.exists_hasEigenvector
+    have hLI : LinearIndependent F (fun _ : Fin 1 => v) :=
+      linearIndependent_unique_iff.mpr hvne
+    obtain ⟨m, w, hm, hbasis, hpres⟩ := LADR.Section_2B.exists_basis_extending _ hLI
+    set b := hbasis.toModuleBasis with hb
+    have hb0 : b (Fin.castLE hm 0) = v := by
+      rw [hb, hbasis.toModuleBasis_apply]; exact hpres 0
+    -- {lit}`S` sends the eigenvector to itself and kills the rest of the basis.
+    set f : Fin m → V := fun i => if i = Fin.castLE hm 0 then v else 0 with hf
+    set S : V →ₗ[F] V := b.constr F f with hS
+    have hsub : Submodule.span F (Set.range f) ≤ Module.End.eigenspace T γ := by
+      rw [Submodule.span_le]
+      rintro _ ⟨i, rfl⟩
+      by_cases hi : i = Fin.castLE hm 0
+      · simp only [hf]; rw [if_pos hi]; exact hvmem
+      · simp only [hf]; rw [if_neg hi]; exact Submodule.zero_mem _
+    have hrangele : LinearMap.range S ≤ Module.End.eigenspace T γ := by
+      rw [hS, Module.Basis.constr_range]; exact hsub
+    have hrange : ∀ u, S u ∈ Module.End.eigenspace T γ :=
+      fun u => hrangele (LinearMap.mem_range_self S u)
+    have hTS : LinearMap.mulLeft F T S = γ • S := by
+      ext u
+      simp only [LinearMap.mulLeft_apply, Module.End.mul_apply, LinearMap.smul_apply]
+      exact Module.End.mem_eigenspace_iff.mp (hrange u)
+    have hSv : S v = v := by
+      have hbv : S (b (Fin.castLE hm 0)) = f (Fin.castLE hm 0) := by
+        rw [hS]; exact Module.Basis.constr_basis b F f (Fin.castLE hm 0)
+      rw [hb0] at hbv
+      rw [hbv]; simp [hf]
+    have hSne : S ≠ 0 := by
+      intro h0
+      rw [h0, LinearMap.zero_apply] at hSv
+      exact hvne hSv.symm
+    exact Module.End.hasEigenvalue_of_hasEigenvector
+      ⟨Module.End.mem_eigenspace_iff.mpr hTS, hSne⟩
 
 /-- 5A.38 (a) -/
 def exercise_5A_38_quotient_op (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) : V ⧸ U →ₗ[F] V ⧸ U :=
-  Submodule.mapQ U U T (by sorry)
+  Submodule.mapQ U U T (by exact (Module.End.mem_invtSubmodule T).mp hU)
 
 -- The defining property from Axler.
 example (T : V →ₗ[F] V) (U : Submodule F V) (hU : InvariantUnder T U)
@@ -1923,31 +2292,156 @@ example (T : V →ₗ[F] V) (U : Submodule F V) (hU : InvariantUnder T U)
     exercise_5A_38_quotient_op T U hU (U.mkQ v) = U.mkQ (T v) := by
   simp [exercise_5A_38_quotient_op, Submodule.mapQ_apply]
 
+/-- If {lit}`f` is surjective, then the induced map on quotients {lit}`M ⧸ p → M₂ ⧸ q` is too. -/
+theorem mapQ_surjective {R M₂ M₃ : Type*} [Ring R] [AddCommGroup M₂] [Module R M₂]
+    [AddCommGroup M₃] [Module R M₃] {p : Submodule R M₂} {q : Submodule R M₃}
+    {f : M₂ →ₗ[R] M₃} (h : p ≤ q.comap f) (hf : Function.Surjective f) :
+    Function.Surjective (p.mapQ q f h) := by
+  intro ybar
+  obtain ⟨y, rfl⟩ := q.mkQ_surjective ybar
+  obtain ⟨x, rfl⟩ := hf y
+  exact ⟨p.mkQ x, by simp [Submodule.mapQ_apply]⟩
+
 /-- 5A.38 (b) -/
 theorem exercise_5A_38b [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) (γ : F)
     (h : HasEigenvalue (exercise_5A_38_quotient_op T U hU) γ) :
     HasEigenvalue T γ := by
-  sorry
+  -- by contra, if T had no eigenvalue γ then T - γ is injective hence surjective (finite dim),
+  -- if a map is surjective the quotient map is also surjective
+  -- the quotient is hence injective, so T' has no eigenvalue γ.)
+  set T' := exercise_5A_38_quotient_op T U hU with hT'
+  have hqapply : ∀ x, T' (U.mkQ x) = U.mkQ (T x) := by
+    intro x; rw [hT']; simp [exercise_5A_38_quotient_op, Submodule.mapQ_apply]
+  by_contra hT
+  set g : V →ₗ[F] V := T - γ • LinearMap.id with hg
+  -- `g = T - γ` is injective: otherwise a kernel vector is an eigenvector of `T`.
+  have hginj : Function.Injective g := by
+    rw [← LinearMap.ker_eq_bot, Submodule.eq_bot_iff]
+    intro x hx
+    by_contra hxne
+    refine hT (Module.End.hasEigenvalue_of_hasEigenvector (x := x) ⟨?_, hxne⟩)
+    rw [Module.End.mem_eigenspace_iff]
+    have hx0 := LinearMap.mem_ker.mp hx
+    simpa [hg, LinearMap.sub_apply, LinearMap.smul_apply, sub_eq_zero] using hx0
+  -- injective ⟹ surjective on the finite-dimensional space `V`.
+  have hgsurj : Function.Surjective g := LinearMap.injective_iff_surjective.mp hginj
+  -- `g` maps `U` into `U`, so it descends to `V ⧸ U`.
+  have hgU : U ≤ U.comap g := by
+    intro u hu
+    rw [Submodule.mem_comap, hg, LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply]
+    exact U.sub_mem (Submodule.mem_comap.mp ((Module.End.mem_invtSubmodule T).mp hU hu))
+      (U.smul_mem γ hu)
+  -- that descent is `T' - γ`, so it is surjective since `g` is (via `mapQ_surjective`).
+  have hg'eq : T' - γ • LinearMap.id = U.mapQ U g hgU := by
+    refine LinearMap.ext fun zbar => ?_
+    obtain ⟨x, rfl⟩ := U.mkQ_surjective zbar
+    show (T' - γ • LinearMap.id : V ⧸ U →ₗ[F] V ⧸ U) (U.mkQ x) = U.mkQ (g x)
+    simp only [LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply, hqapply,
+      hg, map_sub, map_smul]
+  have hg'surj : Function.Surjective (T' - γ • LinearMap.id : V ⧸ U →ₗ[F] V ⧸ U) := by
+    rw [hg'eq]; exact mapQ_surjective hgU hgsurj
+  -- surjective ⟹ injective on the finite-dimensional quotient, contradicting the eigenvalue.
+  have hg'inj : Function.Injective (T' - γ • LinearMap.id : V ⧸ U →ₗ[F] V ⧸ U) :=
+    LinearMap.injective_iff_surjective.mpr hg'surj
+  obtain ⟨vbar, hvmem, hvne⟩ := h.exists_hasEigenvector
+  rw [Module.End.mem_eigenspace_iff] at hvmem
+  refine hvne (hg'inj ?_)
+  simp only [LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply, hvmem, sub_self,
+    map_zero]
 
 /-- 5A.39 -/
 theorem exercise_5A_39 [Finite F V] (T : V →ₗ[F] V) :
     (∃ γ : F, HasEigenvalue T γ) ↔
       ∃ U : Submodule F V, InvariantUnder T U ∧
-        finrank F U = finrank F V - 1 := by
-  sorry
+        finrank F U + 1 = finrank F V := by
+  -- <- use 38, quotient to a 1-dim space, T' has to have an eigenvalue since
+  -- the space is just c v , so T v = c v for some c, so c is an eigenvalue of T'.
+  -- thus T has one too.
+  -- -> we proved T.dual has eigenvalue too if T does
+  -- T.dual φ = c φ, so φ (T v) = c φ v for all v
+  -- ker φ is dim n-1, and T invariant, since if v in ker φ
+  -- then φ (T v) = c φ v = 0, so T v in ker φ too.
+  constructor
+  · rintro ⟨γ, hγ⟩
+    -- `T.dualMap` has `γ` as an eigenvalue too (5A.15); take an eigen-functional `φ`.
+    obtain ⟨φ, hφmem, hφne⟩ := ((exercise_5A_15 T γ).mp hγ).exists_hasEigenvector
+    rw [Module.End.mem_eigenspace_iff] at hφmem
+    refine ⟨LinearMap.ker φ, ?_, ?_⟩
+    · -- `ker φ` is invariant: `φ (T v) = γ • φ v = 0` when `φ v = 0`.
+      intro v hv
+      refine LinearMap.mem_ker.mpr ?_
+      rw [← LinearMap.dualMap_apply, hφmem, LinearMap.smul_apply, LinearMap.mem_ker.mp hv,
+        smul_zero]
+    · -- a nonzero functional has a codimension-one kernel (rank–nullity, `finrank (range φ) = 1`).
+      have hrank := LinearMap.finrank_range_add_finrank_ker φ
+      have hbot : LinearMap.range φ ≠ ⊥ := by rw [Ne, LinearMap.range_eq_bot]; exact hφne
+      have hle : finrank F (LinearMap.range φ) ≤ 1 := by
+        have := Submodule.finrank_le (LinearMap.range φ)
+        rwa [Module.finrank_self] at this
+      have hne0 : finrank F (LinearMap.range φ) ≠ 0 :=
+        fun h0 => hbot (Submodule.finrank_eq_zero.mp h0)
+      omega
+  · rintro ⟨U, hU, hdim⟩
+    -- `V ⧸ U` is a line; the induced operator scales any nonzero vector, giving an eigenvalue.
+    have hquot : finrank F (V ⧸ U) = 1 := by
+      have h := Submodule.finrank_quotient_add_finrank U
+      omega
+    have hpos : 0 < finrank F (V ⧸ U) := by omega
+    haveI : Nontrivial (V ⧸ U) := Module.nontrivial_of_finrank_pos hpos
+    obtain ⟨wbar, hwbar⟩ := exists_ne (0 : V ⧸ U)
+    have hspan : Submodule.span F {wbar} = ⊤ :=
+      Submodule.eq_top_of_finrank_eq (by rw [finrank_span_singleton hwbar, hquot])
+    obtain ⟨c, hc⟩ : ∃ c, c • wbar = exercise_5A_38_quotient_op T U hU wbar :=
+      Submodule.mem_span_singleton.mp (by rw [hspan]; exact Submodule.mem_top)
+    have hev : HasEigenvalue (exercise_5A_38_quotient_op T U hU) c :=
+      Module.End.hasEigenvalue_of_hasEigenvector
+        ⟨Module.End.mem_eigenspace_iff.mpr hc.symm, hwbar⟩
+    exact ⟨c, exercise_5A_38b T U hU c hev⟩
 
 /-- 5A.40 -/
 theorem exercise_5A_40 (S T : V →ₗ[F] V) (hS : IsInvertible S)
     (p : Polynomial F) :
     aeval (S ∘ₗ T ∘ₗ hS.inv) p = S ∘ₗ aeval T p ∘ₗ hS.inv := by
-  sorry
+  -- (S ∘ₗ T ∘ₗ hS.inv) ^ n = S ∘ₗ T ^ n ∘ₗ hS.inv and I = S ∘ₗ hS.inv
+  -- so we can factor out S and hS.inv.
+  have hinv : ∀ w, hS.inv (S w) = w := fun w => LinearMap.congr_fun hS.inv_comp w
+  have hinv' : ∀ w, S (hS.inv w) = w := fun w => LinearMap.congr_fun hS.comp_inv w
+  -- Conjugation commutes with powers: `(S T S⁻¹) ^ n = S Tⁿ S⁻¹` (the `S⁻¹S` cancel).
+  have hpow : ∀ n, (S ∘ₗ T ∘ₗ hS.inv) ^ n = S ∘ₗ (T ^ n) ∘ₗ hS.inv := by
+    intro n
+    induction n with
+    | zero => ext v; simp [hinv']
+    | succ m ih =>
+        rw [pow_succ, ih, pow_succ]
+        ext v; simp only [Module.End.mul_apply, LinearMap.comp_apply, hinv]
+  -- A polynomial in `C` is the linear combination `∑ cᵢ Cⁱ` of its powers; using `Cⁱ = S Tⁱ S⁻¹`
+  -- and linearity of `S`, factor `S` and `S⁻¹` out of every term.
+  rw [Polynomial.aeval_eq_sum_range, Polynomial.aeval_eq_sum_range]
+  ext v
+  simp only [LinearMap.comp_apply, LinearMap.sum_apply, LinearMap.smul_apply, map_sum, map_smul]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [hpow]
+  simp only [LinearMap.comp_apply]
 
 /-- 5A.41 -/
 theorem exercise_5A_41 (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) (p : Polynomial F) :
     InvariantUnder (aeval T p) U := by
-  sorry
+  -- (a + b T + c T^2 + ...) u = a u + b T u + c T^2 u + ...
+  -- = a u + b u' + c u'' + ... because T^n u is in U for all n,
+  -- so the whole thing is in U.
+  intro u hu
+  -- each `T ^ i` keeps `u` inside `U`
+  have hpow : ∀ i, (T ^ i) u ∈ U := by
+    intro i
+    induction i with
+    | zero => simpa using hu
+    | succ n ih => rw [pow_succ', Module.End.mul_apply]; exact hU _ ih
+  rw [Polynomial.aeval_eq_sum_range, LinearMap.sum_apply]
+  refine Submodule.sum_mem _ fun i _ => ?_
+  rw [LinearMap.smul_apply]
+  exact Submodule.smul_mem _ _ (hpow i)
 
 /-- 5A.42 {lit}`T(x₁, …, xₙ) = (x₁, 2x₂, 3x₃, …, nxₙ)` on {lit}`ℝⁿ`. -/
 def T_ex_5A_42 (n : ℕ) : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ) where
@@ -1960,27 +2454,160 @@ def T_ex_5A_42 (n : ℕ) : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ) where
     simp
     ring
 
+@[simp] theorem T_ex_5A_42_apply (n : ℕ) (v : Fin n → ℝ) (j : Fin n) :
+    T_ex_5A_42 n v j = ((j : ℕ) + 1 : ℝ) * v j := rfl
+
+theorem T_ex_5A_42_pow_apply (n : ℕ) (m : ℕ) : ∀ (u : Fin n → ℝ) (i : Fin n),
+    ((T_ex_5A_42 n) ^ m) u i = ((i : ℕ) + 1 : ℝ) ^ m * u i := by
+  induction m with
+  | zero => intro u i; simp
+  | succ k ih =>
+      intro u i
+      rw [pow_succ, Module.End.mul_apply, ih (T_ex_5A_42 n u) i]
+      simp only [T_ex_5A_42_apply]; ring
+
+theorem aeval_T_ex_5A_42_apply (n : ℕ) (q : Polynomial ℝ) (u : Fin n → ℝ) (i : Fin n) :
+    (aeval (T_ex_5A_42 n) q) u i = Polynomial.eval ((i : ℕ) + 1 : ℝ) q * u i := by
+  rw [Polynomial.aeval_eq_sum_range, LinearMap.sum_apply, Finset.sum_apply,
+    Polynomial.eval_eq_sum_range, Finset.sum_mul]
+  refine Finset.sum_congr rfl fun m _ => ?_
+  simp only [LinearMap.smul_apply, Pi.smul_apply, smul_eq_mul, T_ex_5A_42_pow_apply]
+  ring
+
 /-- (a) The set of eigenvalues of {lit}`T_ex_5A_42 n` — to be determined. -/
-def eigenvalues_5A_42 (n : ℕ) : Set ℝ := sorry
+-- solving T v = γ v, gives (j + 1) v j = γ v j for all j
+-- so one v j is nonzero and γ = j +1 for it,
+-- rest are zero, so the eigenvalues are exactly 1, 2, ..., n.
+-- and eigenvectors are the standard basis vectors.
+def eigenvalues_5A_42 (n : ℕ) : Set ℝ := {γ | ∃ j : Fin n, ((j : ℕ) + 1 : ℝ) = γ}
 
 /-- The eigenvectors of {lit}`T_ex_5A_42 n` for a scalar {lit}`γ` — to be
 determined (empty when {lit}`γ` is not an eigenvalue). -/
-def eigenvectors_5A_42 (n : ℕ) (γ : ℝ) : Set (Fin n → ℝ) := sorry
+def eigenvectors_5A_42 (n : ℕ) (γ : ℝ) : Set (Fin n → ℝ) :=
+  {v | v ≠ 0 ∧ ∀ j : Fin n, ((j : ℕ) + 1 : ℝ) ≠ γ → v j = 0}
 
 theorem exercise_5A_42a (n : ℕ) :
     (∀ γ : ℝ,
       HasEigenvalue (T_ex_5A_42 n) γ ↔ γ ∈ eigenvalues_5A_42 n) ∧
     (∀ (γ : ℝ) (v : Fin n → ℝ),
       HasEigenvector (T_ex_5A_42 n) γ v ↔ v ∈ eigenvectors_5A_42 n γ) := by
-  sorry
+  -- `T v = γ v` coordinatewise says `v j = 0` off the coordinate with `j + 1 = γ`.
+  have hmem : ∀ (γ : ℝ) (v : Fin n → ℝ),
+      T_ex_5A_42 n v = γ • v ↔ ∀ j : Fin n, ((j : ℕ) + 1 : ℝ) ≠ γ → v j = 0 := by
+    intro γ v
+    constructor
+    · intro h j hj
+      have hj' := congrFun h j
+      simp only [T_ex_5A_42_apply, Pi.smul_apply, smul_eq_mul] at hj'
+      have h0 : (((j : ℕ) + 1 : ℝ) - γ) * v j = 0 := by rw [sub_mul, hj']; ring
+      exact (mul_eq_zero.mp h0).resolve_left (sub_ne_zero.mpr hj)
+    · intro h
+      funext j
+      simp only [T_ex_5A_42_apply, Pi.smul_apply, smul_eq_mul]
+      by_cases hj : ((j : ℕ) + 1 : ℝ) = γ
+      · rw [hj]
+      · rw [h j hj]; ring
+  refine ⟨fun γ => ?_, fun γ v => ?_⟩
+  · constructor
+    · intro h
+      obtain ⟨w, hwmem, hwne⟩ := h.exists_hasEigenvector
+      rw [Module.End.mem_eigenspace_iff, hmem] at hwmem
+      obtain ⟨j, hj⟩ := Function.ne_iff.mp hwne
+      exact ⟨j, by by_contra hne; exact hj (hwmem j hne)⟩
+    · rintro ⟨j, hj⟩
+      refine Module.End.hasEigenvalue_of_hasEigenvector (x := Pi.single j 1) ⟨?_, ?_⟩
+      · rw [Module.End.mem_eigenspace_iff, hmem]
+        intro k hk
+        have hkj : k ≠ j := fun h => hk (by rw [h]; exact hj)
+        simp [hkj]
+      · intro hc
+        have h1 := congrFun hc j
+        simp at h1
+  · constructor
+    · rintro ⟨hmv, hne⟩
+      rw [Module.End.mem_eigenspace_iff, hmem] at hmv
+      exact ⟨hne, hmv⟩
+    · rintro ⟨hne, hcoord⟩
+      exact ⟨Module.End.mem_eigenspace_iff.mpr ((hmem γ v).mpr hcoord), hne⟩
 
 /-- The invariant subspaces of {lit}`T_ex_5A_42 n` — to be determined. -/
-def invariantSubspaces_5A_42 (n : ℕ) : Set (Submodule ℝ (Fin n → ℝ)) := sorry
+-- the invariant subspaces are exactly the spans of subsets of the standard basis, i.e. the subspaces
+-- <- is easy because they are eigenvectors
+-- -> if a subspace is invariant, and not of the form (0, _, ..., _, )
+-- for some positions _, and some fixed positions 0.
+-- so it has u , s.t T u that doesn't have the same zero pattern as u
+-- but that contradicts application of T.
+def invariantSubspaces_5A_42 (n : ℕ) : Set (Submodule ℝ (Fin n → ℝ)) :=
+  {U | ∃ S : Set (Fin n), U = Submodule.span ℝ ((fun j => (Pi.single j 1 : Fin n → ℝ)) '' S)}
 
 /-- 5A.42 (b) Find all invariant subspaces of {lit}`T`. -/
 theorem exercise_5A_42b (n : ℕ) (U : Submodule ℝ (Fin n → ℝ)) :
     InvariantUnder (T_ex_5A_42 n) U ↔ U ∈ invariantSubspaces_5A_42 n := by
-  sorry
+  constructor
+  · -- `->` : an invariant `U` is spanned by the basis vectors it contains.
+    intro hU
+    -- Key extraction: if `v ∈ U` and `v j ≠ 0`, then `eⱼ ∈ U`.  Use the interpolation
+    -- polynomial `p = ∏_{k≠j}(X - (k+1))`, which `T` sends to a map picking out coordinate `j`.
+    have extract : ∀ v ∈ U, ∀ j : Fin n, v j ≠ 0 → (Pi.single j 1 : Fin n → ℝ) ∈ U := by
+      intro v hvU j hvj
+      set c : ℝ := Polynomial.eval ((j : ℕ) + 1 : ℝ)
+        (∏ k ∈ Finset.univ.erase j, (Polynomial.X - Polynomial.C ((k : ℕ) + 1 : ℝ))) with hc
+      have hval : (aeval (T_ex_5A_42 n)
+          (∏ k ∈ Finset.univ.erase j, (Polynomial.X - Polynomial.C ((k : ℕ) + 1 : ℝ)))) v
+          = Pi.single j (c * v j) := by
+        funext i
+        rw [aeval_T_ex_5A_42_apply]
+        by_cases hij : i = j
+        · subst hij; rw [Pi.single_eq_same, hc]
+        · rw [Pi.single_eq_of_ne hij]
+          have hz : Polynomial.eval ((i : ℕ) + 1 : ℝ)
+              (∏ k ∈ Finset.univ.erase j, (Polynomial.X - Polynomial.C ((k : ℕ) + 1 : ℝ))) = 0 := by
+            rw [Polynomial.eval_prod]
+            refine Finset.prod_eq_zero (Finset.mem_erase.mpr ⟨hij, Finset.mem_univ i⟩) ?_
+            simp
+          rw [hz, zero_mul]
+      have hcne : c ≠ 0 := by
+        rw [hc, Polynomial.eval_prod]
+        refine Finset.prod_ne_zero_iff.mpr fun k hk => ?_
+        simp only [Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C, sub_ne_zero]
+        have hkj : k ≠ j := (Finset.mem_erase.mp hk).1
+        intro hcontra
+        exact hkj (Fin.ext (by exact_mod_cast (by linarith : ((k : ℕ) : ℝ) = ((j : ℕ) : ℝ))))
+      have hmem : (Pi.single j (c * v j) : Fin n → ℝ) ∈ U := by
+        rw [← hval]; exact exercise_5A_41 (T_ex_5A_42 n) U hU _ v hvU
+      have hne : c * v j ≠ 0 := mul_ne_zero hcne hvj
+      have hsingle : (c * v j)⁻¹ • (Pi.single j (c * v j) : Fin n → ℝ) = Pi.single j 1 := by
+        rw [← Pi.single_smul', smul_eq_mul, inv_mul_cancel₀ hne]
+      rw [← hsingle]
+      exact Submodule.smul_mem _ _ hmem
+    refine ⟨{j | (Pi.single j 1 : Fin n → ℝ) ∈ U}, le_antisymm ?_ ?_⟩
+    · -- `U ≤ span`
+      intro v hvU
+      rw [pi_eq_sum_univ' v]
+      refine Submodule.sum_mem _ fun j _ => ?_
+      by_cases hvj : v j = 0
+      · rw [hvj, zero_smul]; exact Submodule.zero_mem _
+      · exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨j, extract v hvU j hvj, rfl⟩)
+    · -- `span ≤ U`
+      rw [Submodule.span_le]
+      rintro _ ⟨j, hjS, rfl⟩
+      exact hjS
+  · -- `<-` : each basis-vector span is invariant (they are eigenvectors).
+    rintro ⟨S, rfl⟩
+    intro v hv
+    induction hv using Submodule.span_induction with
+    | mem x hx =>
+        obtain ⟨j, hjS, rfl⟩ := hx
+        have : T_ex_5A_42 n (Pi.single j 1) = ((j : ℕ) + 1 : ℝ) • (Pi.single j (1 : ℝ) : Fin n → ℝ) := by
+          funext k
+          by_cases h : k = j
+          · subst h; simp
+          · simp [Pi.single_eq_of_ne h]
+        rw [this]
+        exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨j, hjS, rfl⟩)
+    | zero => rw [map_zero]; exact Submodule.zero_mem _
+    | add x y _ _ ihx ihy => rw [map_add]; exact Submodule.add_mem _ ihx ihy
+    | smul a x _ ihx => rw [map_smul]; exact Submodule.smul_mem _ _ ihx
 
 /-- 5A.43 -/
 theorem exercise_5A_43 [Finite F V] (hV : 1 < finrank F V)
