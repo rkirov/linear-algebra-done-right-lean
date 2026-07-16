@@ -1253,7 +1253,7 @@ theorem exercise_5A_16 {V : Type*} [AddCommGroup V] [Module ℂ V]
     ‖γ‖ ≤ n * Finset.univ.sup' ⟨(⟨0, hn⟩, ⟨0, hn⟩), Finset.mem_univ _⟩
       (fun jk : Fin n × Fin n => ‖LADR.Section_3C.matrixOf hv hv T jk.1 jk.2‖) := by
   -- take an eigenvector corresponding to `γ`
-  -- take the maximum absolute value coordinate of the eigenvector - say v_j
+  -- take the maximum absolute value coordinate of the eigenvector - say |v_j|
   -- it is > 0, otherwise whole vector is zero
   -- M0j * v_0 + ... = γ * v_j
   -- |M0j| * |v_0| + ... = |γ| * |v_j|
@@ -1978,6 +1978,42 @@ theorem exercise_5A_32 (T : V →ₗ[F] V)
     simpa [pow_succ, pow_zero, Module.End.mul_apply, Module.End.one_apply] using this
   have hu : T (T (T (T v) + v)) - (T (T v) + v) = 0 := by rw [map_add, map_add, h4v]; abel
   exact eq_neg_of_add_eq_zero_left (step (T (T v) + v) hu)
+
+/-- 5A.32, alternative proof.  In the endomorphism ring the hypothesis reads
+{lit}`T⁴ - 1 = 0`, which factors as {lit}`(T - 1)(T + 1)(T² + 1) = 0`.  Because
+{lit}`T` has no eigenvalue, neither {lit}`1` nor {lit}`-1` is an eigenvalue, so
+{lit}`T - 1` and {lit}`T + 1` are injective; cancelling them from the product
+leaves {lit}`T² + 1 = 0`, i.e. {lit}`T² = -id`. -/
+theorem exercise_5A_32' (T : V →ₗ[F] V)
+    (h : ∀ γ : F, ¬ HasEigenvalue T γ) (h4 : T ^ 4 = LinearMap.id) :
+    T ^ 2 = -LinearMap.id := by
+  -- No eigenvalue `γ` means `T - γ • 1` is injective: its kernel would be an eigenspace.
+  have hinj : ∀ γ : F, Function.Injective (T - γ • (1 : Module.End F V)) := by
+    intro γ
+    rw [← LinearMap.ker_eq_bot, Submodule.eq_bot_iff]
+    intro w hw
+    by_contra hwne
+    refine h γ (Module.End.hasEigenvalue_iff_exists.mpr ⟨w, hwne, ?_⟩)
+    have := (LinearMap.mem_ker).mp hw
+    simpa [LinearMap.sub_apply, sub_eq_zero] using this
+  -- Injective `A` cancels on the left of a product that is `0`.
+  have cancel : ∀ A B : Module.End F V, Function.Injective A → A * B = 0 → B = 0 := by
+    intro A B hA hAB
+    ext v
+    refine hA ?_
+    simpa [Module.End.mul_apply] using LinearMap.congr_fun hAB v
+  -- `T⁴ = 1` factors as `(T - 1)(T + 1)(T² + 1) = 0`.
+  have hfact : (T - 1) * ((T + 1) * (T ^ 2 + 1)) = 0 := by
+    have hexp : (T - 1) * ((T + 1) * (T ^ 2 + 1)) = T ^ 4 - 1 := by noncomm_ring
+    rw [hexp, sub_eq_zero]
+    exact h4
+  -- Cancel `T - 1` (no eigenvalue `1`), then `T + 1` (no eigenvalue `-1`).
+  have hinj1 : Function.Injective (T - 1 : Module.End F V) := by simpa using hinj 1
+  have hinjm1 : Function.Injective (T + 1 : Module.End F V) := by
+    have := hinj (-1); simpa [neg_smul, sub_neg_eq_add] using this
+  have h2 : (T + 1) * (T ^ 2 + 1) = 0 := cancel _ _ hinj1 hfact
+  have h3 : T ^ 2 + 1 = 0 := cancel _ _ hinjm1 h2
+  exact eq_neg_of_add_eq_zero_left h3
 
 /-- 5A.33 (a) -/
 theorem exercise_5A_33a (T : V →ₗ[F] V) (m : ℕ+) :
