@@ -451,8 +451,25 @@ example (z : EuclideanSpace 𝕜 (Fin 3)) :
 
 /-! 6.41 Example: a linear functional on {lit}`𝒫₅(ℝ)`. The map
 {lit}`φ(p) = ∫₋₁¹ p(t) cos(πt) dt` is a linear functional on {lit}`𝒫₅(ℝ)`, using the
-{lit}`L²` integral pairing (see 6.34); the closely related Riesz computation on
-{lit}`𝒫₂(ℝ)` is 6.44. Recorded in prose. -/
+{lit}`L²` integral pairing (see 6.34). In the `L²` model it is the inner product
+against `cos(π·)`, so it is a linear functional by construction; the closely
+related Riesz computation on {lit}`𝒫₂(ℝ)` is 6.44. -/
+
+section Example_6_41
+
+/-- The weight `cos(π·)` of the functional `φ`, as an element of `C[-1,1]`. -/
+noncomputable def cosWeight : L2C (-1) 1 := ⟨fun x => Real.cos (Real.pi * x), by fun_prop⟩
+
+/-- 6.41: `φ(p) = ∫₋₁¹ p(t) cos(πt) dt = ⟨cos(π·), p⟩` is a linear functional. Its
+type `L2C (-1) 1 →ₗ[ℝ] ℝ` records that it is linear. -/
+noncomputable def phi_6_41 : L2C (-1) 1 →ₗ[ℝ] ℝ where
+  toFun p := ⟪cosWeight, p⟫_ℝ
+  map_add' p q := inner_add_right cosWeight p q
+  map_smul' c p := by simp [real_inner_smul_right]
+
+theorem phi_6_41_apply (p : L2C (-1) 1) : phi_6_41 p = ⟪cosWeight, p⟫_ℝ := rfl
+
+end Example_6_41
 
 /-! 6.42 Riesz representation theorem
 
