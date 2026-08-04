@@ -3,8 +3,10 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
+import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Analysis.SpecialFunctions.Complex.Arg
 import LinearAlgebraDoneRightLean.Section_5C
+import LinearAlgebraDoneRightLean.L2Interval
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import Mathlib.Tactic.Recall
@@ -238,11 +240,65 @@ theorem span_gram_schmidt_initial {ι : Type*} [LinearOrder ι]
   span_gramSchmidt_Iic 𝕜 f k
 
 /-! 6.34 Example: an orthonormal basis of {lit}`𝒫₂(ℝ)`. Applying Gram–Schmidt
-(6.32) to {lit}`1, x, x²` under {lit}`⟨p, q⟩ = ∫₋₁¹ pq` yields (normalized) Legendre
-polynomials. This uses the {lit}`L²` inner product on polynomials — an analysis
-construction outside mathlib's typeclass inner products (see {lit}`L2Interval.lean`)
-— so it is recorded in prose; the analogous Gram–Schmidt over {lit}`∫₀¹` is
-Exercise 6B.8. -/
+(6.32) to {lit}`1, x, x²` under {lit}`⟨p, q⟩ = ∫₋₁¹ pq` yields the (unnormalized)
+Legendre polynomials {lit}`1, x, x² − ⅓`. This uses the {lit}`L²` inner product on
+`C[-1,1]` from the skippable {lit}`L2Interval.lean` infrastructure. We verify the
+key fact — that the three Legendre polynomials are pairwise orthogonal — by
+reducing each inner product to a concrete interval integral. The analogous
+Gram–Schmidt over {lit}`∫₀¹` is Exercise 6B.8. -/
+
+section Example_6_34
+
+open MeasureTheory
+
+/-- Bridge for computing the `L²` inner product on `C[a,b]`: when the integrand
+`f g` factors through the coordinate as `H ↑x`, the inner product equals the
+ordinary interval integral of `H`. -/
+theorem L2C_inner_eq_intervalIntegral {a b : ℝ} (hab : a ≤ b) (f g : L2C a b) (H : ℝ → ℝ)
+    (hH : ∀ x : ↥(Set.Icc a b), f.toCont x * g.toCont x = H x) :
+    ⟪f, g⟫_ℝ = ∫ x in a..b, H x := by
+  calc ⟪f, g⟫_ℝ = ∫ x : ↥(Set.Icc a b), f.toCont x * g.toCont x := rfl
+    _ = ∫ x : ↥(Set.Icc a b), H (x : ℝ) := by simp_rw [hH]
+    _ = ∫ x in Set.Icc a b, H x := integral_subtype_comap measurableSet_Icc H
+    _ = ∫ x in a..b, H x := by
+        rw [integral_Icc_eq_integral_Ioc, intervalIntegral.integral_of_le hab]
+
+/-- The first Legendre polynomial `1` as an element of `C[-1,1]`. -/
+noncomputable def legendre0 : L2C (-1) 1 := (ContinuousMap.const _ 1 : C(↥(Set.Icc (-1:ℝ) 1), ℝ))
+/-- The second Legendre polynomial `x`. -/
+noncomputable def legendre1 : L2C (-1) 1 := ⟨fun x => (x : ℝ), by fun_prop⟩
+/-- The third Legendre polynomial `x² − ⅓`. -/
+noncomputable def legendre2 : L2C (-1) 1 := ⟨fun x => (x : ℝ) ^ 2 - 1 / 3, by fun_prop⟩
+
+/-- `⟨1, x⟩ = ∫₋₁¹ x = 0`. -/
+theorem legendre_inner_01 : ⟪legendre0, legendre1⟫_ℝ = 0 := by
+  rw [L2C_inner_eq_intervalIntegral (by norm_num) legendre0 legendre1 (fun x => x)
+      (fun x => by simp [legendre0, legendre1, L2C.toCont])]
+  simp
+
+/-- `⟨1, x² − ⅓⟩ = ∫₋₁¹ (x² − ⅓) = 0`. -/
+theorem legendre_inner_02 : ⟪legendre0, legendre2⟫_ℝ = 0 := by
+  rw [L2C_inner_eq_intervalIntegral (by norm_num) legendre0 legendre2 (fun x => x ^ 2 - 1 / 3)
+      (fun x => by simp [legendre0, legendre2, L2C.toCont])]
+  have h1 : IntervalIntegrable (fun x : ℝ => x ^ 2) volume (-1) 1 := by
+    apply Continuous.intervalIntegrable; fun_prop
+  have h2 : IntervalIntegrable (fun _ : ℝ => (1 : ℝ) / 3) volume (-1) 1 := by
+    apply Continuous.intervalIntegrable; fun_prop
+  rw [intervalIntegral.integral_sub h1 h2, integral_pow, intervalIntegral.integral_const]
+  norm_num
+
+/-- `⟨x, x² − ⅓⟩ = ∫₋₁¹ (x³ − x/3) = 0`. -/
+theorem legendre_inner_12 : ⟪legendre1, legendre2⟫_ℝ = 0 := by
+  rw [L2C_inner_eq_intervalIntegral (by norm_num) legendre1 legendre2 (fun x => x ^ 3 - x / 3)
+      (fun x => by simp only [legendre1, legendre2, L2C.toCont, ContinuousMap.coe_mk]; ring)]
+  have h1 : IntervalIntegrable (fun x : ℝ => x ^ 3) volume (-1) 1 := by
+    apply Continuous.intervalIntegrable; fun_prop
+  have h2 : IntervalIntegrable (fun x : ℝ => x / 3) volume (-1) 1 := by
+    apply Continuous.intervalIntegrable; fun_prop
+  rw [intervalIntegral.integral_sub h1 h2, integral_pow, intervalIntegral.integral_div, integral_id]
+  norm_num
+
+end Example_6_34
 
 /-! 6.35 Existence of an orthonormal basis
 
