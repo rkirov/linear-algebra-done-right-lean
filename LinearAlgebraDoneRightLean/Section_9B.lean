@@ -43,8 +43,10 @@ which is a `4`-linear form. We build it from mathlib combinators: the two
 factors act on disjoint pairs of slots, so `β` is the tensor product
 {name}`MultilinearMap.domCoprod` of `α` and `ρ` on `Fin 2 ⊕ Fin 2`, followed by
 multiplication {name}`LinearMap.mul'` `F F : F ⊗ F → F`, reindexed along
-{name}`finSumFinEquiv` `: Fin 2 ⊕ Fin 2 ≃ Fin 4`. (Axler's second example,
-{lit}`β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` on {lit}`ℒ(V)`, is left in prose.) -/
+{name}`finSumFinEquiv` `: Fin 2 ⊕ Fin 2 ≃ Fin 4`. Axler's second example,
+{lit}`β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` on {lit}`ℒ(V)`, is the trace of the ordered
+product {name}`MultilinearMap.mkPiAlgebraFin` composed with
+{name}`LinearMap.trace`. -/
 open scoped Matrix in
 /-- 9.26: the product `β(v₁,v₂,v₃,v₄) = α(v₁,v₂)·ρ(v₃,v₄)` of two bilinear forms
 is a `4`-linear form. -/
@@ -60,6 +62,17 @@ open scoped Matrix in
   congr 1
   · congr 1; funext i; fin_cases i <;> rfl
   · congr 1; funext i; fin_cases i <;> rfl
+
+/-- 9.26: the trace of a product `β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` of operators is an
+`m`-linear form on `ℒ(V)` — the ordered algebra product
+{name}`MultilinearMap.mkPiAlgebraFin` followed by {name}`LinearMap.trace`. -/
+noncomputable def traceForm (m : ℕ) :
+    MultilinearMap F (fun _ : Fin m => Module.End F V) F :=
+  (LinearMap.trace F V).compMultilinearMap (MultilinearMap.mkPiAlgebraFin F m (Module.End F V))
+
+@[simp] theorem traceForm_apply (m : ℕ) (T : Fin m → Module.End F V) :
+    traceForm m T = LinearMap.trace F V (List.ofFn T).prod := by
+  simp [traceForm, MultilinearMap.mkPiAlgebraFin_apply]
 
 /-! 9.27 Definition: alternating forms, `V⁽ᵐ⁾ₐₗₜ`
 
