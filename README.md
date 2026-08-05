@@ -111,11 +111,12 @@ A few items are deliberately kept in prose, each captured formally elsewhere:
   the Jordan form is stated matrix-free via eigenvalue chains in 8C.
 - The purely numeric worked examples 8.24 and 8.27.
 
-Everything is axiom-clean except three Chapter 6 integral-inner-product examples —
-the Legendre orthogonality 6.34, the linear functional 6.41, and the
-sine-approximation 6.63 — which use the skippable, `sorry`-backed `L²[a,b]`
-inner-product space in `L2Interval.lean`. (The Riesz computation 6.44 is stated
-directly with interval integrals, so it too is axiom-clean.)
+Every numbered item is **axiom-clean** — depending only on mathlib's standard
+`propext` / `Classical.choice` / `Quot.sound`, with no `sorry`. This includes the
+Chapter 6 integral-inner-product examples: the `L²[a,b]` inner-product space in the
+skippable `L2Interval.lean` is fully proved (its positive-definiteness genuinely
+requires a nondegenerate interval, so its inner-product instance is gated on
+`Fact (a < b)`).
 
 ## Building
 
