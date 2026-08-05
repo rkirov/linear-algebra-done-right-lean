@@ -85,73 +85,35 @@ the section's exercises.
 | 7A. Self-Adjoint and Normal Operators | ✓ | ✓ | — |
 | 7B. Spectral Theorem | ✓ | — | — |
 | 7C. Positive Operators | ✓ | — | — |
-| 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓* | — | — |
-| 7E. Singular Value Decomposition | ✓* | — | — |
-| 7F. Consequences of Singular Value Decomposition | ✓* | — | — |
-| 8A. Generalized Eigenvectors and Nilpotent Operators | ✓* | — | — |
-| 8B. Generalized Eigenspace Decomposition | ✓* | — | — |
-| 8C. Consequences of Generalized Eigenspace Decomposition | ✓* | — | — |
+| 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓ | — | — |
+| 7E. Singular Value Decomposition | ✓ | — | — |
+| 7F. Consequences of Singular Value Decomposition | ✓ | — | — |
+| 8A. Generalized Eigenvectors and Nilpotent Operators | ✓ | — | — |
+| 8B. Generalized Eigenspace Decomposition | ✓ | — | — |
+| 8C. Consequences of Generalized Eigenspace Decomposition | ✓ | — | — |
 | 8D. Trace | ✓ | — | — |
 | 9A. Bilinear Forms and Quadratic Forms | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |
 | 9C. Determinants | ✓ | — | — |
 | 9D. Tensor Products | ✓ | — | — |
 
-The whole book (Chapters 1–9) is now drafted. A full top-to-bottom pass against
-the text confirms that every numbered Axler item — Definition, Result, and
-Example — is accounted for in the corresponding section file: stated and proved,
-or, where it needs machinery genuinely absent from the pinned mathlib or relies on
-Axler's own informal/analytic constructions, recorded with an explicit prose note.
-Exercises remain as `sorry`. There are no silent `sorry`s on numbered results, and
-no numbered item is omitted. **Every named Axler result (numbered theorem) is
-proved in Lean** — none is left as a prose deferral. The concrete worked
-*examples* are likewise formalized: the orthonormal-eigenbasis diagonalizations
-7.30/7.33, the positive operator 7.35(a), the square root 7.37, the positive
-square root 7.41, the annihilating polynomial 5.28, the generalized-eigenspace
-decomposition 8.21, the traces 8.48/8.53, the product of bilinear forms and the
-trace form 9.26, and — on the skippable `L²[a,b]` infrastructure — the whole
-Chapter 6 integral-inner-product cluster (the Legendre orthogonality 6.34, the
-linear functional 6.41, the Riesz computation 6.44, and the sine-approximation
-6.63) are all real Lean computations. The only prose-only items that remain are
-Axler's own informal *definitions* (e.g. the intuitive box/volume definitions
-7.108–7.110 and the matrix-of-a-basis Jordan-form definition 8.44, both captured
-elsewhere in a formal, matrix-free way). Every numbered Definition, Result, and
-Example is now formalized (the integral examples atop the skippable, `sorry`-backed
-`L²[a,b]` space; everything else axiom-clean).
+The whole book (Chapters 1–9) is drafted, and **every numbered Axler item —
+Definition, Result, and Example — is formalized in Lean.** Exercises remain as
+`sorry` (they are the point of the companion); there are no silent `sorry`s on any
+numbered item.
 
-\* A `✓*` marks a section that prose-defers one or more numbered results. These
-deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
-theory* — the strictly-upper-triangular normal form of a nilpotent operator
-8.18(c) is now proved (8A) and, with it, the per-block content of the
-block-diagonal form 8.37 and the diagonal-multiplicity count 8.31 are now
-proved (8B); the existence of square roots of invertible complex operators 8.41
-is now proved (8C, by gluing per-eigenspace roots along the generalized
-eigenspace decomposition), and the Jordan-form theorems are now proved (8C: the
-nilpotent Jordan basis 8.45 by Axler's induction on dimension, and the full Jordan
-form over `ℂ` 8.46 by applying 8.45 to each `(T − λ)|_{G(λ,T)}` and gluing along
-the generalized eigenspace decomposition) — both stated matrix-free via families
-of eigenvalue chains that form a basis, so only the Definition 8.44's literal
-`ℳ(T, basis)` phrasing stays in prose; *matrix factorizations* (the
-QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
-uniqueness; the Cholesky factorization 7.63 is now proved in 7D, existence and
-uniqueness, built on QR; and in 7F the matrix SVD `A = B D C*` 7.80, the
-operator-norm ↔ largest-singular-value bridge 7.88(a)/7.85, the
-positive-singular-value count 7.68(b)(c), the pseudoinverse SVD 7.75, the
-ellipsoid-image results 7.99/7.101, and the best rank-`k` approximation 7.92 are
-now proved — in 7F only Axler's informal box/volume *definitions* below remain in
-prose); Axler's informal box/volume *definitions* 7.108–7.110 (the headline
-volume theorem 7.111, `volume T(Ω) = (s₁ ⋯ sₙ)·volume Ω`, is proved
-measure-theoretically in 9C via the Haar change-of-variables and 9.60); and a
-handful of purely numeric worked examples. Section 9D now carries no numbered-result deferral: the
-`PiTensorProduct` dimension theory 9.87/9.89/9.90 is proved via
-`Basis.piTensorProduct` (with 9.87 dual to 9.89 through `PiTensorProduct.lift`),
-alongside the previously proved inner product on a binary tensor product
-9.80–9.83. In 9C the
-determinant/adjoint results 9.56(c), 9.58, 9.59, 9.60 and Hadamard's inequality
-9.66 are now proved (9.60 in both its `‖det T‖ = √det(T*T)` and
-product-of-singular-values `|det T| = s₁ ⋯ sₙ` forms) — 9C carries no remaining
-numbered-result deferral. The Chapters 1–7C sections carry no `✓*` — every
-numbered result there is fully proved.
+A few items are deliberately kept in prose, each captured formally elsewhere:
+
+- Axler's own *informal definitions* — the intuitive box/volume definitions
+  7.108–7.110 and the matrix-of-a-basis Jordan-form definition 8.44 — are
+  reformulated formally instead: the volume theorem 7.111
+  (`volume T(Ω) = (s₁ ⋯ sₙ)·volume Ω`) is proved measure-theoretically in 9C, and
+  the Jordan form is stated matrix-free via eigenvalue chains in 8C.
+- The purely numeric worked examples 8.24 and 8.27.
+
+Everything is axiom-clean except the Chapter 6 integral-inner-product examples
+(6.34/6.41/6.44/6.63), which are stated on the skippable, `sorry`-backed `L²[a,b]`
+inner-product space in `L2Interval.lean`.
 
 ## Building
 
