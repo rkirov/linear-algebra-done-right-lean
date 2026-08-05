@@ -83,7 +83,7 @@ the section's exercises.
 | 6B. Orthonormal Bases | ✓ | ✓ | — |
 | 6C. Orthogonal Complements and Minimization Problems | ✓ | ✓ | — |
 | 7A. Self-Adjoint and Normal Operators | ✓ | ✓ | — |
-| 7B. Spectral Theorem | ✓ | — | — |
+| 7B. Spectral Theorem | ✓ | ✓ | — |
 | 7C. Positive Operators | ✓ | — | — |
 | 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓ | — | — |
 | 7E. Singular Value Decomposition | ✓ | — | — |
@@ -112,11 +112,7 @@ A few items are deliberately kept in prose, each captured formally elsewhere:
 - The purely numeric worked examples 8.24 and 8.27.
 
 Every numbered item is **axiom-clean** — depending only on mathlib's standard
-`propext` / `Classical.choice` / `Quot.sound`, with no `sorry`. This includes the
-Chapter 6 integral-inner-product examples: the `L²[a,b]` inner-product space in the
-skippable `L2Interval.lean` is fully proved (its positive-definiteness genuinely
-requires a nondegenerate interval, so its inner-product instance is gated on
-`Fact (a < b)`).
+`propext` / `Classical.choice` / `Quot.sound`, with no `sorry`.
 
 ## Building
 

@@ -6,6 +6,7 @@ import Mathlib.FieldTheory.Minpoly.Field
 import Mathlib.Algebra.Polynomial.Splits
 import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
 import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Analysis.Matrix.Hermitian
 import LinearAlgebraDoneRightLean.Section_7A
 import LinearAlgebraDoneRightLean.Section_6B
 import LinearAlgebraDoneRightLean.Section_6C
@@ -104,23 +105,112 @@ theorem minpoly_symmetric_splits {V : Type*} [NormedAddCommGroup V]
     rw [hkill, map_zero]
   exact Polynomial.Splits.of_dvd hpsplit hp0 (minpoly.dvd ℝ T haeval)
 
+/-! Conditions (b) and (c) of the spectral theorems.
+
+Axler states 7.29 and 7.31 as three-way equivalences that differ only in their
+first condition (self-adjoint over {lit}`ℝ`, normal over {lit}`ℂ`); conditions
+(b) and (c) are identical, so we name them once and reuse them for both. -/
+
+/-- Condition (b) of 7.29/7.31: {lit}`T` has a diagonal matrix with respect to
+some orthonormal basis of {lit}`V`. -/
+def HasDiagonalMatrix (T : V →ₗ[𝕜] V) : Prop :=
+  ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V),
+    (LinearMap.toMatrixOrthonormal e T).IsDiag
+
+/-- Condition (c) of 7.29/7.31: {lit}`V` has an orthonormal basis consisting of
+eigenvectors of {lit}`T`. -/
+def HasOrthonormalEigenbasis (T : V →ₗ[𝕜] V) : Prop :=
+  ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V), ∀ i, ∃ μ : 𝕜, HasEigenvector T μ (e i)
+
+omit [FiniteDimensional 𝕜 V] in
+/-- A vector of an orthonormal basis satisfying {lit}`T (e i) = μ • e i` really is an
+eigenvector: basis vectors are nonzero. -/
+theorem hasEigenvector_of_orthonormalBasis {n : ℕ} {T : V →ₗ[𝕜] V}
+    (e : OrthonormalBasis (Fin n) 𝕜 V) {μ : 𝕜} {i : Fin n} (h : T (e i) = μ • e i) :
+    HasEigenvector T μ (e i) :=
+  Module.End.hasEigenvector_iff.mpr
+    ⟨Module.End.mem_eigenspace_iff.mpr h, e.orthonormal.ne_zero i⟩
+
+/-- For a *fixed* orthonormal basis, "diagonal matrix" and "basis of eigenvectors"
+say the same thing. This is the equivalence of (b) and (c), which Axler notes
+"follows from the definitions". -/
+theorem isDiag_toMatrixOrthonormal_iff {n : ℕ} (T : V →ₗ[𝕜] V)
+    (e : OrthonormalBasis (Fin n) 𝕜 V) :
+    (LinearMap.toMatrixOrthonormal e T).IsDiag ↔ ∀ i, ∃ μ : 𝕜, HasEigenvector T μ (e i) := by
+  constructor
+  · intro hd i
+    refine ⟨⟪e i, T (e i)⟫_𝕜, Module.End.hasEigenvector_iff.mpr
+      ⟨Module.End.mem_eigenspace_iff.mpr ?_, e.orthonormal.ne_zero i⟩⟩
+    conv_lhs => rw [← e.sum_repr' (T (e i))]
+    refine Finset.sum_eq_single i (fun j _ hji => ?_) (fun h => absurd (Finset.mem_univ i) h)
+    rw [← LinearMap.toMatrixOrthonormal_apply_apply e T j i, hd hji, zero_smul]
+  · intro he i j hij
+    obtain ⟨μ, hμ⟩ := he j
+    rw [LinearMap.toMatrixOrthonormal_apply_apply, hμ.apply_eq_smul, inner_smul_right,
+      e.orthonormal.2 hij, mul_zero]
+
+/-- {lit}`HasDiagonalMatrix` and {lit}`HasOrthonormalEigenbasis` are equivalent
+over any {lit}`𝕜` — the (b) ⟺ (c) half of both spectral theorems. -/
+theorem hasDiagonalMatrix_iff_hasOrthonormalEigenbasis (T : V →ₗ[𝕜] V) :
+    HasDiagonalMatrix T ↔ HasOrthonormalEigenbasis T := by
+  constructor
+  · rintro ⟨n, e, hd⟩
+    exact ⟨n, e, (isDiag_toMatrixOrthonormal_iff T e).mp hd⟩
+  · rintro ⟨n, e, he⟩
+    exact ⟨n, e, (isDiag_toMatrixOrthonormal_iff T e).mpr he⟩
+
+/-- A diagonal matrix, read back through the star-algebra isomorphism
+{name}`LinearMap.toMatrixOrthonormal`, is what makes conditions (b) ⟹ (a) work in
+both spectral theorems: over {lit}`ℝ` it forces self-adjointness, over {lit}`ℂ`
+normality. This is the shared "the matrix is {lit}`diagonal d`" step. -/
+theorem exists_diagonal_of_hasDiagonalMatrix {T : V →ₗ[𝕜] V} (h : HasDiagonalMatrix T) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V) (d : Fin n → 𝕜),
+      LinearMap.toMatrixOrthonormal e T = Matrix.diagonal d := by
+  obtain ⟨n, e, hd⟩ := h
+  exact ⟨n, e, _, ((Matrix.isDiag_iff_diagonal_diag _).mp hd).symm⟩
+
 /-! 7.29 Real spectral theorem
 
-For {lit}`𝔽 = ℝ`, an operator {lit}`T` is self-adjoint if and only if {lit}`V`
-has an orthonormal basis consisting of eigenvectors of {lit}`T` (equivalently,
-{lit}`T` has a diagonal matrix with respect to some orthonormal basis).
+For {lit}`𝔽 = ℝ` and {lit}`T ∈ ℒ(V)` the following are equivalent:
+(a) {lit}`T` is self-adjoint; (b) {lit}`T` has a diagonal matrix with respect to
+some orthonormal basis of {lit}`V`; (c) {lit}`V` has an orthonormal basis
+consisting of eigenvectors of {lit}`T`.
 
 The substantive direction — every self-adjoint operator is orthonormally
 diagonalizable — is mathlib's spectral theorem, available uniformly over
 {lit}`ℝ` and {lit}`ℂ` (over {lit}`ℂ` it is the self-adjoint case of the complex
 spectral theorem). mathlib packages the eigenbasis as
-{name}`LinearMap.IsSymmetric.eigenvectorBasis`. -/
+{name}`LinearMap.IsSymmetric.eigenvectorBasis`. The converse (b) ⟹ (a) is the
+observation that a real diagonal matrix equals its own conjugate transpose. -/
 
-theorem spectral_orthonormal_eigenbasis (T : V →ₗ[𝕜] V)
-    (hT : LinearMap.IsSymmetric T) :
-    ∃ b : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V, ∀ i, ∃ μ : 𝕜, T (b i) = μ • b i :=
-  ⟨hT.eigenvectorBasis rfl,
-    fun i => ⟨(hT.eigenvalues rfl i : 𝕜), hT.apply_eigenvectorBasis rfl i⟩⟩
+/-- 7.29 (real spectral theorem) The three-way equivalence. -/
+theorem tfae_real_spectral {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V) :
+    [T.IsSymmetric, HasDiagonalMatrix T, HasOrthonormalEigenbasis T].TFAE := by
+  tfae_have 1 → 3 := fun hT =>
+    ⟨finrank ℝ V, hT.eigenvectorBasis rfl, fun i =>
+      ⟨(hT.eigenvalues rfl i : ℝ),
+        hasEigenvector_of_orthonormalBasis _ (hT.apply_eigenvectorBasis rfl i)⟩⟩
+  tfae_have 3 → 2 := fun h =>
+    (hasDiagonalMatrix_iff_hasOrthonormalEigenbasis T).mpr h
+  tfae_have 2 → 1 := by
+    intro h
+    obtain ⟨n, e, d, hdiag⟩ := exists_diagonal_of_hasDiagonalMatrix h
+    rw [LinearMap.isSymmetric_iff_isSelfAdjoint, isSelfAdjoint_iff]
+    have key : LinearMap.toMatrixOrthonormal e (star T) = LinearMap.toMatrixOrthonormal e T := by
+      rw [map_star, hdiag, Matrix.star_eq_conjTranspose, Matrix.diagonal_conjTranspose,
+        star_trivial]
+    exact (LinearMap.toMatrixOrthonormal e).injective key
+  tfae_finish
+
+/-- 7.29 (a) ⟹ (c), the direction usually cited on its own: every self-adjoint
+operator on a real inner product space has an orthonormal basis of eigenvectors.
+Read off the equivalence, following the {name}`LADR.Section_3D.tfae_isInvertible`
+pattern. -/
+theorem spectral_orthonormal_eigenbasis {V : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V)
+    (hT : T.IsSymmetric) : HasOrthonormalEigenbasis T :=
+  ((tfae_real_spectral T).out 0 2).mp hT
 
 /-- The eigenvalues in the spectral decomposition are real, as expected for a
 self-adjoint operator (7.12). -/
@@ -136,8 +226,14 @@ theorem spectral_eigenvalues_real (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymme
 self-adjoint operator on {lit}`ℝ³` with matrix {lit}`!![14,-13,8; -13,14,8; 8,8,-7]`,
 the vectors {lit}`(1,-1,0), (1,1,1), (1,1,-2)` (normalized by {lit}`√2, √3, √6`)
 form an orthonormal basis of eigenvectors, with eigenvalues {lit}`27, 9, -15`. This
-illustrates the real spectral theorem 7.29. We verify each eigenvalue equation and
-the pairwise orthogonality and squared norms of the three vectors. -/
+illustrates the real spectral theorem 7.29.
+
+We verify all of Axler's claims: the matrix equals its transpose, so {lit}`T` is
+self-adjoint ({lit}`A_7_30_isHermitian`, {lit}`A_7_30_isSymmetric`); each
+eigenvalue equation, together with the pairwise orthogonality and squared norms of
+the three vectors; that the normalized vectors form an orthonormal basis
+({lit}`b_7_30`); and that the matrix of {lit}`T` with respect to that basis is the
+diagonal matrix {lit}`diag(27, 9, -15)` ({lit}`A_7_30_toMatrixOrthonormal`). -/
 
 section Example_7_30
 
@@ -177,6 +273,74 @@ theorem v_7_30_normSq_b : ⟪v_7_30_b, v_7_30_b⟫_ℝ = 3 := by
   rw [PiLp.inner_apply]; simp [v_7_30_b, Fin.sum_univ_three]; norm_num
 theorem v_7_30_normSq_c : ⟪v_7_30_c, v_7_30_c⟫_ℝ = 6 := by
   rw [PiLp.inner_apply]; simp [v_7_30_c, Fin.sum_univ_three]; norm_num
+
+/-- Axler's first claim in 7.30: the matrix has real entries and equals its
+transpose, hence is Hermitian. -/
+theorem A_7_30_isHermitian : Matrix.IsHermitian A_7_30 := by
+  ext i j
+  fin_cases i <;> fin_cases j <;> simp [A_7_30]
+
+/-- ... and therefore {lit}`T` is self-adjoint, which is what makes 7.29 apply. -/
+theorem A_7_30_isSymmetric : (Matrix.toEuclideanLin A_7_30).IsSymmetric :=
+  Matrix.isSymmetric_toEuclideanLin_iff.mpr A_7_30_isHermitian
+
+/-- The three eigenvectors normalized by {lit}`√2, √3, √6`, as in the book. -/
+noncomputable def e_7_30 : Fin 3 → EuclideanSpace ℝ (Fin 3) :=
+  ![(Real.sqrt 2)⁻¹ • v_7_30_a, (Real.sqrt 3)⁻¹ • v_7_30_b, (Real.sqrt 6)⁻¹ • v_7_30_c]
+
+theorem e_7_30_orthonormal : Orthonormal ℝ e_7_30 := by
+  have s2 : Real.sqrt 2 * Real.sqrt 2 = 2 := Real.mul_self_sqrt (by norm_num)
+  have s3 : Real.sqrt 3 * Real.sqrt 3 = 3 := Real.mul_self_sqrt (by norm_num)
+  have s6 : Real.sqrt 6 * Real.sqrt 6 = 6 := Real.mul_self_sqrt (by norm_num)
+  have n2 : Real.sqrt 2 ≠ 0 := by positivity
+  have n3 : Real.sqrt 3 ≠ 0 := by positivity
+  have n6 : Real.sqrt 6 ≠ 0 := by positivity
+  rw [orthonormal_iff_ite]
+  intro i j
+  fin_cases i <;> fin_cases j <;>
+    simp only [e_7_30, Fin.zero_eta, Fin.mk_one, Fin.reduceFinMk, Matrix.cons_val_zero,
+      Matrix.cons_val_one, Matrix.head_cons, Matrix.cons_val_two, Matrix.tail_cons,
+      real_inner_smul_left, real_inner_smul_right, real_inner_comm v_7_30_a v_7_30_b,
+      real_inner_comm v_7_30_a v_7_30_c, real_inner_comm v_7_30_b v_7_30_c,
+      v_7_30_ortho_ab, v_7_30_ortho_ac, v_7_30_ortho_bc, v_7_30_normSq_a, v_7_30_normSq_b,
+      v_7_30_normSq_c] <;>
+    norm_num <;> first | decide | (field_simp; linarith [s2, s3, s6])
+
+/-- The orthonormal basis of eigenvectors of Example 7.30. -/
+noncomputable def b_7_30 : OrthonormalBasis (Fin 3) ℝ (EuclideanSpace ℝ (Fin 3)) :=
+  (basisOfOrthonormalOfCardEqFinrank e_7_30_orthonormal (by simp)).toOrthonormalBasis
+    (by rw [coe_basisOfOrthonormalOfCardEqFinrank]; exact e_7_30_orthonormal)
+
+@[simp] theorem b_7_30_apply (i : Fin 3) : b_7_30 i = e_7_30 i := by
+  rw [b_7_30, Module.Basis.coe_toOrthonormalBasis, coe_basisOfOrthonormalOfCardEqFinrank]
+
+/-- Each basis vector is an eigenvector, with the same eigenvalue as the
+unnormalized vector it was scaled from. -/
+theorem b_7_30_eigenvector (i : Fin 3) :
+    Matrix.toEuclideanLin A_7_30 (b_7_30 i) = (![27, 9, -15] : Fin 3 → ℝ) i • b_7_30 i := by
+  have scale : ∀ (c μ : ℝ) (v : EuclideanSpace ℝ (Fin 3)),
+      Matrix.toEuclideanLin A_7_30 v = μ • v →
+      Matrix.toEuclideanLin A_7_30 (c • v) = μ • (c • v) := by
+    intro c μ v hv
+    rw [map_smul, hv, smul_comm]
+  fin_cases i <;> simp only [b_7_30_apply, e_7_30, Fin.zero_eta, Fin.mk_one, Fin.reduceFinMk,
+    Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.head_cons, Matrix.cons_val_two,
+    Matrix.tail_cons]
+  · exact scale _ _ _ A_7_30_eigenvalue_27
+  · exact scale _ _ _ A_7_30_eigenvalue_9
+  · exact scale _ _ _ A_7_30_eigenvalue_neg15
+
+/-- Axler's second claim in 7.30: with respect to this orthonormal basis the
+matrix of {lit}`T` is the diagonal matrix {lit}`diag(27, 9, -15)`. -/
+theorem A_7_30_toMatrixOrthonormal :
+    LinearMap.toMatrixOrthonormal b_7_30 (Matrix.toEuclideanLin A_7_30)
+      = Matrix.diagonal ![27, 9, -15] := by
+  ext i j
+  rw [LinearMap.toMatrixOrthonormal_apply_apply, b_7_30_eigenvector j, inner_smul_right,
+    orthonormal_iff_ite.mp b_7_30.orthonormal i j, Matrix.diagonal_apply]
+  split_ifs with h
+  · subst h; ring
+  · ring
 
 end Example_7_30
 
@@ -277,6 +441,34 @@ theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace �
     ((LADR.Section_5C.tfae_upperTriangular he T).out 0 2).mp hUT
   exact ⟨n, e, normal_ut_diagonal T hN e hflag⟩
 
+/-- 7.31 (complex spectral theorem) The three-way equivalence: for {lit}`𝔽 = ℂ`,
+{lit}`T` is normal iff it has a diagonal matrix with respect to some orthonormal
+basis iff {lit}`V` has an orthonormal basis of eigenvectors of {lit}`T`. The
+converse (b) ⟹ (a) is the observation that a diagonal matrix commutes with its
+conjugate transpose. -/
+theorem tfae_complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace ℂ W]
+    [FiniteDimensional ℂ W] (T : W →ₗ[ℂ] W) :
+    [IsStarNormal T, HasDiagonalMatrix T, HasOrthonormalEigenbasis T].TFAE := by
+  tfae_have 1 → 3 := by
+    intro hN
+    obtain ⟨n, e, he⟩ := complex_spectral T hN
+    exact ⟨n, e, fun i => ⟨_, hasEigenvector_of_orthonormalBasis e (he i)⟩⟩
+  tfae_have 3 → 2 := fun h =>
+    (hasDiagonalMatrix_iff_hasOrthonormalEigenbasis T).mpr h
+  tfae_have 2 → 1 := by
+    intro h
+    obtain ⟨n, e, d, hdiag⟩ := exists_diagonal_of_hasDiagonalMatrix h
+    have key : LinearMap.toMatrixOrthonormal e (star T * T)
+        = LinearMap.toMatrixOrthonormal e (T * star T) := by
+      rw [map_mul, map_mul, map_star, hdiag, Matrix.star_eq_conjTranspose,
+        Matrix.diagonal_conjTranspose, Matrix.diagonal_mul_diagonal,
+        Matrix.diagonal_mul_diagonal]
+      congr 1
+      funext i
+      exact mul_comm _ _
+    exact ⟨(LinearMap.toMatrixOrthonormal e).injective key⟩
+  tfae_finish
+
 /-! 7.33 Example: an orthonormal basis of eigenvectors (complex case). For the
 normal operator {lit}`T(w, z) = (2w - 3z, 3w + 2z)` on {lit}`ℂ²` (matrix
 {lit}`!![2,-3; 3,2]`), the vectors {lit}`(i, 1), (-i, 1)` (normalized by {lit}`√2`)
@@ -343,12 +535,12 @@ theorem exercise_7B_4 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
     LinearMap.adjoint T = -T ↔ ∀ μ : ℂ, HasEigenvalue T μ → μ.re = 0 := by
   sorry
 
-/-- 7B.5 Counterexample: a diagonalizable operator on {lit}`ℂ³` need not be
-normal with respect to the usual inner product. -/
-theorem exercise_7B_5 :
-    ¬ ∀ T : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3),
-      (∃ b : Module.Basis (Fin 3) ℂ (EuclideanSpace ℂ (Fin 3)),
-        ∀ i, ∃ μ : ℂ, T (b i) = μ • b i) → IsStarNormal T := by
+/-- 7B.5 Prove or give a counterexample: if {lit}`T ∈ ℒ(ℂ³)` is diagonalizable,
+then {lit}`T` is normal (with respect to the usual inner product). -/
+def exercise_7B_5 :
+    Decidable (∀ T : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3),
+      Section_5D.IsDiagonalizable T → IsStarNormal T) := by
+  -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 7B.6 If {lit}`T` is normal on a complex inner product space and {lit}`T⁹ = T⁸`,
@@ -358,19 +550,29 @@ theorem exercise_7B_6 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
     LinearMap.IsSymmetric T ∧ T ^ 2 = T := by
   sorry
 
+/-- Axler leaves the complex vector space free, so it is part of the answer. Only
+its dimension matters — every finite-dimensional complex vector space is
+{lit}`ℂⁿ` up to isomorphism — so the answer supplies {lit}`n`. -/
+def exercise_7B_7_n : ℕ := sorry
+
+/-- The witness operator for 7B.7. -/
+noncomputable def exercise_7B_7_sol :
+    (Fin exercise_7B_7_n → ℂ) →ₗ[ℂ] (Fin exercise_7B_7_n → ℂ) :=
+  sorry
+
 /-- 7B.7 There is an operator on a complex vector space with {lit}`T⁹ = T⁸` but
 {lit}`T² ≠ T`. -/
 theorem exercise_7B_7 :
-    ∃ (V : Type) (_ : AddCommGroup V) (_ : Module ℂ V) (_ : Module.Finite ℂ V)
-      (T : V →ₗ[ℂ] V), T ^ 9 = T ^ 8 ∧ T ^ 2 ≠ T := by
+    exercise_7B_7_sol ^ 9 = exercise_7B_7_sol ^ 8 ∧
+      exercise_7B_7_sol ^ 2 ≠ exercise_7B_7_sol := by
   sorry
 
 /-- 7B.8 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff every eigenvector of {lit}`T` is
 also an eigenvector of {lit}`T*`. -/
 theorem exercise_7B_8 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
-    IsStarNormal T ↔ ∀ (v : V) (μ : ℂ), v ≠ 0 → T v = μ • v →
-      ∃ ν : ℂ, LinearMap.adjoint T v = ν • v := by
+    IsStarNormal T ↔ ∀ (v : V) (μ : ℂ), HasEigenvector T μ v →
+      ∃ ν : ℂ, HasEigenvector (LinearMap.adjoint T) ν v := by
   sorry
 
 /-- 7B.9 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff {lit}`T* = p(T)` for some
@@ -404,7 +606,7 @@ theorem exercise_7B_12 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ
 complex inner product space has an orthonormal basis of eigenvectors. -/
 theorem exercise_7B_13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
-    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V), ∀ k, ∃ μ : ℂ, T (e k) = μ • e k := by
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V), ∀ k, ∃ μ : ℂ, HasEigenvector T μ (e k) := by
   sorry
 
 /-- 7B.14 For {lit}`𝔽 = ℝ`, {lit}`T` is self-adjoint iff eigenvectors for distinct
@@ -412,7 +614,8 @@ eigenvalues are orthogonal and the eigenspaces span {lit}`V`. -/
 theorem exercise_7B_14 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
     [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V) :
     LinearMap.IsSymmetric T ↔
-      ((∀ (μ ν : ℝ) (u v : V), μ ≠ ν → T u = μ • u → T v = ν • v → ⟪u, v⟫_ℝ = 0) ∧
+      ((∀ (μ ν : ℝ) (u v : V), μ ≠ ν → HasEigenvector T μ u → HasEigenvector T ν v →
+          ⟪u, v⟫_ℝ = 0) ∧
         (⨆ μ : ℝ, Module.End.eigenspace T μ) = ⊤) := by
   sorry
 
@@ -421,7 +624,8 @@ eigenvalues are orthogonal and the eigenspaces span {lit}`V`. -/
 theorem exercise_7B_15 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
     IsStarNormal T ↔
-      ((∀ (μ ν : ℂ) (u v : V), μ ≠ ν → T u = μ • u → T v = ν • v → ⟪u, v⟫_ℂ = 0) ∧
+      ((∀ (μ ν : ℂ) (u v : V), μ ≠ ν → HasEigenvector T μ u → HasEigenvector T ν v →
+          ⟪u, v⟫_ℂ = 0) ∧
         (⨆ μ : ℂ, Module.End.eigenspace T μ) = ⊤) := by
   sorry
 
@@ -431,7 +635,7 @@ normal operators. -/
 theorem exercise_7B_16 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (ℰ : Set (V →ₗ[ℂ] V)) :
     (∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V),
-        ∀ T ∈ ℰ, ∀ k, ∃ μ : ℂ, T (e k) = μ • e k) ↔
+        ∀ T ∈ ℰ, (LinearMap.toMatrixOrthonormal e T).IsDiag) ↔
       (∀ S ∈ ℰ, ∀ T ∈ ℰ, IsStarNormal S ∧ IsStarNormal T ∧ S ∘ₗ T = T ∘ₗ S) := by
   sorry
 
@@ -441,35 +645,80 @@ self-adjoint operators. -/
 theorem exercise_7B_17 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
     [FiniteDimensional ℝ V] (ℰ : Set (V →ₗ[ℝ] V)) :
     (∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℝ V),
-        ∀ T ∈ ℰ, ∀ k, ∃ μ : ℝ, T (e k) = μ • e k) ↔
+        ∀ T ∈ ℰ, (LinearMap.toMatrixOrthonormal e T).IsDiag) ↔
       (∀ S ∈ ℰ, ∀ T ∈ ℰ,
         LinearMap.IsSymmetric S ∧ LinearMap.IsSymmetric T ∧ S ∘ₗ T = T ∘ₗ S) := by
   sorry
+
+/-- The witness operator for 7B.18. -/
+noncomputable def exercise_7B_18_sol_T :
+    EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2) :=
+  sorry
+
+/-- The witness coefficient {lit}`b` for 7B.18. It is part of the answer in its own
+right — nothing determines it from {lit}`exercise_7B_18_sol_T`. -/
+noncomputable def exercise_7B_18_sol_b : ℝ := sorry
+
+/-- The witness coefficient {lit}`c` for 7B.18. -/
+noncomputable def exercise_7B_18_sol_c : ℝ := sorry
 
 /-- 7B.18 The self-adjoint hypothesis in 7.26 cannot be dropped: there is a real
 inner product space operator {lit}`T` and {lit}`b, c` with {lit}`b² < 4c` making
 {lit}`T² + bT + cI` non-invertible. -/
 theorem exercise_7B_18 :
-    ∃ (T : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2)) (b c : ℝ),
-      b ^ 2 < 4 * c ∧
-      ¬ Function.Bijective (T ∘ₗ T + b • T +
-        c • (LinearMap.id : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2))) := by
+    exercise_7B_18_sol_b ^ 2 < 4 * exercise_7B_18_sol_c ∧
+      ¬ Function.Bijective (exercise_7B_18_sol_T ∘ₗ exercise_7B_18_sol_T +
+        exercise_7B_18_sol_b • exercise_7B_18_sol_T +
+        exercise_7B_18_sol_c •
+          (LinearMap.id : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2))) := by
   sorry
 
-/-- 7B.19 If {lit}`T` is self-adjoint and {lit}`U` is invariant, then (a) {lit}`U⟂`
-is invariant and (b) {lit}`T|U` is self-adjoint. -/
-theorem exercise_7B_19 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
+/-- 7B.19 (a) If {lit}`T` is self-adjoint and {lit}`U` is invariant under
+{lit}`T`, then {lit}`U⟂` is invariant under {lit}`T`. -/
+theorem exercise_7B_19a (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
-    (∀ w ∈ Uᗮ, T w ∈ Uᗮ) ∧ LinearMap.IsSymmetric (T.restrict hU) := by
+    ∀ w ∈ Uᗮ, T w ∈ Uᗮ := by
   sorry
 
-/-- 7B.20 If {lit}`T` is normal and {lit}`U` is invariant, then (a) {lit}`U⟂` is
-invariant, (b) {lit}`U` is invariant under {lit}`T*`, and (d) {lit}`T|U` is
-normal. -/
-theorem exercise_7B_20 (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
+/-- 7B.19 (b) {lit}`T|U ∈ ℒ(U)` is self-adjoint. -/
+theorem exercise_7B_19b (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
-    (∀ w ∈ Uᗮ, T w ∈ Uᗮ) ∧ (∀ u ∈ U, LinearMap.adjoint T u ∈ U) ∧
-      IsStarNormal (T.restrict hU) := by
+    LinearMap.IsSymmetric (T.restrict hU) := by
+  sorry
+
+/-- 7B.19 (c) {lit}`T|U⟂ ∈ ℒ(U⟂)` is self-adjoint. The invariance of {lit}`U⟂`
+needed to form the restriction is part (a). -/
+theorem exercise_7B_19c (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
+    (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
+    LinearMap.IsSymmetric (T.restrict (exercise_7B_19a T hT U hU)) := by
+  sorry
+
+/-- 7B.20 (a) If {lit}`T` is normal and {lit}`U` is invariant under {lit}`T`, then
+{lit}`U⟂` is invariant under {lit}`T`. -/
+theorem exercise_7B_20a (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
+    (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
+    ∀ w ∈ Uᗮ, T w ∈ Uᗮ := by
+  sorry
+
+/-- 7B.20 (b) {lit}`U` is invariant under {lit}`T*`. -/
+theorem exercise_7B_20b (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
+    (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
+    ∀ u ∈ U, LinearMap.adjoint T u ∈ U := by
+  sorry
+
+/-- 7B.20 (c) {lit}`(T|U)* = (T*)|U`. The invariance of {lit}`U` under {lit}`T*`
+needed to form the right-hand restriction is part (b). -/
+theorem exercise_7B_20c (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
+    (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
+    LinearMap.adjoint (T.restrict hU) =
+      (LinearMap.adjoint T).restrict (exercise_7B_20b T hN U hU) := by
+  sorry
+
+/-- 7B.20 (d) Both {lit}`T|U ∈ ℒ(U)` and {lit}`T|U⟂ ∈ ℒ(U⟂)` are normal. -/
+theorem exercise_7B_20d (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
+    (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
+    IsStarNormal (T.restrict hU) ∧
+      IsStarNormal (T.restrict (exercise_7B_20a T hN U hU)) := by
   sorry
 
 /-- 7B.21 If {lit}`T` is self-adjoint with {lit}`2, 3` its only eigenvalues, then
@@ -479,12 +728,16 @@ theorem exercise_7B_21 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     T ∘ₗ T - (5 : 𝕜) • T + (6 : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V) = 0 := by
   sorry
 
+/-- The witness for 7B.22. -/
+noncomputable def exercise_7B_22_sol :
+    EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3) :=
+  sorry
+
 /-- 7B.22 There is an operator on {lit}`ℂ³` with {lit}`2, 3` its only eigenvalues
 but {lit}`T² − 5T + 6I ≠ 0`. -/
 theorem exercise_7B_22 :
-    ∃ T : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3),
-      (∀ μ : ℂ, HasEigenvalue T μ ↔ μ = 2 ∨ μ = 3) ∧
-      T ∘ₗ T - (5 : ℂ) • T +
+    (∀ μ : ℂ, HasEigenvalue exercise_7B_22_sol μ ↔ μ = 2 ∨ μ = 3) ∧
+      exercise_7B_22_sol ∘ₗ exercise_7B_22_sol - (5 : ℂ) • exercise_7B_22_sol +
         (6 : ℂ) • (LinearMap.id : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3)) ≠ 0 := by
   sorry
 
@@ -499,7 +752,7 @@ theorem exercise_7B_23 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (μ
 matrix equal to its transpose. -/
 theorem exercise_7B_24a {U : Type*} [NormedAddCommGroup U] [InnerProductSpace ℝ U]
     [FiniteDimensional ℝ U] (T : U →ₗ[ℝ] U) :
-    (∃ b : Module.Basis (Fin (finrank ℝ U)) ℝ U, ∀ i, ∃ μ : ℝ, T (b i) = μ • b i) ↔
+    Section_5D.IsDiagonalizable T ↔
       ∃ b : Module.Basis (Fin (finrank ℝ U)) ℝ U,
         (LinearMap.toMatrix b b T).transpose = LinearMap.toMatrix b b T := by
   sorry
@@ -508,7 +761,7 @@ theorem exercise_7B_24a {U : Type*} [NormedAddCommGroup U] [InnerProductSpace �
 matrix commuting with its conjugate transpose. -/
 theorem exercise_7B_24b {U : Type*} [NormedAddCommGroup U] [InnerProductSpace ℂ U]
     [FiniteDimensional ℂ U] (T : U →ₗ[ℂ] U) :
-    (∃ b : Module.Basis (Fin (finrank ℂ U)) ℂ U, ∀ i, ∃ μ : ℂ, T (b i) = μ • b i) ↔
+    Section_5D.IsDiagonalizable T ↔
       ∃ b : Module.Basis (Fin (finrank ℂ U)) ℂ U,
         LinearMap.toMatrix b b T * (LinearMap.toMatrix b b T).conjTranspose =
           (LinearMap.toMatrix b b T).conjTranspose * LinearMap.toMatrix b b T := by
