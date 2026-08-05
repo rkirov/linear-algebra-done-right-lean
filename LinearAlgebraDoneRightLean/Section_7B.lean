@@ -22,6 +22,7 @@ namespace LADR.Section_7B
 open scoped InnerProductSpace RealInnerProductSpace ComplexConjugate
 open Module (finrank)
 open Module.End (HasEigenvalue HasEigenvector)
+open LADR.Section_3D (IsInvertible)
 
 variable {𝕜 : Type*} [RCLike 𝕜]
   {V : Type*} [NormedAddCommGroup V] [InnerProductSpace 𝕜 V] [FiniteDimensional 𝕜 V]
@@ -31,8 +32,10 @@ variable {𝕜 : Type*} [RCLike 𝕜]
 /-! 7.26 Invertible quadratic expressions
 
 If {lit}`T ∈ ℒ(V)` is self-adjoint and {lit}`b, c ∈ ℝ` satisfy {lit}`b² < 4c`,
-then {lit}`T² + bT + cI` is invertible. (We record the key step: it is injective,
-since {lit}`⟨(T² + bT + cI)v, v⟩ > 0` for {lit}`v ≠ 0`.) -/
+then {lit}`T² + bT + cI` is invertible. Axler's proof runs through positivity:
+{lit}`⟨(T² + bT + cI)v, v⟩ > 0` for {lit}`v ≠ 0`, which forces injectivity and
+hence (in finite dimensions) invertibility. We record the positivity step as
+{lit}`quadratic_pos` and the conclusion itself as {lit}`quadratic_isInvertible`. -/
 
 omit [FiniteDimensional 𝕜 V] in
 theorem quadratic_pos (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (b c : ℝ)
@@ -57,6 +60,17 @@ theorem quadratic_pos (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (b c
   have hs : 0 < ‖v‖ ^ 2 := by positivity
   nlinarith [hcs, hbc, hs, sq_nonneg (‖v‖ ^ 2 * b + 2 * RCLike.re ⟪T v, v⟫_𝕜),
     mul_pos hs hs]
+
+/-- 7.26 If {lit}`T` is self-adjoint and {lit}`b² < 4c`, then {lit}`T² + bT + cI`
+is invertible. -/
+theorem quadratic_isInvertible (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (b c : ℝ)
+    (hbc : b ^ 2 < 4 * c) :
+    IsInvertible (T ∘ₗ T + (b : 𝕜) • T + (c : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V)) := by
+  refine (Section_3D.isInvertible_iff_injective rfl _).mpr fun x y hxy => ?_
+  by_contra hne
+  have hpos := quadratic_pos T hT b c hbc (x - y) (sub_ne_zero.mpr hne)
+  rw [map_sub, hxy, sub_self, inner_zero_left, map_zero] at hpos
+  exact lt_irrefl 0 hpos
 
 /-! 7.27 The minimal polynomial of a self-adjoint operator (over {lit}`ℝ`) is a
 product of the linear factors {lit}`(z − λ₁) ⋯ (z − λₘ)` — i.e. it splits over

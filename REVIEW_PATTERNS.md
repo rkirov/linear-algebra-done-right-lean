@@ -100,3 +100,21 @@ Derived from the review-pass commits: 0777fe5 (5D), cf54f39 (5E),
 - **Fix:** use `γ` (not \lambda as it is reserved in lean) for the free eigenvalue variable, for
   consistency with the reviewed sections.
 - **Example:** `lam → γ` throughout 5D exercises in 0777fe5.
+
+## P9 — Numbered result weakened to its "key step"
+
+- **Symptom:** a numbered theorem from the book is formalized only as the
+  intermediate lemma its proof goes through, with the book's actual conclusion
+  left in prose. Tell-tale docstring phrasing: "we record the key step", "the
+  main ingredient", "which gives …".
+- **Detect:** `rg -n "key step|main ingredient|the essential point"
+  LinearAlgebraDoneRightLean/`; then check each numbered `/-! X.Y … -/` block
+  against the PDF and confirm some declaration actually states X.Y's conclusion.
+- **Why:** the section then doesn't contain the result it claims to; downstream
+  sections can't cite it, and the gap is invisible to the README progress table.
+- **Fix:** keep the intermediate lemma (it is usually reusable) and add the
+  book's conclusion as its own theorem, deriving it from the lemma. Rewrite the
+  docstring to name both.
+- **Example:** 7.26 stated only as `quadratic_pos` (positivity of
+  `⟨(T² + bT + cI)v, v⟩`); the book's claim — `T² + bT + cI` is invertible —
+  added as `quadratic_isInvertible`.
