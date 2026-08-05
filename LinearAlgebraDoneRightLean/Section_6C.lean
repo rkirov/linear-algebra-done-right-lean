@@ -531,11 +531,37 @@ variable [FiniteDimensional 𝕜 V]
   {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W]
 
 /-! 6.63 Example: approximating the sine function. The degree-{lit}`≤ 5` polynomial
-{lit}`u` minimizing {lit}`∫₋π^π |sin x − u(x)|² dx` — the orthogonal projection of
-{lit}`sin` onto {lit}`𝒫₅` in the {lit}`L²` inner product — approximates {lit}`sin`
-far better than its degree-{lit}`5` Taylor polynomial away from {lit}`0`. This
-integral-inner-product example is recorded in prose; the same minimization is
-Exercise 6C.18. -/
+{lit}`u` minimizing {lit}`∫₋π^π |sin x − u(x)|² dx` is the orthogonal projection of
+{lit}`sin` onto {lit}`𝒫₅` in the {lit}`L²` inner product on `C[-π,π]` — the content
+of the minimization theorem 6.61. (Axler's explicit numeric `u` merely replaces the
+π's of the exact projection with decimals.) We formalize the mathematical claim:
+the projection is the best degree-≤5 `L²`-approximation to `sin`. Building the exact
+numeric `u` is Exercise 6C.18. -/
+
+section Example_6_63
+
+/-- Monomials `x^k` as elements of `C[-π,π]`. -/
+noncomputable def monoL2 (k : ℕ) : L2C (-Real.pi) Real.pi := ⟨fun x => (x : ℝ) ^ k, by fun_prop⟩
+
+/-- The degree-`≤ 5` polynomial subspace `𝒫₅` of `C[-π,π]`. -/
+noncomputable def polyDegLE5 : Submodule ℝ (L2C (-Real.pi) Real.pi) :=
+  Submodule.span ℝ (Set.range (fun k : Fin 6 => monoL2 k))
+
+instance : FiniteDimensional ℝ polyDegLE5 :=
+  FiniteDimensional.span_of_finite ℝ (Set.finite_range _)
+
+/-- `sin` as an element of `C[-π,π]`. -/
+noncomputable def sinL2 : L2C (-Real.pi) Real.pi := ⟨fun x => Real.sin x, by fun_prop⟩
+
+/-- 6.63: the orthogonal projection of `sin` onto `𝒫₅` is the best degree-`≤ 5`
+`L²`-approximation to `sin` on `[-π,π]`: for every polynomial `u ∈ 𝒫₅`,
+`‖sin − P_{𝒫₅} sin‖ ≤ ‖sin − u‖` (equivalently `∫₋π^π|sin − P|² ≤ ∫₋π^π|sin − u|²`).
+This is 6.61 instantiated at `V = C[-π,π]`, `U = 𝒫₅`, `v = sin`. -/
+theorem sin_best_approx (u : L2C (-Real.pi) Real.pi) (hu : u ∈ polyDegLE5) :
+    ‖sinL2 - polyDegLE5.starProjection sinL2‖ ≤ ‖sinL2 - u‖ :=
+  minimizing_distance sinL2 u hu
+
+end Example_6_63
 
 /-! 6.67 The restriction of {lit}`T` to {lit}`(null T)⟂` is an injective map of
 {lit}`(null T)⟂` onto {lit}`range T`. -/
