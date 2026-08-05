@@ -325,8 +325,8 @@ columns {lit}`eⱼ` and {lit}`Rⱼₖ = ⟨eⱼ, aₖ⟩`. Then {lit}`A = QR` (o
 expansion of each column), {lit}`Q` is unitary (its columns are orthonormal),
 {lit}`R` is upper triangular ({name}`InnerProductSpace.gramSchmidtOrthonormalBasis_inv_triangular`),
 and the diagonal {lit}`Rₖₖ = ‖gramSchmidt aₖ‖ > 0` is a positive real.
-*Uniqueness* is `QR_unique` below, via the lemma that a unitary upper-triangular
-matrix with positive diagonal is the identity (`unitary_upperTri_eq_one`). -/
+*Uniqueness* is {lit}`QR_unique` below, via the lemma that a unitary upper-triangular
+matrix with positive diagonal is the identity ({lit}`unitary_upperTri_eq_one`). -/
 
 /-- The diagonal Gram–Schmidt coefficient: {lit}`⟨ê i, f i⟩ = ‖gramSchmidt f i‖`,
 a positive real. This is the entry that becomes the (positive) diagonal of {lit}`R`
@@ -450,7 +450,7 @@ theorem unitary_upperTri_eq_one {N : ℕ} (U : Matrix (Fin N) (Fin N) 𝕜)
 /-- 7.58 QR factorization (uniqueness). The unitary/upper-triangular/positive-diagonal
 factors of a QR factorization are unique. Following Axler: if {lit}`A = Q₁R₁ = Q₂R₂`,
 then {lit}`U = Q₂* Q₁ = R₂ R₁⁻¹` is unitary, upper triangular, and has positive
-diagonal, so {lit}`U = I` by `unitary_upperTri_eq_one`; hence {lit}`Q₁ = Q₂` and
+diagonal, so {lit}`U = I` by {name}`unitary_upperTri_eq_one`; hence {lit}`Q₁ = Q₂` and
 {lit}`R₁ = R₂`. -/
 theorem QR_unique {N : ℕ} (A Q₁ R₁ Q₂ R₂ : Matrix (Fin N) (Fin N) 𝕜)
     (hQ₁ : Q₁ ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hR₁t : R₁.BlockTriangular id)
@@ -560,10 +560,10 @@ A matrix {lit}`B ∈ 𝔽ⁿ'ⁿ` is *positive definite* if {lit}`B* = B` and
 def IsPositiveDefinite {n : Type*} [Fintype n] (B : Matrix n n 𝕜) : Prop :=
   Bᴴ = B ∧ ∀ x : n → 𝕜, x ≠ 0 → 0 < RCLike.re (∑ i, conj (B.mulVec x i) * x i)
 
-/-- 7.63 Cholesky factorization (existence). Every positive definite matrix `B`
-factors as `B = Rᴴ * R` with `R` upper triangular and positive real diagonal.
-Following Axler: the positive square root of `B` supplies an invertible `A` with
-`Aᴴ * A = B`; a QR factorization `A = Q * R` then gives
+/-- 7.63 Cholesky factorization (existence). Every positive definite matrix {lit}`B`
+factors as {lit}`B = Rᴴ * R` with {lit}`R` upper triangular and positive real diagonal.
+Following Axler: the positive square root of {lit}`B` supplies an invertible {lit}`A` with
+{lit}`Aᴴ * A = B`; a QR factorization {lit}`A = Q * R` then gives
 `B = Rᴴ * Qᴴ * Q * R = Rᴴ * R`. -/
 theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
     (hB : IsPositiveDefinite B) :
@@ -575,14 +575,14 @@ theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
   have hmul : ∀ M P : Matrix (Fin N) (Fin N) 𝕜,
       (M * P).toEuclideanLin = M.toEuclideanLin ∘ₗ P.toEuclideanLin := by
     intro M P; ext v
-    simp only [LinearMap.comp_apply, Matrix.toEuclideanLin_apply, WithLp.ofLp_toLp,
+    simp only [LinearMap.comp_apply, Matrix.toLpLin_apply, WithLp.ofLp_toLp,
       Matrix.mulVec_mulVec]
   -- `re ⟪Bop v, v⟫` equals the positive-definite quadratic form at `ofLp v`.
   have hre : ∀ v : EuclideanSpace 𝕜 (Fin N),
       RCLike.re (⟪B.toEuclideanLin v, v⟫_𝕜)
         = RCLike.re (∑ i, conj (B.mulVec (WithLp.ofLp v) i) * WithLp.ofLp v i) := by
     intro v
-    rw [Matrix.toEuclideanLin_apply, PiLp.inner_apply, map_sum, map_sum]
+    rw [Matrix.toLpLin_apply, PiLp.inner_apply, map_sum, map_sum]
     refine Finset.sum_congr rfl fun i _ => ?_
     rw [RCLike.inner_apply, mul_comm]
   -- `Bop = toEuclideanLin B` is a positive operator.
@@ -618,7 +618,7 @@ theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
   have hAcol : ∀ i, (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i)
       = Rop (EuclideanSpace.single i 1) := by
     intro i
-    rw [← hARop, Matrix.toEuclideanLin_apply]
+    rw [← hARop, Matrix.toLpLin_apply]
     ext k
     simp [EuclideanSpace.single, Matrix.mulVec_single, Matrix.transpose_apply]
   have hA : LinearIndependent 𝕜 (fun i => (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i)) := by
@@ -648,10 +648,10 @@ theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
     hQuni, Matrix.one_mul]
 
 /-- 7.63 Cholesky factorization (uniqueness). The upper-triangular positive-diagonal
-factor is unique: if `B = R₁ᴴ * R₁ = R₂ᴴ * R₂` with both `Rₖ` upper triangular with
-positive diagonal, then `R₁ = R₂`. Following Axler's QR uniqueness argument,
-`U = R₂ * R₁⁻¹` is unitary (from `R₁ᴴ R₁ = R₂ᴴ R₂`), upper triangular, and has
-positive diagonal, so `U = I` by `unitary_upperTri_eq_one`. -/
+factor is unique: if `B = R₁ᴴ * R₁ = R₂ᴴ * R₂` with both {lit}`Rₖ` upper triangular with
+positive diagonal, then {lit}`R₁ = R₂`. Following Axler's QR uniqueness argument,
+{lit}`U = R₂ * R₁⁻¹` is unitary (from {lit}`R₁ᴴ R₁ = R₂ᴴ R₂`), upper triangular, and has
+positive diagonal, so {lit}`U = I` by {name}`unitary_upperTri_eq_one`. -/
 theorem cholesky_unique {N : ℕ} (B R₁ R₂ : Matrix (Fin N) (Fin N) 𝕜)
     (hR₁t : ∀ i j, j < i → R₁ i j = 0)
     (hR₁d : ∀ i, 0 < RCLike.re (R₁ i i) ∧ RCLike.im (R₁ i i) = 0) (hB₁ : B = R₁ᴴ * R₁)

@@ -503,7 +503,7 @@ def T_5_28 : (Fin 5 → ℂ) →ₗ[ℂ] (Fin 5 → ℂ) where
 theorem T_5_28_annihilator :
     (T_5_28 ^ 5 : Module.End ℂ (Fin 5 → ℂ)) - (6 : ℂ) • T_5_28 + (3 : ℂ) • 1 = 0 := by
   apply LinearMap.ext; intro z; funext i
-  fin_cases i <;> simp [pow_succ, Module.End.mul_apply, T_5_28] <;> ring
+  fin_cases i <;> simp [pow_succ, Module.End.mul_apply, T_5_28]; ring
 
 /-! 5.29 {lit}`q(T) = 0` iff {lit}`q` is a polynomial multiple of the minimal
 polynomial. Axler's proof uses the division algorithm (4.9); mathlib's

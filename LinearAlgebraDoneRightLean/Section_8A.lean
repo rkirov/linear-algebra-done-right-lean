@@ -403,10 +403,10 @@ Axler proves the equivalence of three conditions: (a) {lit}`T` is nilpotent;
 (b) the minimal polynomial of {lit}`T` is {lit}`zᵐ` for some positive integer
 {lit}`m`; (c) there is a basis with respect to which the matrix of {lit}`T` is
 strictly upper triangular. We prove the equivalence (a) ↔ (b) as
-`isNilpotent_iff_minpoly_eq_X_pow`, and the "(a) ⟹ (c)" direction as
-`exists_strictUpperTriangular_of_nilpotent` below — following Axler, since the
+{lit}`isNilpotent_iff_minpoly_eq_X_pow`, and the "(a) ⟹ (c)" direction as
+{lit}`exists_strictUpperTriangular_of_nilpotent` below — following Axler, since the
 minimal polynomial {lit}`zᵐ` splits, 5.44 gives a basis with an upper-triangular
-matrix (Section 5C `exists_upperTriangular_iff_minpoly_eq_prod`), and its diagonal
+matrix (Section 5C {name}`exists_upperTriangular_iff_minpoly_eq_prod`), and its diagonal
 entries are eigenvalues (5.41) hence {lit}`0`, so the matrix is strictly upper
 triangular (zero on and below the diagonal). -/
 

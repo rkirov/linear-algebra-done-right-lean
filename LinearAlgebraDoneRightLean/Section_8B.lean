@@ -68,7 +68,7 @@ def T_8_21 : Module.End ℂ (Fin 3 → ℂ) where
 
 /-- {lit}`T³(z₁, z₂, z₃) = (0, 0, 125 z₃)`. -/
 theorem T_8_21_cube (z : Fin 3 → ℂ) : (T_8_21 ^ 3) z = ![0, 0, 125 * z 2] := by
-  funext i; fin_cases i <;> simp [pow_succ, Module.End.mul_apply, T_8_21] <;> ring
+  funext i; fin_cases i <;> simp [pow_succ, Module.End.mul_apply, T_8_21]; ring
 
 /-- {lit}`(T − 5I)³(z₁, z₂, z₃) = (−125 z₁ + 300 z₂, −125 z₂, 0)`. -/
 theorem T_8_21_sub_cube (z : Fin 3 → ℂ) :
@@ -396,9 +396,9 @@ block is the theorem below — {lit}`T` restricted to {lit}`G(μ, T)` has an
 upper-triangular matrix with {lit}`μ` on the diagonal, since
 {lit}`(T − μI)|_{G(μ,T)}` is nilpotent (8.18(c)). -/
 
-/-- 8.37 (per generalized eigenspace). `T` restricted to `G(μ, T)` has, with
+/-- 8.37 (per generalized eigenspace). {lit}`T` restricted to {lit}`G(μ, T)` has, with
 respect to a basis making `(T − μI)|_{G(μ,T)}` strictly upper triangular (8.18(c)),
-an upper-triangular matrix with `μ` on the diagonal. -/
+an upper-triangular matrix with {lit}`μ` on the diagonal. -/
 theorem exists_upperTriangular_restrict_maxGenEigenspace [Finite F V] (T : V →ₗ[F] V)
     (μ : F) (hT : Set.MapsTo T (maxGenEigenspace T μ) (maxGenEigenspace T μ)) :
     ∃ (n : ℕ) (e : Fin n → maxGenEigenspace T μ) (he : IsBasis F e),
@@ -453,8 +453,8 @@ generalized eigenvectors, {lit}`T` has the block diagonal matrix with blocks
 eigenspaces of the distinct eigenvalues. -/
 def T_ex_8B_1 : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ) where
   toFun v := ![-v 1, v 0]
-  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
-  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+  map_add' x y := by funext i; fin_cases i <;> simp; ring
+  map_smul' a x := by funext i; fin_cases i <;> simp
 
 /-- The generalized eigenspaces of {lit}`T_ex_8B_1`, indexed by eigenvalue — to
 be determined by the solver. -/

@@ -670,7 +670,7 @@ theorem exercise_5A_10b (γ : ℝ) (p : Polynomial.degreeLT ℝ 5) :
     HasEigenvector T_ex_5A_10 γ p ↔ p ∈ eigenvectors_5A_10 γ := by
   sorry
 
-/-- 5A.11 Stated over {lit}`ℂ`. Same proof should work for `ℝ`. -/
+/-- 5A.11 Stated over {lit}`ℂ`. Same proof should work for {lit}`ℝ`. -/
 theorem exercise_5A_11 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) (α : ℂ) :
     ∃ δ : ℝ, 0 < δ ∧ ∀ γ : ℂ, 0 < ‖α - γ‖ → ‖α - γ‖ < δ →

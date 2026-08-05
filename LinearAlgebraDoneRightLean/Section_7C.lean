@@ -99,6 +99,7 @@ theorem adjoint_comp_self_isPositive (R : V →ₗ[𝕜] V) :
     rw [inner_self_eq_norm_sq_to_K]
     simp
 
+omit [FiniteDimensional 𝕜 V] in
 /-- (a) ⟹ (b): every eigenvalue of a positive operator is a nonnegative real. -/
 theorem eigenvalue_nonneg {T : V →ₗ[𝕜] V} (hT : T.IsPositive) {μ : 𝕜}
     (hμ : HasEigenvalue T μ) : 0 ≤ RCLike.re μ ∧ conj μ = μ := by
@@ -250,14 +251,14 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
 /-- The (positive) operator {lit}`S(x,y) = (x, 2y)` on {lit}`ℝ²` (Example 7.41). -/
 def S_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
   toFun p := ![p 0, 2 * p 1]
-  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
-  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+  map_add' x y := by funext i; fin_cases i <;> simp; ring
+  map_smul' a x := by funext i; fin_cases i <;> simp; ring
 
 /-- Its positive square root {lit}`√S(x,y) = (x, √2·y)` (Example 7.41). -/
 noncomputable def sqrtS_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
   toFun p := ![p 0, Real.sqrt 2 * p 1]
-  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
-  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+  map_add' x y := by funext i; fin_cases i <;> simp; ring
+  map_smul' a x := by funext i; fin_cases i <;> simp; ring
 
 /-- 7.41 Example: {lit}`√S` is a square root of {lit}`S`, i.e. {lit}`(√S)² = S`
 (using {lit}`√2 · √2 = 2`). -/
@@ -269,7 +270,7 @@ theorem sqrtS_7_41_sq : sqrtS_7_41 ∘ₗ sqrtS_7_41 = S_7_41 := by
     simp [sqrtS_7_41, S_7_41]
   · show sqrtS_7_41 (sqrtS_7_41 p) 1 = S_7_41 p 1
     simp only [sqrtS_7_41, S_7_41, LinearMap.coe_mk, AddHom.coe_mk, Matrix.cons_val_one,
-      Matrix.head_cons, Matrix.cons_val_zero]
+      Matrix.cons_val_zero]
     rw [← mul_assoc, h2]
 
 /-- 7.43 If {lit}`T` is a positive operator and {lit}`⟨Tv, v⟩ = 0`, then {lit}`Tv = 0`.

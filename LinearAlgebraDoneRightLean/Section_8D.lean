@@ -47,6 +47,7 @@ theorem trace_mul_comm {m n : Type*} [Fintype m] [Fintype n] (A : Matrix m n F)
 For any two bases {lit}`b`, {lit}`c` of {lit}`V`, the matrices {lit}`ℳ(T, b)`
 and {lit}`ℳ(T, c)` have the same trace — both equal the basis-independent
 {name}`LinearMap.trace`. -/
+omit [FiniteDimensional F V] in
 theorem trace_toMatrix_indep {ι κ : Type*} [Fintype ι] [Fintype κ] [DecidableEq ι]
     [DecidableEq κ] (b : Module.Basis ι F V) (c : Module.Basis κ F V) (T : V →ₗ[F] V) :
     (LinearMap.toMatrix b b T).trace = (LinearMap.toMatrix c c T).trace := by
@@ -57,6 +58,7 @@ theorem trace_toMatrix_indep {ι κ : Type*} [Fintype ι] [Fintype κ] [Decidabl
 By 8.50 the definition {lit}`tr T = ` trace of the matrix of {lit}`T` (with
 respect to any basis) makes sense; this is mathlib's {name}`LinearMap.trace`. -/
 
+omit [FiniteDimensional F V] in
 theorem trace_eq_toMatrix_trace {ι : Type*} [Fintype ι] [DecidableEq ι]
     (b : Module.Basis ι F V) (T : V →ₗ[F] V) :
     LinearMap.trace F V T = (LinearMap.toMatrix b b T).trace :=
@@ -78,14 +80,17 @@ theorem trace_eq_neg_charpoly_coeff [Nontrivial V] (T : V →ₗ[F] V) :
 
 /-! 8.56 The trace is linear, and {lit}`tr(ST) = tr(TS)`. -/
 
+omit [FiniteDimensional F V] in
 theorem trace_add (S T : V →ₗ[F] V) :
     LinearMap.trace F V (S + T) = LinearMap.trace F V S + LinearMap.trace F V T :=
   map_add _ _ _
 
+omit [FiniteDimensional F V] in
 theorem trace_smul (a : F) (T : V →ₗ[F] V) :
     LinearMap.trace F V (a • T) = a • LinearMap.trace F V T :=
   map_smul _ _ _
 
+omit [FiniteDimensional F V] in
 theorem trace_comp_comm (S T : V →ₗ[F] V) :
     LinearMap.trace F V (S ∘ₗ T) = LinearMap.trace F V (T ∘ₗ S) :=
   LinearMap.trace_mul_comm F S T
@@ -142,6 +147,7 @@ If {lit}`e₁, …, eₙ` is an orthonormal basis of {lit}`V`, then
 {lit}`tr T = ∑ₖ ⟨T eₖ, eₖ⟩`. (mathlib conjugates the *first* slot, so the
 statement reads {lit}`tr T = ∑ₖ ⟨eₖ, T eₖ⟩`; over a real space the two agree,
 and over {lit}`ℂ` they are complex conjugates whose sum equals {lit}`tr T`.) -/
+omit [FiniteDimensional 𝕜 E] in
 theorem trace_eq_sum_inner {ι : Type*} [Fintype ι] (T : E →ₗ[𝕜] E)
     (b : OrthonormalBasis ι 𝕜 E) :
     LinearMap.trace 𝕜 E T = ∑ i, ⟪b i, T (b i)⟫_𝕜 :=

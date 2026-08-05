@@ -9,7 +9,7 @@ import Mathlib.LinearAlgebra.Eigenspace.Minpoly
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.LinearAlgebra.JordanChevalley
 import Mathlib.LinearAlgebra.Semisimple
-import Mathlib.RingTheory.Adjoin.Polynomial
+import Mathlib.RingTheory.Adjoin.Polynomial.Basic
 import Mathlib.RingTheory.Nilpotent.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
@@ -110,8 +110,8 @@ proof of 8.39 above replaces it with Newton's method, which supplies the same
 truncated-polynomial square root without reference to the series. -/
 
 open DirectSum in
-/-- Build an operator on `M` from operators on the summands of an internal direct
-sum: the glued `g` acts as `f i` on each summand `A i`. -/
+/-- Build an operator on {lit}`M` from operators on the summands of an internal direct
+sum: the glued {lit}`g` acts as {lit}`f i` on each summand {lit}`A i`. -/
 theorem glue_endo {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
     [DecidableEq ι] (A : ι → Submodule R M) (hA : DirectSum.IsInternal A)
     (f : ∀ i, A i →ₗ[R] A i) :
@@ -129,8 +129,8 @@ theorem glue_endo {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {ι :
     DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
 
 open DirectSum in
-/-- If on each summand of an internal direct sum `f i ∘ f i` agrees with `T`, then
-gluing the `f i` produces a square root of `T`. -/
+/-- If on each summand of an internal direct sum {lit}`f i ∘ f i` agrees with {lit}`T`, then
+gluing the {lit}`f i` produces a square root of {lit}`T`. -/
 theorem exists_sqComp_of_forall_restrict {R M : Type*} [CommRing R] [AddCommGroup M]
     [Module R M] {ι : Type*} [DecidableEq ι] (A : ι → Submodule R M)
     (hA : DirectSum.IsInternal A) (T : M →ₗ[R] M) (f : ∀ i, A i →ₗ[R] A i)
@@ -149,12 +149,12 @@ theorem exists_sqComp_of_forall_restrict {R M : Type*} [CommRing R] [AddCommGrou
   obtain ⟨w, rfl⟩ := e.surjective v
   exact LinearMap.congr_fun key w
 
-/-- 8.41 Over `ℂ`, every invertible operator has a square root. Following Axler:
+/-- 8.41 Over {lit}`ℂ`, every invertible operator has a square root. Following Axler:
 by the generalized eigenspace decomposition `V = ⊕ G(λₖ, T)`, on each `G(λₖ, T)`
-one has `T = λₖ(I + Nₖ/λₖ)` with `Nₖ` nilpotent (`λₖ ≠ 0` since `T` is invertible),
-so `√λₖ · √(I + Nₖ/λₖ)` (the scalar root exists over `ℂ`, the operator root by 8.39)
+one has `T = λₖ(I + Nₖ/λₖ)` with {lit}`Nₖ` nilpotent (`λₖ ≠ 0` since {lit}`T` is invertible),
+so `√λₖ · √(I + Nₖ/λₖ)` (the scalar root exists over {lit}`ℂ`, the operator root by 8.39)
 squares to the restriction; gluing these along the direct sum gives a square root
-of `T`. -/
+of {lit}`T`. -/
 theorem exists_sqComp_of_bijective {V : Type*} [AddCommGroup V] [Module ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hT : Function.Bijective T) :
     ∃ R : V →ₗ[ℂ] V, R ∘ₗ R = T := by
@@ -225,7 +225,7 @@ theorem cyclic_list_linearIndependent {W : Type*} [AddCommGroup W] [Module ℂ W
     obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hl
     rw [add_comm, pow_add, Module.End.mul_apply, hm, map_zero]
   by_contra hne
-  push_neg at hne
+  push Not at hne
   obtain ⟨j0, hj0⟩ := hne
   set s := Finset.univ.filter (fun j => c j ≠ 0) with hs
   have hsne : s.Nonempty := ⟨j0, by simp [hs, hj0]⟩
@@ -256,7 +256,7 @@ variable {V : Type u} [AddCommGroup V] [Module ℂ V] [FiniteDimensional ℂ V]
 /-- Axler's decomposition step for a nilpotent operator. If {lit}`T ^ m = 0` and
 {lit}`T ^ (m-1) u ≠ 0`, then the cyclic subspace {lit}`U = span {u, Tu, …, Tᵐ⁻¹u}`
 has a {lit}`T`-invariant complement {lit}`W`, with {lit}`dim W + m = dim V`. This is
-the heart of the induction proving 8.45: `U` is a single Jordan block and `W` is
+the heart of the induction proving 8.45: {lit}`U` is a single Jordan block and {lit}`W` is
 handled by the inductive hypothesis. -/
 theorem nilpotent_cyclic_hasCompl (T : V →ₗ[ℂ] V) (m : ℕ) (hm0 : 0 < m) (u : V)
     (hmop : (T ^ m : V →ₗ[ℂ] V) = 0) (hu : (T ^ (m - 1)) u ≠ 0) :
@@ -286,7 +286,7 @@ theorem nilpotent_cyclic_hasCompl (T : V →ₗ[ℂ] V) (m : ℕ) (hm0 : 0 < m) 
     · intro y z _ _ hy hz; rw [map_add]; exact Submodule.add_mem _ hy hz
     · intro a y _ hy; rw [map_smul]; exact Submodule.smul_mem _ _ hy
   obtain ⟨φ, hφ⟩ : ∃ φ : Module.Dual ℂ V, φ ((T ^ (m - 1)) u) ≠ 0 := by
-    by_contra h; push_neg at h
+    by_contra h; push Not at h
     exact hu ((Module.forall_dual_apply_eq_zero_iff ℂ _).mp h)
   set S : V →ₗ[ℂ] (Fin m → ℂ) := LinearMap.pi (fun k : Fin m => φ ∘ₗ (T ^ (k : ℕ))) with hS
   have hSapp : ∀ (x : V) (k : Fin m), S x k = φ ((T ^ (k : ℕ)) x) := by
@@ -318,7 +318,7 @@ theorem nilpotent_cyclic_hasCompl (T : V →ₗ[ℂ] V) (m : ℕ) (hm0 : 0 < m) 
     obtain ⟨c, hc⟩ := (Submodule.mem_span_range_iff_exists_fun ℂ).mp hxU
     by_contra hx0
     have hne : ∃ j : Fin m, c j ≠ 0 := by
-      by_contra h; push_neg at h
+      by_contra h; push Not at h
       exact hx0 (by rw [← hc]; simp [h])
     set sset := Finset.univ.filter (fun j : Fin m => c j ≠ 0) with hsset
     have hsne : sset.Nonempty := by
@@ -391,6 +391,7 @@ def HasNilpotentJordanBasis (T : V →ₗ[ℂ] V) : Prop :=
     Submodule.span ℂ (Set.range (fun p : Σ i, Fin (M i) => (T ^ (p.2 : ℕ)) (v p.1))) = ⊤
 
 set_option maxHeartbeats 800000 in
+omit [FiniteDimensional ℂ V] in
 /-- The gluing step of Axler's Jordan induction: a cyclic block for {lit}`u`
 together with a Jordan basis of a {lit}`T`-invariant complement {lit}`W` assemble
 into a Jordan basis of the whole space. -/
@@ -500,7 +501,7 @@ theorem hasNilpotentJordanBasis (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) :
       have hm1 : (T ^ (m - 1) : V →ₗ[ℂ] V) ≠ 0 :=
         Nat.find_min hex (by rw [← hm]; omega)
       obtain ⟨u, hu⟩ : ∃ u, (T ^ (m - 1)) u ≠ 0 := by
-        by_contra h; push_neg at h; exact hm1 (LinearMap.ext h)
+        by_contra h; push Not at h; exact hm1 (LinearMap.ext h)
       obtain ⟨W, hWinv, hcompl, hdimW⟩ := nilpotent_cyclic_hasCompl T m hm0 u hmop hu
       have hWlt : finrank ℂ ↥W < n := by rw [← hdim]; omega
       have hTW : IsNilpotent (T.restrict hWinv) := Module.End.isNilpotent.restrict hWinv hnil

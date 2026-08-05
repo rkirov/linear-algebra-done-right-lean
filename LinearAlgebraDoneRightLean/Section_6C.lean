@@ -23,7 +23,7 @@ namespace LADR.Section_6C
 open scoped InnerProductSpace RealInnerProductSpace ComplexConjugate
 open Module (finrank)
 
-/-- The intervals `[-1,1]` and `[-π,π]` are nondegenerate, so `C[-1,1]`/`C[-π,π]`
+/-- The intervals {lit}`[-1,1]` and {lit}`[-π,π]` are nondegenerate, so {lit}`C[-1,1]`/`C[-π,π]`
 carry the `L²` inner product (see `L2Interval.lean`). -/
 instance : Fact ((-1 : ℝ) < 1) := ⟨by norm_num⟩
 instance : Fact (-Real.pi < Real.pi) := ⟨neg_lt_self Real.pi_pos⟩
@@ -538,30 +538,30 @@ variable [FiniteDimensional 𝕜 V]
 /-! 6.63 Example: approximating the sine function. The degree-{lit}`≤ 5` polynomial
 {lit}`u` minimizing {lit}`∫₋π^π |sin x − u(x)|² dx` is the orthogonal projection of
 {lit}`sin` onto {lit}`𝒫₅` in the {lit}`L²` inner product on `C[-π,π]` — the content
-of the minimization theorem 6.61. (Axler's explicit numeric `u` merely replaces the
+of the minimization theorem 6.61. (Axler's explicit numeric {lit}`u` merely replaces the
 π's of the exact projection with decimals.) We formalize the mathematical claim:
-the projection is the best degree-≤5 `L²`-approximation to `sin`. Building the exact
-numeric `u` is Exercise 6C.18. -/
+the projection is the best degree-≤5 `L²`-approximation to {lit}`sin`. Building the exact
+numeric {lit}`u` is Exercise 6C.18. -/
 
 section Example_6_63
 
-/-- Monomials `x^k` as elements of `C[-π,π]`. -/
+/-- Monomials {lit}`x^k` as elements of `C[-π,π]`. -/
 noncomputable def monoL2 (k : ℕ) : L2C (-Real.pi) Real.pi := ⟨fun x => (x : ℝ) ^ k, by fun_prop⟩
 
-/-- The degree-`≤ 5` polynomial subspace `𝒫₅` of `C[-π,π]`. -/
+/-- The degree-{lit}`≤ 5` polynomial subspace {lit}`𝒫₅` of `C[-π,π]`. -/
 noncomputable def polyDegLE5 : Submodule ℝ (L2C (-Real.pi) Real.pi) :=
   Submodule.span ℝ (Set.range (fun k : Fin 6 => monoL2 k))
 
 instance : FiniteDimensional ℝ polyDegLE5 :=
   FiniteDimensional.span_of_finite ℝ (Set.finite_range _)
 
-/-- `sin` as an element of `C[-π,π]`. -/
+/-- {lit}`sin` as an element of `C[-π,π]`. -/
 noncomputable def sinL2 : L2C (-Real.pi) Real.pi := ⟨fun x => Real.sin x, by fun_prop⟩
 
-/-- 6.63: the orthogonal projection of `sin` onto `𝒫₅` is the best degree-`≤ 5`
-`L²`-approximation to `sin` on `[-π,π]`: for every polynomial `u ∈ 𝒫₅`,
+/-- 6.63: the orthogonal projection of {lit}`sin` onto {lit}`𝒫₅` is the best degree-{lit}`≤ 5`
+`L²`-approximation to {lit}`sin` on {lit}`[-π,π]`: for every polynomial {lit}`u ∈ 𝒫₅`,
 `‖sin − P_{𝒫₅} sin‖ ≤ ‖sin − u‖` (equivalently `∫₋π^π|sin − P|² ≤ ∫₋π^π|sin − u|²`).
-This is 6.61 instantiated at `V = C[-π,π]`, `U = 𝒫₅`, `v = sin`. -/
+This is 6.61 instantiated at `V = C[-π,π]`, {lit}`U = 𝒫₅`, {lit}`v = sin`. -/
 theorem sin_best_approx (u : L2C (-Real.pi) Real.pi) (hu : u ∈ polyDegLE5) :
     ‖sinL2 - polyDegLE5.starProjection sinL2‖ ≤ ‖sinL2 - u‖ :=
   minimizing_distance sinL2 u hu

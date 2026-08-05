@@ -500,7 +500,7 @@ theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
   · obtain ⟨Q, R, hQ, hRtri, _, hAQR⟩ := LADR.Section_7D.QR_factorization A hindep
     have hRupper : R.BlockTriangular id := hRtri
     have hQdet : ‖Q.det‖ = 1 := by
-      have hu := (unitary.mem_iff.mp (Matrix.det_of_mem_unitary hQ)).1
+      have hu := (Unitary.mem_iff.mp (Matrix.det_of_mem_unitary hQ)).1
       rw [RCLike.star_def, RCLike.conj_mul] at hu
       have h2 : ‖Q.det‖ ^ 2 = 1 := by exact_mod_cast hu
       rw [← Real.sqrt_sq (norm_nonneg Q.det), h2, Real.sqrt_one]

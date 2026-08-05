@@ -242,12 +242,12 @@ theorem span_gram_schmidt_initial {ι : Type*} [LinearOrder ι]
 /-! 6.34 Example: an orthonormal basis of {lit}`𝒫₂(ℝ)`. Applying Gram–Schmidt
 (6.32) to {lit}`1, x, x²` under {lit}`⟨p, q⟩ = ∫₋₁¹ pq` yields the (unnormalized)
 Legendre polynomials {lit}`1, x, x² − ⅓`. This uses the {lit}`L²` inner product on
-`C[-1,1]` from the skippable {lit}`L2Interval.lean` infrastructure. We verify the
+{lit}`C[-1,1]` from the skippable {lit}`L2Interval.lean` infrastructure. We verify the
 key fact — that the three Legendre polynomials are pairwise orthogonal — by
 reducing each inner product to a concrete interval integral. The analogous
 Gram–Schmidt over {lit}`∫₀¹` is Exercise 6B.8. -/
 
-/-- The interval `[-1,1]` is nondegenerate, so `C[-1,1]` carries the `L²` inner
+/-- The interval {lit}`[-1,1]` is nondegenerate, so {lit}`C[-1,1]` carries the `L²` inner
 product (see `L2Interval.lean`). -/
 instance : Fact ((-1 : ℝ) < 1) := ⟨by norm_num⟩
 
@@ -255,9 +255,9 @@ section Example_6_34
 
 open MeasureTheory
 
-/-- Bridge for computing the `L²` inner product on `C[a,b]`: when the integrand
-`f g` factors through the coordinate as `H ↑x`, the inner product equals the
-ordinary interval integral of `H`. -/
+/-- Bridge for computing the `L²` inner product on {lit}`C[a,b]`: when the integrand
+{lit}`f g` factors through the coordinate as {lit}`H ↑x`, the inner product equals the
+ordinary interval integral of {lit}`H`. -/
 theorem L2C_inner_eq_intervalIntegral {a b : ℝ} [Fact (a < b)] (f g : L2C a b) (H : ℝ → ℝ)
     (hH : ∀ x : ↥(Set.Icc a b), f.toCont x * g.toCont x = H x) :
     ⟪f, g⟫_ℝ = ∫ x in a..b, H x := by
@@ -268,9 +268,9 @@ theorem L2C_inner_eq_intervalIntegral {a b : ℝ} [Fact (a < b)] (f g : L2C a b)
     _ = ∫ x in a..b, H x := by
         rw [integral_Icc_eq_integral_Ioc, intervalIntegral.integral_of_le hab]
 
-/-- The first Legendre polynomial `1` as an element of `C[-1,1]`. -/
+/-- The first Legendre polynomial {lit}`1` as an element of {lit}`C[-1,1]`. -/
 noncomputable def legendre0 : L2C (-1) 1 := (ContinuousMap.const _ 1 : C(↥(Set.Icc (-1:ℝ) 1), ℝ))
-/-- The second Legendre polynomial `x`. -/
+/-- The second Legendre polynomial {lit}`x`. -/
 noncomputable def legendre1 : L2C (-1) 1 := ⟨fun x => (x : ℝ), by fun_prop⟩
 /-- The third Legendre polynomial `x² − ⅓`. -/
 noncomputable def legendre2 : L2C (-1) 1 := ⟨fun x => (x : ℝ) ^ 2 - 1 / 3, by fun_prop⟩
@@ -462,11 +462,11 @@ related Riesz computation on {lit}`𝒫₂(ℝ)` is 6.44. -/
 
 section Example_6_41
 
-/-- The weight `cos(π·)` of the functional `φ`, as an element of `C[-1,1]`. -/
+/-- The weight `cos(π·)` of the functional {lit}`φ`, as an element of {lit}`C[-1,1]`. -/
 noncomputable def cosWeight : L2C (-1) 1 := ⟨fun x => Real.cos (Real.pi * x), by fun_prop⟩
 
 /-- 6.41: `φ(p) = ∫₋₁¹ p(t) cos(πt) dt = ⟨cos(π·), p⟩` is a linear functional. Its
-type `L2C (-1) 1 →ₗ[ℝ] ℝ` records that it is linear. -/
+type {lit}`L2C (-1) 1 →ₗ[ℝ] ℝ` records that it is linear. -/
 noncomputable def phi_6_41 : L2C (-1) 1 →ₗ[ℝ] ℝ where
   toFun p := ⟪cosWeight, p⟫_ℝ
   map_add' p q := inner_add_right cosWeight p q

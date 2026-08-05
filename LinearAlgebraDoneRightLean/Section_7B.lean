@@ -34,6 +34,7 @@ If {lit}`T ∈ ℒ(V)` is self-adjoint and {lit}`b, c ∈ ℝ` satisfy {lit}`b²
 then {lit}`T² + bT + cI` is invertible. (We record the key step: it is injective,
 since {lit}`⟨(T² + bT + cI)v, v⟩ > 0` for {lit}`v ≠ 0`.) -/
 
+omit [FiniteDimensional 𝕜 V] in
 theorem quadratic_pos (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (b c : ℝ)
     (hbc : b ^ 2 < 4 * c) (v : V) (hv : v ≠ 0) :
     0 < RCLike.re ⟪(T ∘ₗ T + (b : 𝕜) • T + (c : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V)) v,
@@ -151,17 +152,17 @@ theorem A_7_30_eigenvalue_neg15 :
   ext i; fin_cases i <;> simp [A_7_30, v_7_30_c, Matrix.toEuclideanLin] <;> norm_num
 
 theorem v_7_30_ortho_ab : ⟪v_7_30_a, v_7_30_b⟫_ℝ = 0 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_b, Fin.sum_univ_three] <;> norm_num
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_b, Fin.sum_univ_three]
 theorem v_7_30_ortho_ac : ⟪v_7_30_a, v_7_30_c⟫_ℝ = 0 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_c, Fin.sum_univ_three] <;> norm_num
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_c, Fin.sum_univ_three]
 theorem v_7_30_ortho_bc : ⟪v_7_30_b, v_7_30_c⟫_ℝ = 0 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_b, v_7_30_c, Fin.sum_univ_three] <;> norm_num
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_b, v_7_30_c, Fin.sum_univ_three]; norm_num
 theorem v_7_30_normSq_a : ⟪v_7_30_a, v_7_30_a⟫_ℝ = 2 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, Fin.sum_univ_three] <;> norm_num
+  rw [PiLp.inner_apply]; simp [v_7_30_a, Fin.sum_univ_three]; norm_num
 theorem v_7_30_normSq_b : ⟪v_7_30_b, v_7_30_b⟫_ℝ = 3 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_b, Fin.sum_univ_three] <;> norm_num
+  rw [PiLp.inner_apply]; simp [v_7_30_b, Fin.sum_univ_three]; norm_num
 theorem v_7_30_normSq_c : ⟪v_7_30_c, v_7_30_c⟫_ℝ = 6 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_c, Fin.sum_univ_three] <;> norm_num
+  rw [PiLp.inner_apply]; simp [v_7_30_c, Fin.sum_univ_three]; norm_num
 
 end Example_7_30
 
@@ -288,11 +289,11 @@ theorem A_7_33_eigenvalue_sub :
   ext i; fin_cases i <;> simp [A_7_33, v_7_33_b, Matrix.toEuclideanLin, Complex.ext_iff]
 
 theorem v_7_33_ortho : ⟪v_7_33_a, v_7_33_b⟫_ℂ = 0 := by
-  rw [PiLp.inner_apply]; simp [v_7_33_a, v_7_33_b, Fin.sum_univ_two, Complex.ext_iff]
+  rw [PiLp.inner_apply]; simp [v_7_33_a, v_7_33_b, Fin.sum_univ_two]
 theorem v_7_33_normSq_a : ⟪v_7_33_a, v_7_33_a⟫_ℂ = 2 := by
-  rw [PiLp.inner_apply]; simp [v_7_33_a, Fin.sum_univ_two, Complex.ext_iff] <;> norm_num
+  rw [PiLp.inner_apply]; simp [v_7_33_a, Fin.sum_univ_two, Complex.ext_iff]; norm_num
 theorem v_7_33_normSq_b : ⟪v_7_33_b, v_7_33_b⟫_ℂ = 2 := by
-  rw [PiLp.inner_apply]; simp [v_7_33_b, Fin.sum_univ_two, Complex.ext_iff] <;> norm_num
+  rw [PiLp.inner_apply]; simp [v_7_33_b, Fin.sum_univ_two, Complex.ext_iff]; norm_num
 
 end Example_7_33
 

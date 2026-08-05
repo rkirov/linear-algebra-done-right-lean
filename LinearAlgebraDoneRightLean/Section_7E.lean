@@ -417,8 +417,8 @@ theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
   rw [← sub_eq_zero]
   exact inner_self_eq_zero.mp hzero
 
-/-- The `(k,l)` entry of `A` read off the SVD of `Matrix.toEuclideanLin A`:
-`A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the `sᵢ = 0` terms vanish). -/
+/-- The {lit}`(k,l)` entry of {lit}`A` read off the SVD of {lit}`Matrix.toEuclideanLin A`:
+`A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the {lit}`sᵢ = 0` terms vanish). -/
 theorem toEuclideanLin_entry_eq_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) (k l : Fin N) :
     A k l = ∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))),
       (singularValues (Matrix.toEuclideanLin A) i : 𝕜)
@@ -433,21 +433,20 @@ theorem toEuclideanLin_entry_eq_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) 
   simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at hLk
   have hAkl : A k l = (⇑(EuclideanSpace.equiv (Fin N) 𝕜)
       (T (EuclideanSpace.single l (1:𝕜)))) k := by
-    rw [hTdef, Matrix.toEuclideanLin_apply]
+    rw [hTdef, Matrix.toLpLin_apply]
     simp [EuclideanSpace.single, Matrix.mulVec_single]
   rw [hAkl, hLk]
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [EuclideanSpace.inner_single_right]
-  simp only [show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N), w.ofLp m = w m from fun _ _ => rfl,
-    show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N),
-      ⇑(EuclideanSpace.equiv (Fin N) 𝕜) w m = w m from fun _ _ => rfl, one_mul]
+  simp only [show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N),
+    ⇑(EuclideanSpace.equiv (Fin N) 𝕜) w m = w m from fun _ _ => rfl, one_mul]
   ring
 
-/-- 7.80 Matrix version of the SVD. A square matrix `A` factors as `A = B D Cᴴ`
-with `B`, `C` having orthonormal columns (`Bᴴ B = Cᴴ C = 1`) and `D` a diagonal
-matrix carrying the positive singular values. Following Axler, the columns of `B`
-are the image vectors `fₖ`, the columns of `C` are the eigenbasis vectors `eₖ`
-(both indexed by the positive singular values), and `D` holds the `sₖ`. -/
+/-- 7.80 Matrix version of the SVD. A square matrix {lit}`A` factors as {lit}`A = B D Cᴴ`
+with {lit}`B`, {lit}`C` having orthonormal columns (`Bᴴ B = Cᴴ C = 1`) and {lit}`D` a diagonal
+matrix carrying the positive singular values. Following Axler, the columns of {lit}`B`
+are the image vectors {lit}`fₖ`, the columns of {lit}`C` are the eigenbasis vectors {lit}`eₖ`
+(both indexed by the positive singular values), and {lit}`D` holds the {lit}`sₖ`. -/
 theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
     ∃ (B C : Matrix (Fin N)
         {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
@@ -468,8 +467,7 @@ theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
     rw [Matrix.mul_apply, Matrix.one_apply,
       ← orthonormal_iff_ite.mp (svdImage_orthonormal T) i j, PiLp.inner_apply]
     refine Finset.sum_congr rfl fun x _ => ?_
-    simp only [Matrix.conjTranspose_apply, Matrix.of_apply, RCLike.inner_apply, RCLike.star_def,
-      Function.comp_apply]
+    simp only [Matrix.conjTranspose_apply, Matrix.of_apply, RCLike.inner_apply, RCLike.star_def]
     ring
   · ext i j
     rw [Matrix.mul_apply, Matrix.one_apply,
@@ -506,7 +504,7 @@ The numeric examples 7.66 ({lit}`T ∈ ℒ(𝔽⁴)`, singular values {lit}`3, 3
 concrete computations of the eigenvalues of specific {lit}`T* T` matrices. They
 illustrate the definitions above and are omitted from formalization: extracting
 the eigenvalues of an explicit {lit}`T* T` through the abstract
-{lit}`eigenvectorBasis`/`eigenvalues` API (rather than by inspection, as Axler
+{lit}`eigenvectorBasis`/{lit}`eigenvalues` API (rather than by inspection, as Axler
 does) would be disproportionate to their illustrative role. -/
 
 /-! # Exercises 7E -/

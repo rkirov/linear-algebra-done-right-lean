@@ -30,19 +30,19 @@ variable {F : Type*} [Field F]
 
 /-! # Alternating Multilinear Forms
 
-Axler's `V⁽ᵐ⁾` is the space of `m`-linear forms on `V`; in mathlib this is
-{name}`MultilinearMap` `F (fun _ : Fin m => V) F`. The alternating `m`-linear
+Axler's `V⁽ᵐ⁾` is the space of {lit}`m`-linear forms on {lit}`V`; in mathlib this is
+{name}`MultilinearMap` {lit}`F (fun _ : Fin m => V) F`. The alternating {lit}`m`-linear
 forms `V⁽ᵐ⁾ₐₗₜ` are mathlib's {name}`AlternatingMap`, written
-{lit}`V [⋀^Fin m]→ₗ[F] F`. Throughout, an `m`-linear form applied to a list
-`v₁, …, vₘ` becomes application to a function `v : Fin m → V`, and Axler's
-condition "`vⱼ = vₖ` for some `j ≠ k`" is {name}`AlternatingMap.map_eq_zero_of_eq`. -/
+{lit}`V [⋀^Fin m]→ₗ[F] F`. Throughout, an {lit}`m`-linear form applied to a list
+`v₁, …, vₘ` becomes application to a function {lit}`v : Fin m → V`, and Axler's
+condition "{lit}`vⱼ = vₖ` for some {lit}`j ≠ k`" is {name}`AlternatingMap.map_eq_zero_of_eq`. -/
 
-/-! 9.26 Example: {lit}`m`-linear forms. The type of `m`-linear forms is
+/-! 9.26 Example: {lit}`m`-linear forms. The type of {lit}`m`-linear forms is
 {name}`MultilinearMap` (9.25). Axler's first example is the product
-{lit}`β(v₁, v₂, v₃, v₄) = α(v₁, v₂) ρ(v₃, v₄)` of two bilinear forms `α, ρ`,
-which is a `4`-linear form. We build it from mathlib combinators: the two
-factors act on disjoint pairs of slots, so `β` is the tensor product
-{name}`MultilinearMap.domCoprod` of `α` and `ρ` on `Fin 2 ⊕ Fin 2`, followed by
+{lit}`β(v₁, v₂, v₃, v₄) = α(v₁, v₂) ρ(v₃, v₄)` of two bilinear forms {lit}`α, ρ`,
+which is a {lit}`4`-linear form. We build it from mathlib combinators: the two
+factors act on disjoint pairs of slots, so {lit}`β` is the tensor product
+{name}`MultilinearMap.domCoprod` of {lit}`α` and {lit}`ρ` on {lit}`Fin 2 ⊕ Fin 2`, followed by
 multiplication {name}`LinearMap.mul'` `F F : F ⊗ F → F`, reindexed along
 {name}`finSumFinEquiv` `: Fin 2 ⊕ Fin 2 ≃ Fin 4`. Axler's second example,
 {lit}`β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` on {lit}`ℒ(V)`, is the trace of the ordered
@@ -50,7 +50,7 @@ product {name}`MultilinearMap.mkPiAlgebraFin` composed with
 {name}`LinearMap.trace`. -/
 open scoped Matrix in
 /-- 9.26: the product `β(v₁,v₂,v₃,v₄) = α(v₁,v₂)·ρ(v₃,v₄)` of two bilinear forms
-is a `4`-linear form. -/
+is a {lit}`4`-linear form. -/
 noncomputable def prodBilinear (α ρ : MultilinearMap F (fun _ : Fin 2 => V) F) :
     MultilinearMap F (fun _ : Fin 4 => V) F :=
   ((LinearMap.mul' F F).compMultilinearMap (α.domCoprod ρ)).domDomCongr finSumFinEquiv
@@ -65,7 +65,7 @@ open scoped Matrix in
   · congr 1; funext i; fin_cases i <;> rfl
 
 /-- 9.26: the trace of a product `β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` of operators is an
-`m`-linear form on `ℒ(V)` — the ordered algebra product
+{lit}`m`-linear form on {lit}`ℒ(V)` — the ordered algebra product
 {name}`MultilinearMap.mkPiAlgebraFin` followed by {name}`LinearMap.trace`. -/
 noncomputable def traceForm (m : ℕ) :
     MultilinearMap F (fun _ : Fin m => Module.End F V) F :=
@@ -77,14 +77,14 @@ noncomputable def traceForm (m : ℕ) :
 
 /-! 9.27 Definition: alternating forms, `V⁽ᵐ⁾ₐₗₜ`
 
-An `m`-linear form is a {name}`MultilinearMap`; it is *alternating* if it
+An {lit}`m`-linear form is a {name}`MultilinearMap`; it is *alternating* if it
 vanishes whenever two of its inputs are equal, which is exactly the defining
 property of a mathlib {name}`AlternatingMap`. -/
 
-/-- An `m`-linear form on {lit}`V`. -/
+/-- An {lit}`m`-linear form on {lit}`V`. -/
 example (m : ℕ) : Type _ := MultilinearMap F (fun _ : Fin m => V) F
 
-/-- An alternating `m`-linear form on {lit}`V`, i.e. {lit}`V⁽ᵐ⁾ₐₗₜ`. -/
+/-- An alternating {lit}`m`-linear form on {lit}`V`, i.e. {lit}`V⁽ᵐ⁾ₐₗₜ`. -/
 example (m : ℕ) : Type _ := V [⋀^Fin m]→ₗ[F] F
 
 example (m : ℕ) : (V [⋀^Fin m]→ₗ[F] F) = AlternatingMap F V F (Fin m) := rfl
@@ -114,9 +114,9 @@ theorem map_eq_zero_of_linearDependent {m : ℕ} (α : V [⋀^Fin m]→ₗ[F] F)
     (v : Fin m → V) (h : ¬ LinearIndependent F v) : α v = 0 :=
   α.map_linearDependent v h
 
-/-! 9.29 No nonzero alternating `m`-linear forms for `m > dim V`
+/-! 9.29 No nonzero alternating {lit}`m`-linear forms for {lit}`m > dim V`
 
-If {lit}`m > dim V`, then {lit}`0` is the only alternating `m`-linear form on
+If {lit}`m > dim V`, then {lit}`0` is the only alternating {lit}`m`-linear form on
 {lit}`V`: any list of {lit}`m` vectors is linearly dependent (2.22), so 9.28
 forces the form to vanish everywhere. -/
 
@@ -142,7 +142,7 @@ theorem map_swap_eq_neg {m : ℕ} (α : V [⋀^Fin m]→ₗ[F] F) (v : Fin m →
     α (v ∘ Equiv.swap i j) = - α v :=
   α.map_swap (v := v) hij
 
-/-! 9.31 Definition: permutation, `perm m`
+/-! 9.31 Definition: permutation, {lit}`perm m`
 
 A permutation of {lit}`(1, …, m)` is a rearrangement of the first {lit}`m`
 positive integers. In mathlib, {lit}`perm m` is {name}`Equiv.Perm` {lit}`(Fin m)`:
@@ -202,11 +202,11 @@ theorem map_perm_eq_sign_smul {m : ℕ} (α : V [⋀^Fin m]→ₗ[F] F) (v : Fin
     α (v ∘ σ) = Equiv.Perm.sign σ • α v :=
   α.map_perm v σ
 
-/-! 9.36 Formula for `(dim V)`-linear alternating forms on `V`
+/-! 9.36 Formula for {lit}`(dim V)`-linear alternating forms on {lit}`V`
 
 Let {lit}`n = dim V` with basis {lit}`e₁, …, eₙ`. Writing {lit}`vₖ = ∑ⱼ bⱼ,ₖ eⱼ`
 (so {lit}`bⱼ,ₖ = eⱼ'(vₖ)` are the basis coordinates), every alternating
-`n`-linear form {lit}`α` satisfies
+{lit}`n`-linear form {lit}`α` satisfies
 {lit}`α(v₁, …, vₙ) = α(e₁, …, eₙ) · ∑_{σ ∈ perm n} sign(σ) b_{σ1,1} ⋯ b_{σn,n}`.
 
 mathlib packages the permutation sum as the determinant {name}`Module.Basis.det`
@@ -234,7 +234,7 @@ theorem alternating_formula {n : ℕ} (e : Fin n → V) (he : IsBasis F e)
 
 /-! 9.37 `dim V⁽ᵈⁱᵐ ⱽ⁾ₐₗₜ = 1`
 
-The vector space of alternating `(dim V)`-linear forms on {lit}`V` has dimension
+The vector space of alternating {lit}`(dim V)`-linear forms on {lit}`V` has dimension
 one. By 9.36 every such form is a scalar multiple of {name}`Module.Basis.det`,
 which is nonzero ({name}`Module.Basis.det_ne_zero`); hence {lit}`{e.det}` is a
 basis of a one-dimensional space. -/
@@ -246,9 +246,9 @@ theorem finrank_alternating_eq_one [Finite F V] :
   refine finrank_eq_one b.det b.det_ne_zero (fun α => ⟨α b, ?_⟩)
   exact (AlternatingMap.eq_smul_basis_det (e := b) α).symm
 
-/-! 9.38 A nonzero alternating `n`-linear form exists
+/-! 9.38 A nonzero alternating {lit}`n`-linear form exists
 
-Axler constructs a nonzero alternating `n`-form directly from the dual basis
+Axler constructs a nonzero alternating {lit}`n`-form directly from the dual basis
 (formula 9.38), used above to rule out {lit}`dim V⁽ⁿ⁾ₐₗₜ = 0`. mathlib's
 {name}`Module.Basis.det` *is* that form: it is alternating, and 9.38 evaluated at
 {lit}`vₖ = eₖ` gives {lit}`α(e₁, …, eₙ) = 1`, which is
@@ -258,9 +258,9 @@ example {n : ℕ} (e : Fin n → V) (he : IsBasis F e) :
     he.toModuleBasis.det he.toModuleBasis = 1 :=
   he.toModuleBasis.det_self
 
-/-! 9.39 Alternating `(dim V)`-linear forms and linear independence
+/-! 9.39 Alternating {lit}`(dim V)`-linear forms and linear independence
 
-Let {lit}`n = dim V` and let {lit}`α` be a *nonzero* alternating `n`-linear form.
+Let {lit}`n = dim V` and let {lit}`α` be a *nonzero* alternating {lit}`n`-linear form.
 Then {lit}`α(e₁, …, eₙ) ≠ 0` if and only if {lit}`e₁, …, eₙ` is linearly
 independent. (The forward direction is 9.28; the reverse uses that a linearly
 independent list of length {lit}`n = dim V` is a basis (2.38), and that a nonzero
@@ -305,8 +305,8 @@ so any two top alternating forms are proportional). This companion uses mathlib'
 
 /-! # Exercises 9B -/
 
-/-- 9B.1 {lit}`dim V⁽ᵐ⁾ = (dim V)ᵐ`: the space of `m`-linear forms on an
-`n`-dimensional space has dimension {lit}`nᵐ`. -/
+/-- 9B.1 {lit}`dim V⁽ᵐ⁾ = (dim V)ᵐ`: the space of {lit}`m`-linear forms on an
+{lit}`n`-dimensional space has dimension {lit}`nᵐ`. -/
 theorem exercise_9B_1 [Finite F V] (m : ℕ) :
     finrank F (MultilinearMap F (fun _ : Fin m => V) F) = (finrank F V) ^ m := by
   sorry
@@ -322,7 +322,7 @@ theorem exercise_9B_2 {n : ℕ} [NeZero n] (hn : 3 ≤ n) :
             - x 0 * y 2 * z 1 + x 2 * y 0 * z 1 + x 1 * y 2 * z 0 := by
   sorry
 
-/-- 9B.3 If an `m`-linear form vanishes whenever two *adjacent* inputs are equal
+/-- 9B.3 If an {lit}`m`-linear form vanishes whenever two *adjacent* inputs are equal
 ({lit}`vⱼ = vⱼ₊₁`), then it is alternating (vanishes whenever any two inputs are
 equal). -/
 theorem exercise_9B_3 {m : ℕ} (α : MultilinearMap F (fun _ : Fin m => V) F)
@@ -332,23 +332,23 @@ theorem exercise_9B_3 {m : ℕ} (α : MultilinearMap F (fun _ : Fin m => V) F)
 
 /-- 9B.4 Prove or give a counterexample: for {lit}`α ∈ V⁽⁴⁾ₐₗₜ`, the zero set
 {lit}`{(v₁, v₂, v₃, v₄) : α(v₁, v₂, v₃, v₄) = 0}` is a subspace of {lit}`V⁴`. This
-is *false*; we exhibit an {lit}`α` on {lit}`ℝ⁴` and two `4`-tuples in the zero set
+is *false*; we exhibit an {lit}`α` on {lit}`ℝ⁴` and two {lit}`4`-tuples in the zero set
 whose sum is not, so the zero set is not closed under addition. -/
 theorem exercise_9B_4 :
     ∃ (α : (Fin 4 → ℝ) [⋀^Fin 4]→ₗ[ℝ] ℝ) (a b : Fin 4 → (Fin 4 → ℝ)),
       α a = 0 ∧ α b = 0 ∧ α (a + b) ≠ 0 := by
   sorry
 
-/-- 9B.5 If {lit}`β` is an `m`-linear form, then
+/-- 9B.5 If {lit}`β` is an {lit}`m`-linear form, then
 {lit}`α(v₁, …, vₘ) = ∑_{σ ∈ perm m} sign(σ) β(v_{σ1}, …, v_{σm})` is an
-*alternating* `m`-linear form. -/
+*alternating* {lit}`m`-linear form. -/
 theorem exercise_9B_5 {m : ℕ} (β : MultilinearMap F (fun _ : Fin m => V) F) :
     ∃ α : V [⋀^Fin m]→ₗ[F] F,
       ∀ v : Fin m → V,
         α v = ∑ σ : Equiv.Perm (Fin m), Equiv.Perm.sign σ • β (v ∘ σ) := by
   sorry
 
-/-- 9B.6 If {lit}`β` is an `m`-linear form, then
+/-- 9B.6 If {lit}`β` is an {lit}`m`-linear form, then
 {lit}`α(v₁, …, vₘ) = ∑_{σ ∈ perm m} β(v_{σ1}, …, v_{σm})` is *symmetric*:
 {lit}`α(v_{k₁}, …, v_{kₘ}) = α(v₁, …, vₘ)` for every permutation {lit}`(k₁, …, kₘ)`. -/
 theorem exercise_9B_6 {m : ℕ} (β : MultilinearMap F (fun _ : Fin m => V) F) :
