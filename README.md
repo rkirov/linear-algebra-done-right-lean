@@ -108,13 +108,16 @@ proved in Lean** — none is left as a prose deferral. The concrete worked
 *examples* are likewise formalized: the orthonormal-eigenbasis diagonalizations
 7.30/7.33, the positive operator 7.35(a), the square root 7.37, the positive
 square root 7.41, the annihilating polynomial 5.28, the generalized-eigenspace
-decomposition 8.21, the traces 8.48/8.53, and the product of bilinear forms 9.26
-are all real Lean computations. The only prose-only items that remain are Axler's
-own informal *definitions* (e.g. the intuitive box/volume definitions 7.108–7.110
-and the matrix-of-a-basis Jordan-form definition 8.44, both captured elsewhere in
-a formal, matrix-free way) and the integral-inner-product worked *examples*
-6.34/6.41/6.63, whose `L²[a,b]` space is available in the project only as
-skippable, `sorry`-backed infrastructure.
+decomposition 8.21, the traces 8.48/8.53, the product of bilinear forms and the
+trace form 9.26, and — on the skippable `L²[a,b]` infrastructure — the Legendre
+orthogonality 6.34 and the linear functional 6.41 are all real Lean computations.
+The only prose-only items that remain are Axler's own informal *definitions* (e.g.
+the intuitive box/volume definitions 7.108–7.110 and the matrix-of-a-basis
+Jordan-form definition 8.44, both captured elsewhere in a formal, matrix-free way)
+and two analytically heavy integral-inner-product worked *examples* — the Riesz
+computation 6.44 and the sine-approximation 6.63 — which would need repeated
+integration by parts and projection machinery on top of the same `sorry`-backed
+`L²[a,b]` space.
 
 \* A `✓*` marks a section that prose-defers one or more numbered results. These
 deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
