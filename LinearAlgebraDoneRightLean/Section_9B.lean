@@ -1,5 +1,6 @@
 import Mathlib.LinearAlgebra.Alternating.Basic
 import Mathlib.LinearAlgebra.Determinant
+import Mathlib.LinearAlgebra.Trace
 import Mathlib.LinearAlgebra.Multilinear.Basic
 import Mathlib.LinearAlgebra.Multilinear.TensorProduct
 import Mathlib.LinearAlgebra.Dimension.Finite
