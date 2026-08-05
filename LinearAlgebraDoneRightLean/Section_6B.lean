@@ -247,6 +247,10 @@ key fact — that the three Legendre polynomials are pairwise orthogonal — by
 reducing each inner product to a concrete interval integral. The analogous
 Gram–Schmidt over {lit}`∫₀¹` is Exercise 6B.8. -/
 
+/-- The interval `[-1,1]` is nondegenerate, so `C[-1,1]` carries the `L²` inner
+product (see `L2Interval.lean`). -/
+instance : Fact ((-1 : ℝ) < 1) := ⟨by norm_num⟩
+
 section Example_6_34
 
 open MeasureTheory
@@ -254,9 +258,10 @@ open MeasureTheory
 /-- Bridge for computing the `L²` inner product on `C[a,b]`: when the integrand
 `f g` factors through the coordinate as `H ↑x`, the inner product equals the
 ordinary interval integral of `H`. -/
-theorem L2C_inner_eq_intervalIntegral {a b : ℝ} (hab : a ≤ b) (f g : L2C a b) (H : ℝ → ℝ)
+theorem L2C_inner_eq_intervalIntegral {a b : ℝ} [Fact (a < b)] (f g : L2C a b) (H : ℝ → ℝ)
     (hH : ∀ x : ↥(Set.Icc a b), f.toCont x * g.toCont x = H x) :
     ⟪f, g⟫_ℝ = ∫ x in a..b, H x := by
+  have hab : a ≤ b := le_of_lt Fact.out
   calc ⟪f, g⟫_ℝ = ∫ x : ↥(Set.Icc a b), f.toCont x * g.toCont x := rfl
     _ = ∫ x : ↥(Set.Icc a b), H (x : ℝ) := by simp_rw [hH]
     _ = ∫ x in Set.Icc a b, H x := integral_subtype_comap measurableSet_Icc H
@@ -272,13 +277,13 @@ noncomputable def legendre2 : L2C (-1) 1 := ⟨fun x => (x : ℝ) ^ 2 - 1 / 3, b
 
 /-- `⟨1, x⟩ = ∫₋₁¹ x = 0`. -/
 theorem legendre_inner_01 : ⟪legendre0, legendre1⟫_ℝ = 0 := by
-  rw [L2C_inner_eq_intervalIntegral (by norm_num) legendre0 legendre1 (fun x => x)
+  rw [L2C_inner_eq_intervalIntegral legendre0 legendre1 (fun x => x)
       (fun x => by simp [legendre0, legendre1, L2C.toCont])]
   simp
 
 /-- `⟨1, x² − ⅓⟩ = ∫₋₁¹ (x² − ⅓) = 0`. -/
 theorem legendre_inner_02 : ⟪legendre0, legendre2⟫_ℝ = 0 := by
-  rw [L2C_inner_eq_intervalIntegral (by norm_num) legendre0 legendre2 (fun x => x ^ 2 - 1 / 3)
+  rw [L2C_inner_eq_intervalIntegral legendre0 legendre2 (fun x => x ^ 2 - 1 / 3)
       (fun x => by simp [legendre0, legendre2, L2C.toCont])]
   have h1 : IntervalIntegrable (fun x : ℝ => x ^ 2) volume (-1) 1 := by
     apply Continuous.intervalIntegrable; fun_prop
@@ -289,7 +294,7 @@ theorem legendre_inner_02 : ⟪legendre0, legendre2⟫_ℝ = 0 := by
 
 /-- `⟨x, x² − ⅓⟩ = ∫₋₁¹ (x³ − x/3) = 0`. -/
 theorem legendre_inner_12 : ⟪legendre1, legendre2⟫_ℝ = 0 := by
-  rw [L2C_inner_eq_intervalIntegral (by norm_num) legendre1 legendre2 (fun x => x ^ 3 - x / 3)
+  rw [L2C_inner_eq_intervalIntegral legendre1 legendre2 (fun x => x ^ 3 - x / 3)
       (fun x => by simp only [legendre1, legendre2, L2C.toCont, ContinuousMap.coe_mk]; ring)]
   have h1 : IntervalIntegrable (fun x : ℝ => x ^ 3) volume (-1) 1 := by
     apply Continuous.intervalIntegrable; fun_prop

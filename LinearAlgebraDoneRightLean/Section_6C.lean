@@ -23,6 +23,11 @@ namespace LADR.Section_6C
 open scoped InnerProductSpace RealInnerProductSpace ComplexConjugate
 open Module (finrank)
 
+/-- The intervals `[-1,1]` and `[-π,π]` are nondegenerate, so `C[-1,1]`/`C[-π,π]`
+carry the `L²` inner product (see `L2Interval.lean`). -/
+instance : Fact ((-1 : ℝ) < 1) := ⟨by norm_num⟩
+instance : Fact (-Real.pi < Real.pi) := ⟨neg_lt_self Real.pi_pos⟩
+
 variable {𝕜 : Type*} [RCLike 𝕜]
   {V : Type*} [NormedAddCommGroup V] [InnerProductSpace 𝕜 V]
 
