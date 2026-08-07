@@ -471,6 +471,18 @@ theorem isEigenvalue_iff_isRoot [Finite F V] (T : V →ₗ[F] V) (γ : F) :
     rw [sub_eq_zero] at h2
     exact h2
 
+/-- The factorization half of 5.27 (b) over an arbitrary field: whenever the
+minimal polynomial splits, it is the product of {lit}`z − λ` over its roots. -/
+theorem minpoly_eq_prod_roots_of_splits [Finite F V] (T : V →ₗ[F] V)
+    (hsplit : (minpoly F T).Splits) :
+    minpoly F T = (Multiset.map (fun a => Polynomial.X - Polynomial.C a)
+      (minpoly F T).roots).prod := by
+  have hmonic : (minpoly F T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  have h := Polynomial.C_leadingCoeff_mul_prod_multiset_X_sub_C
+    (p := minpoly F T) (Polynomial.splits_iff_card_roots.mp hsplit)
+  rw [hmonic.leadingCoeff, Polynomial.C_1, one_mul] at h
+  exact h.symm
+
 /-- 5.27 (b) On a complex vector space the minimal polynomial factors as
 {lit}`(z − λ₁)⋯(z − λₘ)` where {lit}`λ₁, …, λₘ` are exactly the eigenvalues
 of {lit}`T` (with possible repetitions), encoded via the multiset of roots. -/
@@ -481,14 +493,8 @@ theorem minpoly_eq_prod_roots {V : Type*} [AddCommGroup V] [Module ℂ V]
       ∀ γ : ℂ, γ ∈ (minpoly ℂ T).roots ↔ HasEigenvalue T γ := by
   have hmonic : (minpoly ℂ T).Monic :=
     minpoly.monic (Algebra.IsIntegral.isIntegral T)
-  constructor
-  · have h := Polynomial.C_leadingCoeff_mul_prod_multiset_X_sub_C
-      (p := minpoly ℂ T)
-      (Polynomial.splits_iff_card_roots.mp (IsAlgClosed.splits _))
-    rw [hmonic.leadingCoeff, Polynomial.C_1, one_mul] at h
-    exact h.symm
-  · intro lam
-    rw [Polynomial.mem_roots hmonic.ne_zero, isEigenvalue_iff_isRoot]
+  refine ⟨minpoly_eq_prod_roots_of_splits T (IsAlgClosed.splits _), fun lam => ?_⟩
+  rw [Polynomial.mem_roots hmonic.ne_zero, isEigenvalue_iff_isRoot]
 
 /-! 5.28 Example: an operator whose eigenvalues cannot be found exactly. Axler's
 operator {lit}`T(z₁,…,z₅) = (−3z₅, z₁+6z₅, z₂, z₃, z₄)` on {lit}`ℂ⁵` satisfies
@@ -1729,14 +1735,70 @@ theorem exercise_5B_11b2 [Finite F V] {v : Fin 2 → V} (hv : IsBasis F v)
 
 /-- The minimal polynomial of {lit}`T_ex_5A_42 n` — to be determined by the
 solver. -/
-noncomputable def minpoly_5B_12 (n : ℕ) : Polynomial ℝ := sorry
+-- ∏ i : Fin n, (X - C (i + 1))
+-- since 1, …, n are the eigenvalues, with the standard basis vectors as
+-- eigenvectors, the minimal polynomial is the product of the linear factors
+-- corresponding to the eigenvalues
+noncomputable def minpoly_5B_12 (n : ℕ) : Polynomial ℝ :=
+  ∏ i : Fin n, (Polynomial.X - Polynomial.C ((i : ℕ) + 1 : ℝ))
 
-open LADR.Section_5A (T_ex_5A_42) in
+open LADR.Section_5A (T_ex_5A_42 aeval_T_ex_5A_42_apply exercise_5A_42a) in
 /-- 5B.12 Find the minimal polynomial of
 {lit}`T(x₁, …, xₙ) = (x₁, 2x₂, …, nxₙ)`. -/
 theorem exercise_5B_12 (n : ℕ) :
     minpoly ℝ (T_ex_5A_42 n) = minpoly_5B_12 n := by
-  sorry
+  classical
+  have hmonic : (minpoly_5B_12 n).Monic :=
+    Polynomial.monic_prod_of_monic _ _ fun i _ => Polynomial.monic_X_sub_C _
+  have hmin_ne : minpoly ℝ (T_ex_5A_42 n) ≠ 0 :=
+    minpoly.ne_zero (Algebra.IsIntegral.isIntegral _)
+  -- the {lit}`n` distinct eigenvalues {lit}`1, …, n`, as a {lit}`Finset`
+  have hinj : Function.Injective (fun i : Fin n => ((i : ℕ) + 1 : ℝ)) := by
+    intro i j hij
+    simp only [add_left_inj, Nat.cast_inj] at hij
+    exact Fin.ext hij
+  set Z : Finset ℝ := Finset.image (fun i : Fin n => ((i : ℕ) + 1 : ℝ)) Finset.univ with hZ
+  have hprodZ : ∏ x ∈ Z, (Polynomial.X - Polynomial.C x) = minpoly_5B_12 n := by
+    rw [hZ, Finset.prod_image fun i _ j _ h => hinj h]
+    rfl
+  have hcardZ : Multiset.card Z.val = n := by
+    rw [← Finset.card_def, hZ, Finset.card_image_of_injective _ hinj, Finset.card_univ,
+      Fintype.card_fin]
+  -- First: {lit}`1, …, n` are eigenvalues of {lit}`T` (5A.42 (a)), hence — by
+  -- 5.27 (a) — roots of the minimal polynomial.
+  have heig : ∀ i : Fin n, HasEigenvalue (T_ex_5A_42 n) ((i : ℕ) + 1 : ℝ) :=
+    fun i => ((exercise_5A_42a n).1 _).mpr ⟨i, rfl⟩
+  have hle : Z.val ≤ (minpoly ℝ (T_ex_5A_42 n)).roots := by
+    refine Finset.val_le_iff_val_subset.mpr fun x hx => ?_
+    simp only [hZ, Finset.mem_val, Finset.mem_image, Finset.mem_univ, true_and] at hx
+    obtain ⟨i, rfl⟩ := hx
+    exact (Polynomial.mem_roots hmin_ne).mpr ((isEigenvalue_iff_isRoot _ _).mp (heig i))
+  -- Second: the product of those linear factors annihilates {lit}`T`, so the
+  -- minimal polynomial divides it — whence it splits and has degree at most
+  -- {lit}`n`.
+  have hann : aeval (T_ex_5A_42 n) (minpoly_5B_12 n) = 0 := by
+    refine LinearMap.ext fun u => funext fun i => ?_
+    have hz : Polynomial.eval ((i : ℕ) + 1 : ℝ) (minpoly_5B_12 n) = 0 := by
+      rw [minpoly_5B_12, Polynomial.eval_prod]
+      exact Finset.prod_eq_zero (Finset.mem_univ i) (by simp)
+    rw [aeval_T_ex_5A_42_apply, hz, zero_mul]
+    simp
+  have hdvd : minpoly ℝ (T_ex_5A_42 n) ∣ minpoly_5B_12 n := minpoly.dvd ℝ _ hann
+  have hpsplit : (minpoly_5B_12 n).Splits :=
+    Polynomial.Splits.prod fun i _ => Polynomial.Splits.X_sub_C _
+  have hsplit : (minpoly ℝ (T_ex_5A_42 n)).Splits := hpsplit.of_dvd hmonic.ne_zero hdvd
+  have hdegle : (minpoly ℝ (T_ex_5A_42 n)).natDegree ≤ n := by
+    refine le_trans (Polynomial.natDegree_le_of_dvd hdvd hmonic.ne_zero) ?_
+    rw [minpoly_5B_12, Polynomial.natDegree_prod _ _ fun i _ => Polynomial.X_sub_C_ne_zero _]
+    simp only [Polynomial.natDegree_X_sub_C, Finset.sum_const, Finset.card_univ,
+      Fintype.card_fin, smul_eq_mul, mul_one, le_refl]
+  -- So the roots are exactly {lit}`1, …, n`, each simple.
+  have hroots : (minpoly ℝ (T_ex_5A_42 n)).roots = Z.val :=
+    (Multiset.eq_of_le_of_card_le hle
+      (by rw [hcardZ]; exact le_trans (Polynomial.card_roots' _) hdegle)).symm
+  -- 5.27 (b): the minimal polynomial is the product of {lit}`z − λ` over its roots.
+  rw [minpoly_eq_prod_roots_of_splits _ hsplit, hroots, ← hprodZ,
+    Finset.prod_eq_multiset_prod]
 
 /-- 5B.13 -/
 theorem exercise_5B_13 [Finite F V] (T : V →ₗ[F] V) (p : Polynomial F) :
@@ -1948,57 +2010,580 @@ theorem exercise_5B_16 {n : ℕ} (hn : 0 < n) (a : Fin n → F) :
     minpoly F (companionOp a) =
       Polynomial.X ^ n + ∑ i : Fin n, Polynomial.C (a i) *
         Polynomial.X ^ (i : ℕ) := by
-  sorry
+  -- The whole proof rests on one observation: {lit}`Me₀ = e₁, …, Me_{n−2} = e_{n−1}`
+  -- and {lit}`Me_{n−1} = −a₀e₀ − ⋯ − a_{n−1}e_{n−1}`, i.e. {lit}`Mⁱe₀ = eᵢ` for
+  -- {lit}`i < n`. That gives both {lit}`p(M) = 0` and the minimality of {lit}`p`.
+  -- The standard basis of {lit}`Fⁿ`, indexed by {lit}`ℕ` to avoid {lit}`Fin` arithmetic.
+  set e : ℕ → (Fin n → F) := fun i j => if (j : ℕ) = i then 1 else 0 with he
+  set M := companionOp a with hM
+  set p : Polynomial F :=
+    Polynomial.X ^ n + ∑ i : Fin n, Polynomial.C (a i) * Polynomial.X ^ (i : ℕ) with hp
+  -- Every vector is a combination of the basis vectors.
+  have hexpand : ∀ v : Fin n → F, v = ∑ k : Fin n, v k • e (k : ℕ) := by
+    intro v
+    funext j
+    rw [Finset.sum_apply, Finset.sum_eq_single j]
+    · simp [he]
+    · intro b _ hb
+      have : (j : ℕ) ≠ (b : ℕ) := fun hc => hb (Fin.ext hc).symm
+      simp [he, this]
+    · simp
+  -- The action on a basis vector reads off the corresponding column of the matrix.
+  have hcol : ∀ (i : ℕ), i < n → ∀ j : Fin n,
+      M (e i) j = (if i = n - 1 then -(a j) else if (j : ℕ) = i + 1 then 1 else 0) := by
+    intro i hi j
+    simp only [hM, companionOp, LADR.Section_3A.fromFnToFm, LinearMap.coe_mk,
+      AddHom.coe_mk, he]
+    rw [Finset.sum_eq_single (⟨i, hi⟩ : Fin n)]
+    · simp
+    · intro b _ hb
+      have : (b : ℕ) ≠ i := fun hc => hb (Fin.ext hc)
+      simp [this]
+    · simp
+  -- {lit}`Meᵢ = eᵢ₊₁` for {lit}`i + 1 < n`
+  have hstep : ∀ i : ℕ, i + 1 < n → M (e i) = e (i + 1) := by
+    intro i hi
+    funext j
+    rw [hcol i (by omega) j, if_neg (by omega)]
+  -- {lit}`Me_{n−1} = −a`
+  have hlast : M (e (n - 1)) = -a := by
+    funext j
+    rw [hcol (n - 1) (by omega) j, if_pos rfl]
+    simp
+  -- {lit}`Mⁱe₀ = eᵢ` for {lit}`i < n`
+  have hpow : ∀ i : ℕ, i < n → (M ^ i) (e 0) = e i := by
+    intro i
+    induction i with
+    | zero => intro _; simp
+    | succ i ih =>
+      intro hi
+      rw [pow_succ', Module.End.mul_apply, ih (by omega), hstep i hi]
+  -- Hence {lit}`p(M)e₀ = Mⁿe₀ + ∑ᵢ aᵢeᵢ = −a + a = 0`.
+  have hMn : (M ^ n) (e 0) = -a := by
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    rw [pow_succ', Module.End.mul_apply, hpow m (by omega)]
+    simpa using hlast
+  have hpe0 : (aeval M p) (e 0) = 0 := by
+    simp only [hp, map_add, map_sum, map_mul, map_pow, Polynomial.aeval_X,
+      Polynomial.aeval_C, ← Algebra.smul_def, LinearMap.add_apply, LinearMap.sum_apply,
+      LinearMap.smul_apply]
+    have hrest : ∑ i : Fin n, a i • (M ^ (i : ℕ)) (e 0) = a := by
+      conv_rhs => rw [hexpand a]
+      exact Finset.sum_congr rfl fun i _ => by rw [hpow i i.isLt]
+    rw [hMn, hrest, neg_add_cancel]
+  -- {lit}`p(M)` commutes with the powers of {lit}`M`
+  have hcomm : ∀ (k : ℕ) (v : Fin n → F),
+      (aeval M p) ((M ^ k) v) = (M ^ k) ((aeval M p) v) := by
+    intro k v
+    have h : (aeval M p) * (M ^ k) = (M ^ k) * (aeval M p) := by
+      have h1 : (aeval M p) * (M ^ k) = aeval M (p * Polynomial.X ^ k) := by simp
+      have h2 : (M ^ k) * (aeval M p) = aeval M (Polynomial.X ^ k * p) := by simp
+      rw [h1, h2, mul_comm]
+    rw [← Module.End.mul_apply, h, Module.End.mul_apply]
+  -- so {lit}`p(M)eₖ = p(M)Mᵏe₀ = Mᵏp(M)e₀ = 0` on every basis vector
+  have hann : aeval M p = 0 := by
+    refine LinearMap.ext fun v => ?_
+    rw [hexpand v, map_sum, LinearMap.zero_apply]
+    refine Finset.sum_eq_zero fun k _ => ?_
+    rw [map_smul, ← hpow k k.isLt, hcomm, hpe0, map_zero, smul_zero]
+  -- {lit}`p` is monic of degree {lit}`n`
+  have hdegsum : (∑ i : Fin n, Polynomial.C (a i) * Polynomial.X ^ (i : ℕ)).degree
+      < (n : WithBot ℕ) := by
+    refine lt_of_le_of_lt (Polynomial.degree_sum_le _ _) ?_
+    refine (Finset.sup_lt_iff (WithBot.bot_lt_coe n)).mpr fun i _ => ?_
+    exact lt_of_le_of_lt (Polynomial.degree_C_mul_X_pow_le _ _)
+      (WithBot.coe_lt_coe.mpr i.isLt)
+  have hmonic : p.Monic := by
+    rw [hp]
+    refine (Polynomial.monic_X_pow n).add_of_left ?_
+    rw [Polynomial.degree_X_pow]
+    exact hdegsum
+  have hdeg : p.degree = (n : WithBot ℕ) := by
+    rw [hp, Polynomial.degree_add_eq_left_of_degree_lt
+      (by rw [Polynomial.degree_X_pow]; exact hdegsum), Polynomial.degree_X_pow]
+  -- Minimality: a monic {lit}`q` of degree {lit}`< n` would give
+  -- {lit}`q(M)e₀ = ∑ᵢ qᵢeᵢ = 0`, forcing all its coefficients to vanish.
+  refine (minpoly.unique F M hmonic hann fun q hq hq0 => ?_).symm
+  rw [hdeg]
+  by_contra hlt
+  push Not at hlt
+  have hqnat : q.natDegree < n :=
+    (Polynomial.natDegree_lt_iff_degree_lt hq.ne_zero).mpr hlt
+  have h0 : (aeval M q) (e 0) = 0 := by rw [hq0]; simp
+  rw [Polynomial.aeval_eq_sum_range' hqnat M] at h0
+  have hz : ∀ j : Fin n, q.coeff (j : ℕ) = 0 := by
+    intro j
+    have hsum2 : (∑ i ∈ Finset.range n, q.coeff i • (M ^ i)) (e 0)
+        = ∑ i ∈ Finset.range n, q.coeff i • e i := by
+      simp only [LinearMap.sum_apply, LinearMap.smul_apply]
+      exact Finset.sum_congr rfl fun i hi => by rw [hpow i (Finset.mem_range.mp hi)]
+    rw [hsum2] at h0
+    have hj := congrFun h0 j
+    simpa [he, Finset.sum_apply, Finset.sum_ite_eq, j.isLt] using hj
+  exact one_ne_zero (hq.coeff_natDegree.symm.trans (hz ⟨q.natDegree, hqnat⟩))
 
 /-- 5B.17 -/
 theorem exercise_5B_17 [Finite F V] (T : V →ₗ[F] V) (γ : F) :
     minpoly F (T - γ • (LinearMap.id : V →ₗ[F] V)) =
-      (minpoly F T).comp (Polynomial.X + Polynomial.C γ) := by
-  sorry
+      (minpoly F T).comp (Polynomial.X + γ • 1) := by
+  -- (p ∘ q) (T - γ • id) = p(T) where q(X) = X + γ
+  -- but p ∘ q = p' ↔ p = p' ∘ q⁻¹, where q⁻¹(X) = X - γ
+  -- since the two evals are equivalent the min polys are related
+  set S := T - γ • (LinearMap.id : V →ₗ[F] V) with hS
+  -- the polynomial API is stated for {lit}`C γ` rather than {lit}`γ • 1`
+  rw [show (γ • 1 : Polynomial F) = Polynomial.C γ by
+    rw [Polynomial.smul_eq_C_mul, mul_one]]
+  -- substituting {lit}`X + γ` turns {lit}`S` back into {lit}`T`, and
+  -- substituting {lit}`X − γ` turns {lit}`T` into {lit}`S`
+  have hSX : aeval S (Polynomial.X + Polynomial.C γ) = T := by
+    rw [map_add, Polynomial.aeval_X, Polynomial.aeval_C,
+      Algebra.algebraMap_eq_smul_one, hS, Module.End.one_eq_id, sub_add_cancel]
+  have hTX : aeval T (Polynomial.X - Polynomial.C γ) = S := by
+    rw [map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
+      Algebra.algebraMap_eq_smul_one, Module.End.one_eq_id, hS]
+  have hmonicP : (minpoly F T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  have hmonic : ((minpoly F T).comp (Polynomial.X + Polynomial.C γ)).Monic :=
+    hmonicP.comp_X_add_C γ
+  refine (minpoly.unique F S hmonic ?_ fun q hq hq0 => ?_).symm
+  · -- {lit}`p(X + γ)` evaluated at {lit}`S` is {lit}`p` evaluated at {lit}`S + γ = T`
+    rw [Polynomial.aeval_comp, hSX, minpoly.aeval]
+  · -- conversely {lit}`q(X − γ)` annihilates {lit}`T`, so it is at least as long
+    -- as {lit}`p`; composing with a degree-one polynomial preserves the degree
+    have h0 : aeval T (q.comp (Polynomial.X - Polynomial.C γ)) = 0 := by
+      rw [Polynomial.aeval_comp, hTX, hq0]
+    have hle := minpoly.min F T (hq.comp_X_sub_C γ) h0
+    rw [Polynomial.degree_eq_natDegree hmonic.ne_zero,
+      Polynomial.degree_eq_natDegree hq.ne_zero]
+    rw [Polynomial.degree_eq_natDegree hmonicP.ne_zero,
+      Polynomial.degree_eq_natDegree (hq.comp_X_sub_C γ).ne_zero,
+      Polynomial.natDegree_comp, Polynomial.natDegree_X_sub_C, mul_one] at hle
+    rw [Polynomial.natDegree_comp, Polynomial.natDegree_X_add_C, mul_one]
+    exact hle
+
+/-- Substituting {lit}`c X` into a polynomial and evaluating at {lit}`A` is the
+same as evaluating at {lit}`c A`. -/
+private theorem aeval_comp_C_mul_X (A : V →ₗ[F] V) (c : F) (r : Polynomial F) :
+    aeval A (r.comp (Polynomial.C c * Polynomial.X)) = aeval (c • A) r := by
+  rw [Polynomial.aeval_comp, map_mul, Polynomial.aeval_C, Polynomial.aeval_X,
+    ← Algebra.smul_def]
+
+/-- Rescaling the variable by {lit}`c ≠ 0` and renormalizing by the resulting
+leading coefficient keeps a polynomial monic and preserves its degree. -/
+private theorem monic_scale {p : Polynomial F} (hp : p.Monic) {c : F} (hc : c ≠ 0) :
+    ((c ^ p.natDegree)⁻¹ • p.comp (Polynomial.C c * Polynomial.X)).Monic ∧
+      ((c ^ p.natDegree)⁻¹ • p.comp (Polynomial.C c * Polynomial.X)).natDegree
+        = p.natDegree := by
+  have hdeg1 : (Polynomial.C c * Polynomial.X).natDegree = 1 :=
+    Polynomial.natDegree_C_mul_X c hc
+  have hlc : (Polynomial.C c * Polynomial.X).leadingCoeff = c := by
+    rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C, Polynomial.leadingCoeff_X,
+      mul_one]
+  have hcomp : (p.comp (Polynomial.C c * Polynomial.X)).natDegree = p.natDegree := by
+    rw [Polynomial.natDegree_comp, hdeg1, mul_one]
+  have hcl : (p.comp (Polynomial.C c * Polynomial.X)).leadingCoeff = c ^ p.natDegree := by
+    rw [Polynomial.leadingCoeff_comp (by rw [hdeg1]; exact one_ne_zero), hp.leadingCoeff,
+      one_mul, hlc]
+  have hne : (c ^ p.natDegree)⁻¹ ≠ 0 := inv_ne_zero (pow_ne_zero _ hc)
+  constructor
+  · rw [Polynomial.Monic.def, Polynomial.smul_eq_C_mul, Polynomial.leadingCoeff_mul,
+      Polynomial.leadingCoeff_C, hcl, inv_mul_cancel₀ (pow_ne_zero _ hc)]
+  · rw [Polynomial.smul_eq_C_mul, Polynomial.natDegree_mul (by simpa using hne) ?_,
+      Polynomial.natDegree_C, zero_add, hcomp]
+    intro h0
+    rw [h0] at hcl
+    simp only [Polynomial.leadingCoeff_zero] at hcl
+    exact pow_ne_zero _ hc hcl.symm
 
 /-- 5B.18 -/
 theorem exercise_5B_18 [Finite F V] (T : V →ₗ[F] V) (γ : F) (hγ : γ ≠ 0) :
-    minpoly F (γ • T) = Polynomial.C (γ ^ (minpoly F T).natDegree) *
-      (minpoly F T).comp (Polynomial.C γ⁻¹ * Polynomial.X) := by
-  sorry
+    minpoly F (γ • T) = (γ ^ (minpoly F T).natDegree) • (minpoly F T).comp (γ⁻¹ • Polynomial.X) := by
+  -- (p ∘ q) (γ T) = p(T) where q(X) = X / γ
+  -- but p ∘ q = p' ↔ p = p' ∘ q⁻¹, where q⁻¹(X) = γ X
+  -- finally we need to account for the scalar factor γ^n when relating the minimal polynomials.
+  -- so they are both monic.
+  have hγi : γ⁻¹ ≠ 0 := inv_ne_zero hγ
+  have hpmonic : (minpoly F T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  -- the polynomial API is stated for {lit}`C _ * _` rather than {lit}`_ • _`
+  rw [Polynomial.smul_eq_C_mul γ⁻¹ (p := Polynomial.X),
+    show (γ ^ (minpoly F T).natDegree) = ((γ⁻¹ ^ (minpoly F T).natDegree)⁻¹) by
+      rw [inv_pow, inv_inv]]
+  obtain ⟨hmonic, hdeg⟩ := monic_scale hpmonic hγi
+  refine (minpoly.unique F (γ • T) hmonic ?_ fun q hq hq0 => ?_).symm
+  · -- {lit}`p(X/γ)` evaluated at {lit}`γT` is {lit}`p` evaluated at
+    -- {lit}`γ⁻¹ • (γ • T) = T`
+    rw [map_smul, aeval_comp_C_mul_X, smul_smul, inv_mul_cancel₀ hγ, one_smul,
+      minpoly.aeval, smul_zero]
+  · -- conversely {lit}`q(γX)`, renormalized, is monic of the same degree and
+    -- annihilates {lit}`T`
+    obtain ⟨hmonic', hdeg'⟩ := monic_scale hq hγ
+    have h0 : aeval T ((γ ^ q.natDegree)⁻¹ • q.comp (Polynomial.C γ * Polynomial.X))
+        = 0 := by
+      rw [map_smul, aeval_comp_C_mul_X, hq0, smul_zero]
+    have hle := minpoly.min F T hmonic' h0
+    rw [Polynomial.degree_eq_natDegree hpmonic.ne_zero,
+      Polynomial.degree_eq_natDegree hmonic'.ne_zero, hdeg'] at hle
+    rw [Polynomial.degree_eq_natDegree hmonic.ne_zero,
+      Polynomial.degree_eq_natDegree hq.ne_zero, hdeg]
+    exact_mod_cast hle
 
 /-- 5B.19 -/
 theorem exercise_5B_19 [Finite F V] (T : V →ₗ[F] V) :
     finrank F (range (Polynomial.aeval (R := F) T).toLinearMap) =
       (minpoly F T).natDegree := by
-  sorry
+  -- let n = deg min poly
+  -- 1) 1...X^n-1 linear idp. otherwise contradiction with min poly
+  -- 2) X^n and all X^m , m ≥ n, are all in span {1, X, ..., X^(n-1)} by
+  -- using the min poly relation
+  have hmonic : (minpoly F T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  -- 1) the powers below the degree of the minimal polynomial are independent
+  have hli : LinearIndependent F
+      (fun i : Fin (minpoly F T).natDegree => T ^ (i : ℕ)) := linearIndependent_pow T
+  -- 2) every {lit}`p(T)` lies in their span: divide {lit}`p` by the minimal
+  -- polynomial, which leaves a remainder of degree {lit}`< n`
+  have hspan : range (Polynomial.aeval (R := F) T).toLinearMap
+      = Submodule.span F
+        (Set.range fun i : Fin (minpoly F T).natDegree => T ^ (i : ℕ)) := by
+    refine le_antisymm ?_ ?_
+    · rintro _ ⟨p, rfl⟩
+      have hmod : aeval T (p %ₘ minpoly F T) = aeval T p := by
+        conv_rhs => rw [← Polynomial.modByMonic_add_div p (minpoly F T)]
+        rw [map_add, map_mul, minpoly.aeval, zero_mul, add_zero]
+      rw [AlgHom.toLinearMap_apply, ← hmod]
+      rcases eq_or_ne (p %ₘ minpoly F T) 0 with h0 | h0
+      · rw [h0, map_zero]
+        exact Submodule.zero_mem _
+      · have hlt : (p %ₘ minpoly F T).natDegree < (minpoly F T).natDegree := by
+          refine (Polynomial.natDegree_lt_iff_degree_lt h0).mpr ?_
+          rw [← Polynomial.degree_eq_natDegree hmonic.ne_zero]
+          exact Polynomial.degree_modByMonic_lt p hmonic
+        rw [Polynomial.aeval_eq_sum_range' hlt T]
+        refine Submodule.sum_mem _ fun i hi => Submodule.smul_mem _ _ ?_
+        exact Submodule.subset_span ⟨⟨i, Finset.mem_range.mp hi⟩, rfl⟩
+    · rw [Submodule.span_le]
+      rintro _ ⟨i, rfl⟩
+      exact ⟨Polynomial.X ^ (i : ℕ), by simp⟩
+  rw [hspan, finrank_span_eq_card hli, Fintype.card_fin]
 
+open Polynomial in
 /-- 5B.20 -/
 theorem exercise_5B_20 (T : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ))
     (hev : ∀ γ : ℝ, HasEigenvalue T γ ↔ γ = 3 ∨ γ = 5 ∨ γ = 8) :
     ((T - 3 • LinearMap.id) ^ 2) ∘ₗ ((T - 5 • LinearMap.id) ^ 2) ∘ₗ
       ((T - 8 • LinearMap.id) ^ 2) = 0 := by
-  sorry
+  -- p = (z - 3)(z - 5)(z - 8) must divide min poly, because
+  -- each is eigenvalue.
+  -- two options minpoly deg 3 or 4
+  -- if deg3 - minpoly = p, so goal poly q = p ^ 2 , so 0 at T
+  -- if def4 - minpoly = p(z - a), but a is eigenvalue so 3,5,8
+  -- so minpoly still divides q, so 0 at T
+  classical
+  set m : Polynomial ℝ := (X - C 3) * ((X - C 5) * (X - C 8)) with hm
+  have hmmonic : m.Monic := by
+    rw [hm]
+    exact (monic_X_sub_C _).mul ((monic_X_sub_C _).mul (monic_X_sub_C _))
+  have hmdeg : m.natDegree = 3 := by
+    rw [hm, (monic_X_sub_C (3 : ℝ)).natDegree_mul
+      ((monic_X_sub_C (5 : ℝ)).mul (monic_X_sub_C (8 : ℝ))),
+      (monic_X_sub_C (5 : ℝ)).natDegree_mul (monic_X_sub_C (8 : ℝ))]
+    simp
+  have hpmonic : (minpoly ℝ T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  -- the roots of the minimal polynomial are the eigenvalues {lit}`3, 5, 8` (5.27)
+  have hrootiff : ∀ γ : ℝ, (minpoly ℝ T).IsRoot γ ↔ (γ = 3 ∨ γ = 5 ∨ γ = 8) :=
+    fun γ => (isEigenvalue_iff_isRoot T γ).symm.trans (hev γ)
+  -- they are distinct, so {lit}`m` divides the minimal polynomial
+  have hdvdm : m ∣ minpoly ℝ T := by
+    have hle : ({3, 5, 8} : Multiset ℝ) ≤ (minpoly ℝ T).roots := by
+      refine (Multiset.le_iff_subset (by norm_num)).mpr fun x hx => ?_
+      have hx' : x = 3 ∨ x = 5 ∨ x = 8 := by simpa using hx
+      exact (mem_roots hpmonic.ne_zero).mpr ((hrootiff x).mpr hx')
+    have := (Multiset.prod_X_sub_C_dvd_iff_le_roots hpmonic.ne_zero _).mpr hle
+    simpa [hm, mul_assoc] using this
+  obtain ⟨g, hg⟩ := hdvdm
+  have hgmonic : g.Monic := hmmonic.of_mul_monic_left (hg ▸ hpmonic)
+  -- the minimal polynomial has degree at most {lit}`4` (5.24), so {lit}`g` has
+  -- degree at most {lit}`1`
+  have hgdeg : g.natDegree ≤ 1 := by
+    have h4 := minpoly_natDegree_le T
+    rw [hg, hmmonic.natDegree_mul hgmonic, hmdeg] at h4
+    simp only [Module.finrank_fin_fun] at h4
+    omega
+  -- {lit}`g` divides {lit}`m`: either {lit}`g = 1`, or {lit}`g = X − a` with
+  -- {lit}`a` an eigenvalue, hence one of {lit}`3, 5, 8`
+  have hgm : g ∣ m := by
+    rcases Nat.lt_or_ge g.natDegree 1 with h1 | h1
+    · rw [hgmonic.natDegree_eq_zero.mp (by omega)]
+      exact one_dvd _
+    · have hdeg1 : g.natDegree = 1 := le_antisymm hgdeg h1
+      have hgX : g = X - C (-(g.coeff 0)) := by
+        rw [map_neg, sub_neg_eq_add]
+        exact hgmonic.eq_X_add_C hdeg1
+      have hroot : (minpoly ℝ T).IsRoot (-(g.coeff 0)) := by
+        refine (dvd_iff_isRoot).mp ?_
+        rw [← hgX, hg]
+        exact Dvd.intro_left _ rfl
+      rw [hgX]
+      rcases (hrootiff _).mp hroot with h | h | h <;> rw [h, hm]
+      · exact ⟨(X - C 5) * (X - C 8), rfl⟩
+      · exact ⟨(X - C 3) * (X - C 8), by ring⟩
+      · exact ⟨(X - C 3) * (X - C 5), by ring⟩
+  -- hence the minimal polynomial divides {lit}`m²`, which is the goal polynomial
+  have hdvd : minpoly ℝ T ∣ m * m := by
+    rw [hg]
+    exact mul_dvd_mul_left m hgm
+  -- the numerals in the statement are natural-number scalars
+  have hns : ∀ n : ℕ, (n • (LinearMap.id : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ)))
+      = (n : ℝ) • LinearMap.id := fun n => (Nat.cast_smul_eq_nsmul ℝ n _).symm
+  have hfac : ∀ c : ℝ, aeval T (X - C c)
+      = T - c • (LinearMap.id : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ)) := by
+    intro c
+    rw [map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
+      Algebra.algebraMap_eq_smul_one, Module.End.one_eq_id]
+  have hgoal : ((T - 3 • LinearMap.id) ^ 2) ∘ₗ ((T - 5 • LinearMap.id) ^ 2) ∘ₗ
+      ((T - 8 • LinearMap.id) ^ 2) = aeval T (m * m) := by
+    rw [show m * m = (X - C 3) ^ 2 * ((X - C 5) ^ 2 * (X - C 8) ^ 2) by rw [hm]; ring]
+    simp only [map_mul, map_pow, hfac, Module.End.mul_eq_comp, hns, Nat.cast_ofNat]
+  obtain ⟨h, hh⟩ := hdvd
+  rw [hgoal, hh, map_mul, minpoly.aeval, zero_mul]
 
 /-- 5B.21 -/
 theorem exercise_5B_21 [Finite F V] (T : V →ₗ[F] V) :
     (minpoly F T).natDegree ≤ 1 + finrank F (range T) := by
-  sorry
+  -- consider T|range T, its minpoly p is <= rank range T.
+  -- so p(T) = 0 for all vectors in the range of T
+  -- but (p(z)z) T = 0 for all v, since the first z sends to range T
+  -- so minpoly | p(z)z -> minpoly.deg ≤ rank range + T
+  have hU : InvariantUnder T (range T) := fun u _ => LinearMap.mem_range_self T u
+  have hpdeg : (minpoly F hU.restrict).natDegree ≤ finrank F (range T) :=
+    minpoly_natDegree_le hU.restrict
+  have hpne : minpoly F hU.restrict ≠ 0 :=
+    minpoly.ne_zero (Algebra.IsIntegral.isIntegral _)
+  -- {lit}`p(T)` kills the range of {lit}`T`, so {lit}`p(T) ∘ T = 0` on all of
+  -- {lit}`V`
+  have hann : aeval T (minpoly F hU.restrict * Polynomial.X) = 0 := by
+    refine LinearMap.ext fun v => ?_
+    rw [map_mul, Polynomial.aeval_X, Module.End.mul_apply, LinearMap.zero_apply]
+    have hcoe := aeval_restrict_coe hU (minpoly F hU.restrict)
+      ⟨T v, LinearMap.mem_range_self T v⟩
+    rw [minpoly.aeval] at hcoe
+    simpa using hcoe.symm
+  have hle := Polynomial.natDegree_le_of_dvd (minpoly.dvd F T hann)
+    (mul_ne_zero hpne Polynomial.X_ne_zero)
+  rw [Polynomial.natDegree_mul hpne Polynomial.X_ne_zero, Polynomial.natDegree_X] at hle
+  omega
 
 /-- 5B.22 -/
 theorem exercise_5B_22 [Finite F V] (T : V →ₗ[F] V) :
     IsInvertible T ↔ LinearMap.id ∈ Submodule.span F
       (Set.range fun i : Fin (finrank F V) => T ^ ((i : ℕ) + 1)) := by
-  sorry
+  -- invertable iff a0 in minpoly is nonzero
+  -- -> solve for I from minpoly
+  -- <- take the lin combination for I, and build a monic p(T) = 0
+  -- minpoly | p(T) = 0, if T | minpoly it would divide p(T) as well,
+  -- but a₀ ≠ 0, so T cannot divide the minimal polynomial, so T is invertable
+  classical
+  have hndeg : (minpoly F T).natDegree ≤ finrank F V := minpoly_natDegree_le T
+  -- the minimal-polynomial relation with the constant term split off
+  have hsum : (∑ i ∈ Finset.range (finrank F V),
+        (minpoly F T).coeff (i + 1) • T ^ (i + 1))
+      + (minpoly F T).coeff 0 • (1 : Module.End F V) = 0 := by
+    have h : ∑ i ∈ Finset.range (finrank F V + 1), (minpoly F T).coeff i • T ^ i = 0 := by
+      rw [← Polynomial.aeval_eq_sum_range' (by omega) T, minpoly.aeval]
+    rwa [Finset.sum_range_succ' (fun i => (minpoly F T).coeff i • T ^ i)
+      (finrank F V), pow_zero] at h
+  constructor
+  · -- if {lit}`T` is invertible then {lit}`a₀ ≠ 0` (5.32), so the relation
+    -- solves for {lit}`I`
+    intro hinv
+    have ha0 : (minpoly F T).coeff 0 ≠ 0 :=
+      fun h => (not_invertible_iff_minpoly_coeff_zero T).mpr h hinv
+    have hkey : (∑ i ∈ Finset.range (finrank F V),
+        (minpoly F T).coeff (i + 1) • T ^ (i + 1))
+        = -((minpoly F T).coeff 0 • (1 : Module.End F V)) :=
+      eq_neg_of_add_eq_zero_left hsum
+    rw [Submodule.mem_span_range_iff_exists_fun]
+    refine ⟨fun i => -((minpoly F T).coeff 0)⁻¹ * (minpoly F T).coeff ((i : ℕ) + 1), ?_⟩
+    rw [Fin.sum_univ_eq_sum_range (fun i =>
+      (-((minpoly F T).coeff 0)⁻¹ * (minpoly F T).coeff (i + 1)) • T ^ (i + 1))]
+    simp only [mul_smul]
+    rw [← Finset.smul_sum, hkey, neg_smul, smul_neg, neg_neg, smul_smul,
+      inv_mul_cancel₀ ha0, one_smul]
+    rfl
+  · -- conversely, {lit}`I = ∑ cᵢ T^{i+1}` factors as {lit}`T` times something
+    intro hmem
+    rw [Submodule.mem_span_range_iff_exists_fun] at hmem
+    obtain ⟨c, hc⟩ := hmem
+    refine ⟨∑ i : Fin (finrank F V), c i • T ^ (i : ℕ), ?_, ?_⟩
+    · rw [← Module.End.mul_eq_comp, Finset.sum_mul, ← hc]
+      exact Finset.sum_congr rfl fun i _ => by rw [smul_mul_assoc, ← pow_succ]
+    · rw [← Module.End.mul_eq_comp, Finset.mul_sum, ← hc]
+      exact Finset.sum_congr rfl fun i _ => by rw [mul_smul_comm, ← pow_succ']
 
 /-- 5B.23 -/
 theorem exercise_5B_23 [Finite F V] (T : V →ₗ[F] V) (v : V) :
     InvariantUnder T (Submodule.span F
       (Set.range fun i : Fin (finrank F V) => (T ^ (i : ℕ)) v)) := by
-  sorry
+  -- enough to show T maps each generator into the span
+  -- T^i v for i < n,
+  -- T T ^ i v = T ^ (i + 1) v, for all but i = n - 1, this is trivial
+  -- for i = n - 1, we get T ^ n, but minpoly is monic of deg d ≤ n,
+  -- so T ^ d rewrites as lower powers; multiply by T ^ (n - d) to get
+  -- T ^ n as a combination of T ^ (n-d) ... T ^ (n-1), all still in the span.
+  classical
+  have hmono : (minpoly F T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  have hnle : (minpoly F T).natDegree ≤ finrank F V := minpoly_natDegree_le T
+  have hgen : ∀ m : ℕ, m < finrank F V → (T ^ m) v ∈ Submodule.span F
+      (Set.range fun i : Fin (finrank F V) => (T ^ (i : ℕ)) v) :=
+    fun m hm => Submodule.subset_span ⟨⟨m, hm⟩, rfl⟩
+  -- the minimal polynomial rewrites {lit}`Tⁿ v` in terms of lower powers
+  have hTn : (T ^ (minpoly F T).natDegree) v
+      = -∑ i ∈ Finset.range (minpoly F T).natDegree,
+          (minpoly F T).coeff i • (T ^ i) v := by
+    have h0 : aeval T (minpoly F T) v = 0 := by rw [minpoly.aeval]; rfl
+    rw [Polynomial.aeval_eq_sum_range] at h0
+    simp only [LinearMap.sum_apply, LinearMap.smul_apply] at h0
+    rw [Finset.sum_range_succ, hmono.coeff_natDegree, one_smul] at h0
+    exact eq_neg_of_add_eq_zero_right h0
+  -- hence {lit}`T^(dim V) v` lies in the span as well
+  have hpow : (T ^ (finrank F V)) v
+      = (T ^ (finrank F V - (minpoly F T).natDegree))
+          ((T ^ (minpoly F T).natDegree) v) := by
+    rw [← Module.End.mul_apply, ← pow_add, Nat.sub_add_cancel hnle]
+  have hTN : (T ^ (finrank F V)) v ∈ Submodule.span F
+      (Set.range fun i : Fin (finrank F V) => (T ^ (i : ℕ)) v) := by
+    rw [hpow, hTn, map_neg, map_sum]
+    refine Submodule.neg_mem _ (Submodule.sum_mem _ fun i hi => ?_)
+    rw [map_smul, ← Module.End.mul_apply, ← pow_add]
+    exact Submodule.smul_mem _ _
+      (hgen _ (by have := Finset.mem_range.mp hi; omega))
+  -- it suffices to check the generators
+  rw [LADR.Section_5A.invariantUnder_iff_map_le, Submodule.map_span, Submodule.span_le]
+  rintro _ ⟨_, ⟨i, rfl⟩, rfl⟩
+  simp only [SetLike.mem_coe]
+  rw [← Module.End.mul_apply, ← pow_succ']
+  rcases Nat.lt_or_ge ((i : ℕ) + 1) (finrank F V) with h | h
+  · exact hgen _ h
+  · rw [show (i : ℕ) + 1 = finrank F V by omega]
+    exact hTN
 
+open Polynomial in
 /-- 5B.24 -/
 theorem exercise_5B_24 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V)
     (hev : ∀ γ : ℂ, HasEigenvalue T γ ↔ γ = 5 ∨ γ = 6) :
     ((T - 5 • LinearMap.id) ^ (finrank ℂ V - 1)) ∘ₗ
       ((T - 6 • LinearMap.id) ^ (finrank ℂ V - 1)) = 0 := by
-  sorry
+  -- over C the min poly splits fully to products (z - a)
+  -- but a has to be either 5 or 6
+  -- so minpoly = (z - 5)^i * (z - 6)^j, where i + j ≤ finrank ℂ V
+  -- both 5 and 6 really are eigenvalues, so i ≥ 1 and j ≥ 1, hence
+  -- i ≤ finrank - 1 and j ≤ finrank - 1
+  -- so the poly in question is divisble by minpoly, so 0 at T
+  classical
+  have hmonic : (minpoly ℂ T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  have hsplit : (minpoly ℂ T).Splits := IsAlgClosed.splits _
+  have hcard : Multiset.card (minpoly ℂ T).roots = (minpoly ℂ T).natDegree :=
+    Polynomial.splits_iff_card_roots.mp hsplit
+  have hdeg : (minpoly ℂ T).natDegree ≤ finrank ℂ V := minpoly_natDegree_le T
+  -- the roots are exactly the eigenvalues, so they lie in {lit}`{5, 6}`
+  have hroots : ∀ a ∈ (minpoly ℂ T).roots, a = 5 ∨ a = 6 := by
+    intro a ha
+    exact (hev a).mp ((isEigenvalue_iff_isRoot T a).mpr
+      ((mem_roots hmonic.ne_zero).mp ha))
+  have h5 : (5 : ℂ) ∈ (minpoly ℂ T).roots :=
+    (mem_roots hmonic.ne_zero).mpr
+      ((isEigenvalue_iff_isRoot T 5).mp ((hev 5).mpr (Or.inl rfl)))
+  have h6 : (6 : ℂ) ∈ (minpoly ℂ T).roots :=
+    (mem_roots hmonic.ne_zero).mpr
+      ((isEigenvalue_iff_isRoot T 6).mp ((hev 6).mpr (Or.inr rfl)))
+  -- the two multiplicities add up to at most the degree
+  have hle : Multiset.replicate ((minpoly ℂ T).roots.count 5) (5 : ℂ)
+      + Multiset.replicate ((minpoly ℂ T).roots.count 6) (6 : ℂ)
+      ≤ (minpoly ℂ T).roots := by
+    refine Multiset.le_iff_count.mpr fun a => ?_
+    simp only [Multiset.count_add, Multiset.count_replicate]
+    by_cases h1 : (5 : ℂ) = a
+    · subst h1
+      rw [if_pos rfl, if_neg (by norm_num : ¬((6 : ℂ) = 5))]
+      omega
+    · by_cases h2 : (6 : ℂ) = a
+      · subst h2
+        rw [if_neg h1, if_pos rfl]
+        omega
+      · rw [if_neg h1, if_neg h2]
+        omega
+  have hsum : (minpoly ℂ T).roots.count 5 + (minpoly ℂ T).roots.count 6
+      ≤ finrank ℂ V := by
+    have := Multiset.card_le_card hle
+    simp only [Multiset.card_add, Multiset.card_replicate] at this
+    omega
+  have h5pos : 1 ≤ (minpoly ℂ T).roots.count 5 := Multiset.one_le_count_iff_mem.mpr h5
+  have h6pos : 1 ≤ (minpoly ℂ T).roots.count 6 := Multiset.one_le_count_iff_mem.mpr h6
+  -- hence every root has multiplicity at most {lit}`finrank - 1`
+  have hps : (minpoly ℂ T).roots ≤ Multiset.replicate (finrank ℂ V - 1) (5 : ℂ)
+      + Multiset.replicate (finrank ℂ V - 1) (6 : ℂ) := by
+    refine Multiset.le_iff_count.mpr fun a => ?_
+    simp only [Multiset.count_add, Multiset.count_replicate]
+    by_cases h1 : (5 : ℂ) = a
+    · subst h1
+      rw [if_pos rfl, if_neg (by norm_num : ¬((6 : ℂ) = 5))]
+      omega
+    · by_cases h2 : (6 : ℂ) = a
+      · subst h2
+        rw [if_neg h1, if_pos rfl]
+        omega
+      · have hnot : a ∉ (minpoly ℂ T).roots := fun hm => by
+          rcases hroots a hm with h | h
+          · exact h1 h.symm
+          · exact h2 h.symm
+        rw [if_neg h1, if_neg h2, Multiset.count_eq_zero.mpr hnot]
+  -- so the minimal polynomial divides the goal polynomial
+  have hq : ((Multiset.replicate (finrank ℂ V - 1) (5 : ℂ)
+        + Multiset.replicate (finrank ℂ V - 1) (6 : ℂ)).map
+          (fun a => X - C a)).prod
+      = (X - C 5) ^ (finrank ℂ V - 1) * (X - C 6) ^ (finrank ℂ V - 1) := by
+    rw [Multiset.map_add, Multiset.prod_add, Multiset.map_replicate,
+      Multiset.map_replicate, Multiset.prod_replicate, Multiset.prod_replicate]
+  have hdvd : minpoly ℂ T
+      ∣ (X - C 5) ^ (finrank ℂ V - 1) * (X - C 6) ^ (finrank ℂ V - 1) := by
+    rw [← hq, minpoly_eq_prod_roots_of_splits T hsplit]
+    exact Multiset.prod_dvd_prod_of_le (Multiset.map_le_map hps)
+  -- translate the goal into the polynomial statement
+  have hns : ∀ m : ℕ, (m • (LinearMap.id : V →ₗ[ℂ] V)) = (m : ℂ) • LinearMap.id :=
+    fun m => (Nat.cast_smul_eq_nsmul ℂ m _).symm
+  have hfac : ∀ c : ℂ, aeval T (X - C c) = T - c • (LinearMap.id : V →ₗ[ℂ] V) := by
+    intro c
+    rw [map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
+      Algebra.algebraMap_eq_smul_one, Module.End.one_eq_id]
+  have hgoal : ((T - 5 • LinearMap.id) ^ (finrank ℂ V - 1)) ∘ₗ
+      ((T - 6 • LinearMap.id) ^ (finrank ℂ V - 1))
+      = aeval T ((X - C 5 : Polynomial ℂ) ^ (finrank ℂ V - 1)
+          * (X - C 6) ^ (finrank ℂ V - 1)) := by
+    simp only [map_mul, map_pow, hfac, Module.End.mul_eq_comp, hns, Nat.cast_ofNat]
+  obtain ⟨h, hh⟩ := hdvd
+  rw [hgoal, hh, map_mul, minpoly.aeval, zero_mul]
+
+open LADR.Section_5A (exercise_5A_38_quotient_op) in
+/-- Evaluating a polynomial at the quotient operator commutes with the quotient
+map: {lit}`p(T/U)(v + U) = p(T)v + U`. -/
+private theorem aeval_quotient_mkQ {T : V →ₗ[F] V} {U : Submodule F V}
+    (hU : InvariantUnder T U) (p : Polynomial F) (v : V) :
+    aeval (exercise_5A_38_quotient_op T U hU) p (U.mkQ v) = U.mkQ (aeval T p v) := by
+  have hqapply : ∀ x, exercise_5A_38_quotient_op T U hU (U.mkQ x) = U.mkQ (T x) := by
+    intro x; simp [exercise_5A_38_quotient_op, Submodule.mapQ_apply]
+  have hpow : ∀ (n : ℕ) (v : V),
+      ((exercise_5A_38_quotient_op T U hU) ^ n) (U.mkQ v) = U.mkQ ((T ^ n) v) := by
+    intro n
+    induction n with
+    | zero => intro v; simp
+    | succ n ih =>
+      intro v
+      rw [pow_succ', Module.End.mul_apply, ih, hqapply, ← Module.End.mul_apply,
+        ← pow_succ']
+  induction p using Polynomial.induction_on' generalizing v with
+  | add p q hp hq => simp only [map_add, LinearMap.add_apply, hp, hq, map_add]
+  | monomial n a =>
+    simp only [Polynomial.aeval_monomial, Module.End.mul_apply,
+      Module.algebraMap_end_apply, hpow, map_smul]
 
 open LADR.Section_5A (exercise_5A_38_quotient_op) in
 /-- 5B.25 (a) The minimal polynomial of {lit}`T` is a polynomial multiple of
@@ -2006,7 +2591,11 @@ the minimal polynomial of the quotient operator {lit}`T/U`. -/
 theorem exercise_5B_25a [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) :
     minpoly F (exercise_5A_38_quotient_op T U hU) ∣ minpoly F T := by
-  sorry
+  -- since p(T) v = 0, then p(T) (v + U) = 0 too, so minpoly quotient | minpoly T
+  refine minpoly.dvd F _ (LinearMap.ext fun x => ?_)
+  obtain ⟨v, rfl⟩ := U.mkQ_surjective x
+  rw [aeval_quotient_mkQ, LinearMap.congr_fun (minpoly.aeval F T) v]
+  simp
 
 open LADR.Section_5A (exercise_5A_38_quotient_op) in
 /-- 5B.25 (b) {lit}`(minpoly T|_U) · (minpoly T/U)` is a polynomial multiple
@@ -2015,7 +2604,20 @@ theorem exercise_5B_25b [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) :
     minpoly F T ∣
       minpoly F hU.restrict * minpoly F (exercise_5A_38_quotient_op T U hU) := by
-  sorry
+  -- (r * q)(T) v = (r * q)(T) (v + u), where v not in U and u ∈ U
+  -- = (r * q)(T) v + (q * r)(T) u = 0 + 0, because q(T) v = 0, and r(T) u = 0
+  -- {lit}`r(T) v` lands in {lit}`U`, because {lit}`r` kills the quotient
+  -- operator; then {lit}`q(T)` kills it, because {lit}`q` kills {lit}`T|_U`
+  refine minpoly.dvd F T (LinearMap.ext fun v => ?_)
+  rw [map_mul, Module.End.mul_apply, LinearMap.zero_apply]
+  have h0 : U.mkQ (aeval T (minpoly F (exercise_5A_38_quotient_op T U hU)) v) = 0 := by
+    rw [← aeval_quotient_mkQ hU, minpoly.aeval, LinearMap.zero_apply]
+  have hmem : aeval T (minpoly F (exercise_5A_38_quotient_op T U hU)) v ∈ U := by
+    rwa [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at h0
+  have hcoe := aeval_restrict_coe hU (minpoly F hU.restrict)
+    ⟨aeval T (minpoly F (exercise_5A_38_quotient_op T U hU)) v, hmem⟩
+  rw [minpoly.aeval] at hcoe
+  simpa using hcoe.symm
 
 open LADR.Section_5A (exercise_5A_38_quotient_op) in
 /-- 5B.26 -/
@@ -2023,7 +2625,23 @@ theorem exercise_5B_26 [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) (γ : F) :
     HasEigenvalue T γ ↔ HasEigenvalue hU.restrict γ ∨
       HasEigenvalue (exercise_5A_38_quotient_op T U hU) γ := by
-  sorry
+  -- p = minpoly, q = restiction and r = quotient minpoly
+  -- we have shown q | p, r | p, p | q * r
+  -- so linear factors of q or r, are linear factors of p
+  -- and linear factors of p are linear factors of either q or r (they are prime)
+  have hqp : minpoly F hU.restrict ∣ minpoly F T := minpoly_restrict_dvd T U hU
+  have hrp : minpoly F (exercise_5A_38_quotient_op T U hU) ∣ minpoly F T :=
+    exercise_5B_25a T U hU
+  have hpqr := exercise_5B_25b T U hU
+  rw [isEigenvalue_iff_isRoot, isEigenvalue_iff_isRoot, isEigenvalue_iff_isRoot,
+    ← Polynomial.dvd_iff_isRoot, ← Polynomial.dvd_iff_isRoot,
+    ← Polynomial.dvd_iff_isRoot]
+  constructor
+  · intro h
+    exact (Polynomial.prime_X_sub_C γ).2.2 _ _ (h.trans hpqr)
+  · rintro (h | h)
+    · exact h.trans hqp
+    · exact h.trans hrp
 
 open LADR.Section_1B (Complexification exercise_1B_8) in
 open LADR.Section_3B (complexification_map) in
@@ -2033,17 +2651,396 @@ theorem exercise_5B_27 {V : Type*} [AddCommGroup V] [Module ℝ V]
     letI : Module ℂ (Complexification V) := exercise_1B_8 V
     minpoly ℂ (complexification_map T) =
       (minpoly ℝ T).map (algebraMap ℝ ℂ) := by
-  sorry
+  -- for real p: p(T_C) (u,v) = (p(T)u, p(T)v), so p(T_C) = 0 iff p(T) = 0.
+  -- one direction is then immediate: minpoly R T, viewed over C, kills T_C.
+  -- but minpoly C (T_C) is a complex polynomial and could a priori be shorter,
+  -- so take monic complex q with q(T_C) = 0 and evaluate at (u, 0):
+  -- the real coordinate is qre(T) u, where qre collects the real parts of the
+  -- coefficients of q. q monic => qre monic of the same degree, and qre(T) = 0,
+  -- so deg (minpoly R T) <= deg q. hence the degrees match and min poly follows.
+  letI : Module ℂ (Complexification V) := exercise_1B_8 V
+  have hmap : ∀ x : Complexification V,
+      complexification_map T x = (T x.1, T x.2) := fun _ => rfl
+  have hsmul : ∀ (c : ℂ) (x : Complexification V),
+      c • x = (c.re • x.1 - c.im • x.2, c.re • x.2 + c.im • x.1) := fun _ _ => rfl
+  have hpow : ∀ (n : ℕ) (x : Complexification V),
+      ((complexification_map T) ^ n) x = ((T ^ n) x.1, (T ^ n) x.2) := by
+    intro n
+    induction n with
+    | zero => intro x; simp
+    | succ n ih =>
+      intro x
+      rw [pow_succ', Module.End.mul_apply, ih, hmap, pow_succ']
+      simp [Module.End.mul_apply]
+  -- a real polynomial acts coordinatewise on the complexification
+  have hreal : ∀ (r : Polynomial ℝ) (x : Complexification V),
+      aeval (complexification_map T) (r.map (algebraMap ℝ ℂ)) x
+        = ((aeval T r) x.1, (aeval T r) x.2) := by
+    intro r
+    induction r using Polynomial.induction_on' with
+    | add p q hp hq =>
+      intro x
+      simp only [Polynomial.map_add, map_add, LinearMap.add_apply, hp, hq, Prod.mk_add_mk]
+    | monomial n a =>
+      intro x
+      rw [Polynomial.map_monomial, Polynomial.aeval_monomial, Polynomial.aeval_monomial,
+        Module.End.mul_apply, Module.End.mul_apply, Module.algebraMap_end_apply,
+        Module.algebraMap_end_apply, hpow, hsmul]
+      simp
+  have hpmonic : (minpoly ℝ T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  have hmonic : ((minpoly ℝ T).map (algebraMap ℝ ℂ)).Monic := hpmonic.map _
+  refine (minpoly.unique ℂ (complexification_map T) hmonic ?_ fun q hq hq0 => ?_).symm
+  · -- it annihilates the complexification because it annihilates {lit}`T`
+    refine LinearMap.ext fun x => ?_
+    rw [hreal, LinearMap.congr_fun (minpoly.aeval ℝ T) x.1,
+      LinearMap.congr_fun (minpoly.aeval ℝ T) x.2]
+    rfl
+  · -- conversely, the real part of a monic complex annihilator is a monic real
+    -- annihilator of the same degree
+    set d := q.natDegree with hd
+    set qre : Polynomial ℝ :=
+      ∑ i ∈ Finset.range d, Polynomial.C (q.coeff i).re * Polynomial.X ^ i with hqre
+    set qim : Polynomial ℝ :=
+      ∑ i ∈ Finset.range (d + 1), Polynomial.C (q.coeff i).im * Polynomial.X ^ i with hqim
+    have hev : ∀ (c : ℕ → ℝ) (n : ℕ) (u : V),
+        (aeval T (∑ i ∈ Finset.range n, Polynomial.C (c i) * Polynomial.X ^ i)) u
+          = ∑ i ∈ Finset.range n, c i • ((T ^ i) u) := by
+      intro c n u
+      simp only [map_sum, map_mul, map_pow, Polynomial.aeval_X, Polynomial.aeval_C,
+        ← Algebra.smul_def, LinearMap.sum_apply, LinearMap.smul_apply]
+    have hsplit : ∀ u : V,
+        aeval (complexification_map T) q (u, 0)
+          = (((T ^ d) u + (aeval T qre) u), (aeval T qim) u) := by
+      intro u
+      rw [Polynomial.aeval_eq_sum_range' (n := d + 1) (by omega) (complexification_map T)]
+      rw [LinearMap.sum_apply]
+      have hterm : ∀ i ∈ Finset.range (d + 1),
+          (q.coeff i • (complexification_map T) ^ i) (u, 0)
+            = ((q.coeff i).re • ((T ^ i) u), (q.coeff i).im • ((T ^ i) u)) := by
+        intro i _
+        rw [LinearMap.smul_apply, hpow, hsmul]
+        simp
+      rw [Finset.sum_congr rfl hterm, Prod.mk.injEq]
+      constructor
+      · rw [Prod.fst_sum, Finset.sum_range_succ, hev]
+        simp only []
+        rw [hq.coeff_natDegree]
+        simp [add_comm]
+      · rw [Prod.snd_sum, hev]
+    have hqre0 : aeval T (Polynomial.X ^ d + qre) = 0 := by
+      refine LinearMap.ext fun u => ?_
+      have h := hsplit u
+      rw [hq0] at h
+      have h1 : ((T ^ d) u + (aeval T qre) u) = 0 := by
+        have := congrArg Prod.fst h
+        simpa using this.symm
+      simpa [map_add, map_pow, Polynomial.aeval_X] using h1
+    have hqredeg : qre.degree < ((d : ℕ) : WithBot ℕ) := by
+      rw [hqre]
+      refine lt_of_le_of_lt (Polynomial.degree_sum_le _ _) ?_
+      refine (Finset.sup_lt_iff (WithBot.bot_lt_coe d)).mpr fun i hi => ?_
+      exact lt_of_le_of_lt (Polynomial.degree_C_mul_X_pow_le _ _)
+        (WithBot.coe_lt_coe.mpr (Finset.mem_range.mp hi))
+    have hXqre : (Polynomial.X ^ d + qre).Monic :=
+      (Polynomial.monic_X_pow d).add_of_left (by rw [Polynomial.degree_X_pow]; exact hqredeg)
+    have hdegXqre : (Polynomial.X ^ d + qre).degree = (d : WithBot ℕ) := by
+      rw [Polynomial.degree_add_eq_left_of_degree_lt
+        (by rw [Polynomial.degree_X_pow]; exact hqredeg), Polynomial.degree_X_pow]
+    have hle := minpoly.min ℝ T hXqre hqre0
+    rw [hdegXqre] at hle
+    rw [hpmonic.degree_map (algebraMap ℝ ℂ),
+      Polynomial.degree_eq_natDegree hq.ne_zero, ← hd]
+    exact hle
 
 /-- 5B.28 -/
 theorem exercise_5B_28 [Finite F V] (T : V →ₗ[F] V) :
     minpoly F T.dualMap = minpoly F T := by
-  sorry
+  -- (p(T') φ) v = φ (p(T) v)
+  -- so p(T) = 0 for all v iff p(T') = 0 for all φ, hence minpoly T' = minpoly T
+  have hpow : ∀ (n : ℕ) (φ : Module.Dual F V) (v : V),
+      ((T.dualMap ^ n) φ) v = φ ((T ^ n) v) := by
+    intro n
+    induction n with
+    | zero => intro φ v; simp
+    | succ n ih =>
+      intro φ v
+      rw [pow_succ, Module.End.mul_apply, ih, pow_succ', Module.End.mul_apply,
+        LinearMap.dualMap_apply]
+  have haeval : ∀ (p : Polynomial F) (φ : Module.Dual F V) (v : V),
+      (aeval T.dualMap p φ) v = φ (aeval T p v) := by
+    intro p
+    induction p using Polynomial.induction_on' with
+    | add p q hp hq =>
+      intro φ v
+      simp only [map_add, LinearMap.add_apply, hp, hq, map_add]
+    | monomial n a =>
+      intro φ v
+      simp only [Polynomial.aeval_monomial, Module.End.mul_apply,
+        Module.algebraMap_end_apply, LinearMap.smul_apply, hpow, map_smul]
+  -- the two operators are annihilated by exactly the same polynomials; the
+  -- backward step uses that the dual separates points
+  have hiff : ∀ p : Polynomial F, aeval T.dualMap p = 0 ↔ aeval T p = 0 := by
+    intro p
+    constructor
+    · intro h
+      refine LinearMap.ext fun v => ?_
+      rw [LinearMap.zero_apply]
+      refine (Module.forall_dual_apply_eq_zero_iff F _).mp fun φ => ?_
+      rw [← haeval, h]
+      simp
+    · intro h
+      refine LinearMap.ext fun φ => LinearMap.ext fun v => ?_
+      rw [haeval, h]
+      simp
+  -- both minimal polynomials therefore minimize over the same set
+  refine (minpoly.unique F T.dualMap ?_ ?_ ?_).symm
+  · exact minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  · exact (hiff _).mpr (minpoly.aeval F T)
+  · exact fun q hq hq0 => minpoly.min F T hq ((hiff q).mp hq0)
+
+/-- Two independent vectors whose images stay inside their span give a
+2-dimensional invariant subspace. -/
+private theorem exists_invariant_two {V : Type*} [AddCommGroup V] [Module ℝ V]
+    (T : V →ₗ[ℝ] V) {x y : V}
+    (hindep : LinearIndependent ℝ ![x, y])
+    (hx : T x ∈ Submodule.span ℝ (Set.range ![x, y]))
+    (hy : T y ∈ Submodule.span ℝ (Set.range ![x, y])) :
+    ∃ U : Submodule ℝ V, InvariantUnder T U ∧ finrank ℝ U = 2 := by
+  refine ⟨Submodule.span ℝ (Set.range ![x, y]), ?_, ?_⟩
+  · rw [LADR.Section_5A.invariantUnder_iff_map_le, Submodule.map_span, Submodule.span_le]
+    rintro _ ⟨_, ⟨i, rfl⟩, rfl⟩
+    fin_cases i
+    · simpa using hx
+    · simpa using hy
+  · rw [finrank_span_eq_card hindep, Fintype.card_fin]
+
+/-- A monic real polynomial of degree at least 2 has a monic divisor of
+degree exactly 2. -/
+private theorem exists_monic_degree_two_dvd {p : Polynomial ℝ} (hp : p.Monic)
+    (hd : 2 ≤ p.natDegree) :
+    ∃ f : Polynomial ℝ, f.Monic ∧ f.natDegree = 2 ∧ f ∣ p := by
+  have hdeg : ∀ q : Polynomial ℝ, q.Monic → Irreducible q →
+      q.natDegree = 1 ∨ q.natDegree = 2 := by
+    intro q hqm hqi
+    have h2 : q.natDegree ≤ 2 := Polynomial.natDegree_le_iff_degree_le.mpr hqi.degree_le_two
+    have h1 : q.natDegree ≠ 0 := by
+      intro h0
+      exact hqi.not_isUnit (hqm.natDegree_eq_zero.mp h0 ▸ isUnit_one)
+    omega
+  have hnu : ¬ IsUnit p := by
+    intro h
+    have := Polynomial.natDegree_eq_zero_of_isUnit h
+    omega
+  obtain ⟨f₁, hf₁m, hf₁i, hf₁d⟩ := Polynomial.exists_monic_irreducible_factor p hnu
+  rcases hdeg f₁ hf₁m hf₁i with h1 | h1
+  swap
+  · exact ⟨f₁, hf₁m, h1, hf₁d⟩
+  obtain ⟨h, rfl⟩ := hf₁d
+  have hhm : h.Monic := hf₁m.of_mul_monic_left hp
+  have hhdeg : 1 ≤ h.natDegree := by
+    rw [hf₁m.natDegree_mul hhm, h1] at hd
+    omega
+  have hnu' : ¬ IsUnit h := by
+    intro hu
+    have := Polynomial.natDegree_eq_zero_of_isUnit hu
+    omega
+  obtain ⟨f₂, hf₂m, hf₂i, hf₂d⟩ := Polynomial.exists_monic_irreducible_factor h hnu'
+  rcases hdeg f₂ hf₂m hf₂i with h2 | h2
+  · refine ⟨f₁ * f₂, hf₁m.mul hf₂m, ?_, mul_dvd_mul_left f₁ hf₂d⟩
+    rw [hf₁m.natDegree_mul hf₂m, h1, h2]
+  · exact ⟨f₂, hf₂m, h2, hf₂d.trans (Dvd.intro_left _ rfl)⟩
 
 /-- 5B.29 -/
 theorem exercise_5B_29 {V : Type*} [AddCommGroup V] [Module ℝ V]
     [Finite ℝ V] (hV : 2 ≤ finrank ℝ V) (T : V →ₗ[ℝ] V) :
     ∃ U : Submodule ℝ V, InvariantUnder T U ∧ finrank ℝ U = 2 := by
-  sorry
+  -- over R we can factor the minimal polynomial into linear and quadratic factors, and
+  -- 1) take a quadratic factor f = X^2 + aX + b, minpoly = f g
+  --    deg g < deg minpoly, so g(T) ≠ 0: pick v with w := g(T) v ≠ 0
+  --    f(T) w = f(T) g(T) v = minpoly(T) v = 0, so w ∈ ker f(T)
+  --    then w, Tw span a 2-dim invariant subspace:
+  --    invariant because T^2 w = -a Tw - b w
+  --    dim 2 because Tw = c w would give c^2 + ac + b = 0, so f factors
+  -- 2) no quadratic factors
+  --    then all factors are linear
+  --    a) deg 1 -> T = a I , so any 2 dim space will do
+  --    b) deg > 1, so minpoly has at least two linear factors
+  --       i)  if Tw is not a multiple of w we are back in case 1)
+  --       ii) otherwise Tw = c w; choosing v off the kernel of (X - lam) g,
+  --           where lam is a root of f, forces c ≠ lam, and lam is an
+  --           eigenvalue too, so its eigenvector u and w span a 2-dim
+  --           invariant subspace
+
+  have hnt : Nontrivial V := Module.nontrivial_of_finrank_pos (R := ℝ) (by omega)
+  have hmonic : (minpoly ℝ T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  -- a nonzero polynomial of degree below the minimal one does not annihilate `T`
+  have hnonzero : ∀ q : Polynomial ℝ, q ≠ 0 → q.natDegree < (minpoly ℝ T).natDegree →
+      ∃ v : V, aeval T q v ≠ 0 := by
+    intro q hq hlt
+    by_contra hc
+    push Not at hc
+    have h0 : aeval T q = 0 := LinearMap.ext fun v => by rw [hc v]; simp
+    have hle := minpoly.degree_le_of_ne_zero ℝ T hq h0
+    rw [Polynomial.degree_eq_natDegree hmonic.ne_zero,
+      Polynomial.degree_eq_natDegree hq] at hle
+    exact absurd (by exact_mod_cast hle : (minpoly ℝ T).natDegree ≤ q.natDegree) (by omega)
+  by_cases hd : (minpoly ℝ T).natDegree ≤ 1
+  · -- `T` is a scalar operator, so every subspace is invariant
+    have hd1 : (minpoly ℝ T).natDegree = 1 := by
+      have hpos : 0 < (minpoly ℝ T).natDegree :=
+        minpoly.natDegree_pos (Algebra.IsIntegral.isIntegral T)
+      omega
+    have hTscal : ∀ v : V, T v = (-(minpoly ℝ T).coeff 0) • v := by
+      intro v
+      have heq := hmonic.eq_X_add_C hd1
+      have h0 := LinearMap.congr_fun (minpoly.aeval ℝ T) v
+      rw [heq, map_add, Polynomial.aeval_X, Polynomial.aeval_C,
+        Algebra.algebraMap_eq_smul_one] at h0
+      simp only [LinearMap.add_apply, LinearMap.smul_apply, Module.End.one_apply,
+        LinearMap.zero_apply] at h0
+      rw [neg_smul, eq_comm, neg_eq_iff_add_eq_zero, add_comm]
+      exact h0
+    obtain ⟨v₁, hv₁⟩ := exists_ne (0 : V)
+    have hspan : Submodule.span ℝ ({v₁} : Set V) ≠ ⊤ := by
+      intro h
+      have h1 : finrank ℝ (Submodule.span ℝ ({v₁} : Set V)) = 1 := finrank_span_singleton hv₁
+      rw [h, finrank_top] at h1
+      omega
+    obtain ⟨v₂, hv₂⟩ : ∃ v : V, v ∉ Submodule.span ℝ ({v₁} : Set V) := by
+      by_contra hc
+      push Not at hc
+      exact hspan (Submodule.eq_top_iff'.mpr hc)
+    refine exists_invariant_two T (x := v₂) (y := v₁) ?_ ?_ ?_
+    · refine linearIndependent_fin2.mpr ⟨by simpa using hv₁, fun t ht => hv₂ ?_⟩
+      simp only [Matrix.cons_val_zero, Matrix.cons_val_one] at ht
+      rw [← ht]
+      exact Submodule.smul_mem _ _ (Submodule.mem_span_singleton_self v₁)
+    · rw [hTscal]
+      exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨0, rfl⟩)
+    · rw [hTscal]
+      exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨1, rfl⟩)
+  · -- take a monic degree-2 divisor of the minimal polynomial
+    push Not at hd
+    obtain ⟨f, hfm, hfdeg, hfdvd⟩ := exists_monic_degree_two_dvd hmonic (by omega)
+    obtain ⟨g, hg⟩ := hfdvd
+    set a := f.coeff 1 with ha
+    set b := f.coeff 0 with hb
+    have hfexp : f = Polynomial.X ^ 2 + Polynomial.C a * Polynomial.X + Polynomial.C b := by
+      refine Polynomial.ext fun n => ?_
+      match n with
+      | 0 => simp [hb]
+      | 1 => simp [ha]
+      | 2 =>
+        have h2 : f.coeff 2 = 1 := by rw [← hfdeg]; exact hfm.coeff_natDegree
+        rw [h2]
+        simp
+      | (m + 3) =>
+        rw [Polynomial.coeff_eq_zero_of_natDegree_lt (by omega)]
+        simp [Polynomial.coeff_X_pow]
+    have hfact : ∀ w : V, aeval T f w = (T ^ 2) w + a • T w + b • w := by
+      intro w
+      rw [hfexp]
+      simp only [map_add, map_mul, map_pow, Polynomial.aeval_X, Polynomial.aeval_C,
+        ← Algebra.smul_def, LinearMap.add_apply, LinearMap.smul_apply,
+        Module.algebraMap_end_apply]
+    have hgmonic : g.Monic := hfm.of_mul_monic_left (hg ▸ hmonic)
+    have hgne : g ≠ 0 := hgmonic.ne_zero
+    have hgdeg : g.natDegree + 2 = (minpoly ℝ T).natDegree := by
+      rw [hg, hfm.natDegree_mul hgmonic, hfdeg]
+      omega
+    -- the packaged conclusion when `Tw` is not a multiple of `w`
+    have hpair : ∀ w : V, w ≠ 0 → aeval T f w = 0 → (∀ c : ℝ, c • w ≠ T w) →
+        ∃ U : Submodule ℝ V, InvariantUnder T U ∧ finrank ℝ U = 2 := by
+      intro w hw hfw hnc
+      refine exists_invariant_two T (x := T w) (y := w) ?_ ?_ ?_
+      · exact linearIndependent_fin2.mpr ⟨by simpa using hw, by simpa using hnc⟩
+      · have h1 : (T ^ 2) w = -(a • T w + b • w) := by
+          rw [hfact w] at hfw
+          rw [eq_neg_iff_add_eq_zero, ← add_assoc]
+          exact hfw
+        rw [show T (T w) = (T ^ 2) w by rw [pow_two, Module.End.mul_apply], h1]
+        exact Submodule.neg_mem _ (Submodule.add_mem _
+          (Submodule.smul_mem _ _ (Submodule.subset_span ⟨0, rfl⟩))
+          (Submodule.smul_mem _ _ (Submodule.subset_span ⟨1, rfl⟩)))
+      · exact Submodule.subset_span ⟨0, rfl⟩
+    -- if `Tw = c • w` then `c` is a root of `f`
+    have hcroot : ∀ (w : V) (c : ℝ), w ≠ 0 → aeval T f w = 0 → T w = c • w →
+        c ^ 2 + a * c + b = 0 := by
+      intro w c hw hfw hcw
+      have h2 : (T ^ 2) w = (c ^ 2) • w := by
+        rw [pow_two, Module.End.mul_apply, hcw, map_smul, hcw, smul_smul, ← pow_two]
+      rw [hfact w, h2, hcw, smul_smul] at hfw
+      have h3 : (c ^ 2 + a * c + b) • w = 0 := by rw [← hfw]; module
+      rcases smul_eq_zero.mp h3 with h | h
+      · exact h
+      · exact absurd h hw
+    by_cases hroot : ∃ c : ℝ, c ^ 2 + a * c + b = 0
+    · obtain ⟨lam, hlam⟩ := hroot
+      obtain ⟨v, hv⟩ := hnonzero ((Polynomial.X - Polynomial.C lam) * g)
+        (mul_ne_zero (Polynomial.X_sub_C_ne_zero lam) hgne)
+        (by
+          rw [Polynomial.natDegree_mul (Polynomial.X_sub_C_ne_zero lam) hgne,
+            Polynomial.natDegree_X_sub_C]
+          omega)
+      set w := aeval T g v with hw
+      have hexp : aeval T ((Polynomial.X - Polynomial.C lam) * g) v = T w - lam • w := by
+        rw [map_mul, Module.End.mul_apply, ← hw, map_sub, Polynomial.aeval_X,
+          Polynomial.aeval_C, Algebra.algebraMap_eq_smul_one]
+        simp
+      have hTw : T w - lam • w ≠ 0 := by rw [← hexp]; exact hv
+      have hwne : w ≠ 0 := by
+        intro h
+        apply hTw
+        rw [h]
+        simp
+      have hfw : aeval T f w = 0 := by
+        rw [hw, ← Module.End.mul_apply, ← map_mul, ← hg]
+        simp
+      by_cases hc : ∃ c : ℝ, T w = c • w
+      · obtain ⟨c, hcw⟩ := hc
+        have hne : c ≠ lam := by
+          intro h
+          apply hTw
+          rw [hcw, h, sub_self]
+        -- `lam` is a root of the minimal polynomial, hence an eigenvalue
+        have hlamroot : (minpoly ℝ T).IsRoot lam := by
+          have hf0 : f.eval lam = 0 := by
+            rw [hfexp]
+            simp only [Polynomial.eval_add, Polynomial.eval_pow, Polynomial.eval_X,
+              Polynomial.eval_mul, Polynomial.eval_C]
+            linarith [hlam]
+          rw [Polynomial.IsRoot, hg, Polynomial.eval_mul, hf0, zero_mul]
+        obtain ⟨u, hune, hu⟩ := Module.End.hasEigenvalue_iff_exists.mp
+          ((isEigenvalue_iff_isRoot T lam).mpr hlamroot)
+        refine exists_invariant_two T (x := u) (y := w) ?_ ?_ ?_
+        · refine linearIndependent_fin2.mpr ⟨by simpa using hwne, ?_⟩
+          intro t ht
+          simp only [Matrix.cons_val_zero, Matrix.cons_val_one] at ht
+          apply hune
+          have h1 : T (t • w) = lam • (t • w) := by rw [ht]; exact hu
+          rw [map_smul, hcw, smul_smul, smul_smul] at h1
+          have h2 : (t * c - lam * t) • w = 0 := by rw [sub_smul, h1, sub_self]
+          rcases smul_eq_zero.mp h2 with h | h
+          · have ht0 : t = 0 := by
+              rcases mul_eq_zero.mp (by linarith [h] : t * (c - lam) = 0) with h' | h'
+              · exact h'
+              · exact absurd (sub_eq_zero.mp h') hne
+            rw [← ht, ht0, zero_smul]
+          · exact absurd h hwne
+        · rw [hu]
+          exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨0, rfl⟩)
+        · rw [hcw]
+          exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨1, rfl⟩)
+      · push Not at hc
+        exact hpair w hwne hfw (fun c hcc => hc c hcc.symm)
+    · -- `f` has no real root, so `Tw` can never be a multiple of `w`
+      obtain ⟨v, hv⟩ := hnonzero g hgne (by omega)
+      set w := aeval T g v with hw
+      have hfw : aeval T f w = 0 := by
+        rw [hw, ← Module.End.mul_apply, ← map_mul, ← hg]
+        simp
+      refine hpair w hv hfw fun c hcc => ?_
+      exact hroot ⟨c, hcroot w c hv hfw hcc.symm⟩
+
 
 end LADR.Section_5B
