@@ -660,8 +660,12 @@ def exercise_1C_1a :
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
-/-- 1C.1(b) -/
-def exercise_1C_1b :
+/-- 1C.1(b) The answer depends on {lit}`(4 : F) ≠ 0`, so we assume
+{lit}`[CharZero F]`, which forces {lit}`(n : F) ≠ 0` for every positive
+{lit}`n` and is satisfied by {lit}`ℝ` and {lit}`ℂ` (Axler's working fields);
+over a field of characteristic {lit}`2` the set is {lit}`{v | v 0 + v 2 = 0}`,
+which *is* a subspace. -/
+def exercise_1C_1b [CharZero F] :
     Decidable (∃ U : Submodule F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 + 2 * v 1 + 3 * v 2 = 4}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
@@ -838,7 +842,11 @@ def exercise_1C_14_W : Submodule F (Fin 3 → F) where
     · simp [smul_eq_mul]
     · simp [smul_eq_mul]; ring
 
-theorem exercise_1C_14 :
+/-- Splitting an arbitrary vector of the sum back into a piece of {lit}`U` and
+a piece of {lit}`W` needs to halve, so we assume {lit}`[CharZero F]`; in
+characteristic {lit}`2` we would have {lit}`U = W`, and the sum would be
+strictly smaller. -/
+theorem exercise_1C_14 [CharZero F] :
     ((exercise_1C_14_U ⊔ exercise_1C_14_W : Submodule F (Fin 3 → F))
       : Set (Fin 3 → F)) = {v | sorry} := by
   sorry
@@ -895,8 +903,12 @@ def exercise_1C_20_U : Submodule F (Fin 4 → F) where
     rintro a v ⟨h1, h2⟩
     exact ⟨by simp [Pi.smul_apply, h1], by simp [Pi.smul_apply, h2]⟩
 
+/-- The student supplies the complement {lit}`W` (replacing the
+{lit}`sorry`) and then proves that it is one. -/
+def exercise_1C_20_W : Submodule F (Fin 4 → F) := sorry
+
 theorem exercise_1C_20 :
-    ∃ W : Submodule F (Fin 4 → F), IsCompl exercise_1C_20_U W := by
+    IsCompl (exercise_1C_20_U (F := F)) exercise_1C_20_W := by
   sorry
 
 /-- 1C.21 -/
@@ -916,17 +928,32 @@ def exercise_1C_21_U : Submodule F (Fin 5 → F) where
     · show a • v 3 = a • v 0 - a • v 1; simp only [smul_eq_mul]; rw [h3]; ring
     · show a • v 4 = 2 * (a • v 0); simp only [smul_eq_mul]; rw [h4]; ring
 
+/-- The student supplies the complement {lit}`W` (replacing the
+{lit}`sorry`) and then proves that it is one. -/
+def exercise_1C_21_W : Submodule F (Fin 5 → F) := sorry
+
 theorem exercise_1C_21 :
-    ∃ W : Submodule F (Fin 5 → F), IsCompl exercise_1C_21_U W := by
+    IsCompl (exercise_1C_21_U (F := F)) exercise_1C_21_W := by
   sorry
 
-/-- 1C.22 The direct-sum condition is captured by {name}`IsDirectSum` on the
-family {lit}`![U, W₁, W₂, W₃]`; the cover by {lit}`U ⊔ W₁ ⊔ W₂ ⊔ W₃ = ⊤`. -/
+/-- 1C.22 The student supplies three subspaces {lit}`W₁`, {lit}`W₂`,
+{lit}`W₃` (replacing the {lit}`sorry`s), none of them {lit}`⊥`, whose sum with
+{lit}`exercise_1C_21_U` is direct and is all of {lit}`F⁵`. -/
+def exercise_1C_22_W₁ : Submodule F (Fin 5 → F) := sorry
+def exercise_1C_22_W₂ : Submodule F (Fin 5 → F) := sorry
+def exercise_1C_22_W₃ : Submodule F (Fin 5 → F) := sorry
+
+theorem exercise_1C_22_W₁_ne_bot : exercise_1C_22_W₁ (F := F) ≠ ⊥ := by sorry
+theorem exercise_1C_22_W₂_ne_bot : exercise_1C_22_W₂ (F := F) ≠ ⊥ := by sorry
+theorem exercise_1C_22_W₃_ne_bot : exercise_1C_22_W₃ (F := F) ≠ ⊥ := by sorry
+
+/-- The direct-sum condition is captured by {name}`IsDirectSum` on the family
+{lit}`![U, W₁, W₂, W₃]`; the cover by {lit}`U ⊔ W₁ ⊔ W₂ ⊔ W₃ = ⊤`. -/
 theorem exercise_1C_22 :
-    ∃ W₁ W₂ W₃ : Submodule F (Fin 5 → F),
-      W₁ ≠ ⊥ ∧ W₂ ≠ ⊥ ∧ W₃ ≠ ⊥ ∧
-      IsDirectSum ![exercise_1C_21_U (F := F), W₁, W₂, W₃] ∧
-      exercise_1C_21_U ⊔ W₁ ⊔ W₂ ⊔ W₃ = ⊤ := by
+      IsDirectSum ![exercise_1C_21_U (F := F), exercise_1C_22_W₁, exercise_1C_22_W₂,
+        exercise_1C_22_W₃] ∧
+      exercise_1C_21_U (F := F) ⊔ exercise_1C_22_W₁ ⊔ exercise_1C_22_W₂ ⊔ exercise_1C_22_W₃
+        = ⊤ := by
   sorry
 
 /-- 1C.23 -/
