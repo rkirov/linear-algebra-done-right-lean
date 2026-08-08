@@ -506,10 +506,59 @@ theorem QR_unique {N : ℕ} (A Q₁ R₁ Q₂ R₂ : Matrix (Fin N) (Fin N) 𝕜
       _ = Q₂ := Matrix.mul_one Q₂
   · rw [← hUR, hU1, Matrix.one_mul]
 
-/-! 7.60 Example: QR factorization of a 3-by-3 matrix.
+/-! 7.60 Example: QR factorization of a 3-by-3 matrix
 
-A concrete numeric illustration of 7.58 (with entries involving {lit}`√10`). It is
-**deferred** together with the QR factorization it illustrates. -/
+Axler runs the construction in the proof of 7.58 on
+{lit}`A = !![1,2,1; 0,1,-4; 0,3,2]`. Gram–Schmidt applied to the columns
+{lit}`v₁ = (1,0,0)`, {lit}`v₂ = (2,1,3)`, {lit}`v₃ = (1,−4,2)` produces the
+orthonormal list {lit}`e₁ = (1,0,0)`, {lit}`e₂ = (0,1/√10,3/√10)`,
+{lit}`e₃ = (0,−3/√10,1/√10)`; then {lit}`Q` has columns {lit}`e₁, e₂, e₃` and
+{lit}`Rⱼₖ = ⟨vₖ, eⱼ⟩`. -/
+
+/-- The matrix {lit}`A` of Example 7.60. -/
+def A_7_60 : Matrix (Fin 3) (Fin 3) ℝ := !![1, 2, 1; 0, 1, -4; 0, 3, 2]
+
+/-- The unitary factor {lit}`Q` of Example 7.60: its columns are the Gram–Schmidt
+orthonormalization {lit}`e₁, e₂, e₃` of the columns of {lit}`A`. -/
+noncomputable def Q_7_60 : Matrix (Fin 3) (Fin 3) ℝ :=
+  !![1, 0, 0;
+     0, 1 / Real.sqrt 10, -3 / Real.sqrt 10;
+     0, 3 / Real.sqrt 10, 1 / Real.sqrt 10]
+
+/-- The upper-triangular factor {lit}`R` of Example 7.60, with
+{lit}`Rⱼₖ = ⟨vₖ, eⱼ⟩`. -/
+noncomputable def R_7_60 : Matrix (Fin 3) (Fin 3) ℝ :=
+  !![1, 2, 1;
+     0, Real.sqrt 10, Real.sqrt 10 / 5;
+     0, 0, 7 * Real.sqrt 10 / 5]
+
+/-- 7.60: {lit}`A = QR` really is a QR factorization — {lit}`Q` is unitary and
+{lit}`R` is upper triangular with only positive numbers on its diagonal. By
+{lit}`QR_unique` it is the only one. -/
+theorem QR_7_60 :
+    Q_7_60 ∈ Matrix.unitaryGroup (Fin 3) ℝ ∧
+      (∀ i j, j < i → R_7_60 i j = 0) ∧
+      (∀ i, 0 < R_7_60 i i) ∧
+      A_7_60 = Q_7_60 * R_7_60 := by
+  have hs : (0 : ℝ) < Real.sqrt 10 := Real.sqrt_pos.mpr (by norm_num)
+  have hs2 : Real.sqrt 10 * Real.sqrt 10 = 10 := Real.mul_self_sqrt (by norm_num)
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [Matrix.mem_unitaryGroup_iff', Matrix.star_eq_conjTranspose]
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [Q_7_60, Matrix.mul_apply, Fin.sum_univ_three] <;>
+      field_simp <;> linarith [hs2]
+  · intro i j h
+    fin_cases i <;> fin_cases j <;>
+      first
+        | exact absurd h (by decide)
+        | simp [R_7_60]
+  · intro i
+    fin_cases i <;> simp [R_7_60]
+  · ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [A_7_60, Q_7_60, R_7_60, Matrix.mul_apply, Fin.sum_univ_three] <;>
+      field_simp <;> linarith [hs2]
 
 /-! # Cholesky Factorization -/
 
@@ -871,9 +920,15 @@ theorem exercise_7D_19 {n : ℕ} (hn : 0 < n)
     IsUnitary F ∧ F ∘ₗ F ∘ₗ F ∘ₗ F = 1 := by
   sorry
 
-/-! 7D.20 (deferred): a matrix with linearly independent columns factors uniquely
-as {lit}`A = RQ` with {lit}`R` lower triangular (positive diagonal) and {lit}`Q`
-unitary. This is the {lit}`RQ` variant of the QR factorization (7.58), which is
-itself deferred — the pinned mathlib has no packaged QR/RQ factorization. -/
+/-- 7D.20 A square matrix with linearly independent columns has unique matrices
+{lit}`R` lower triangular with only positive numbers on its diagonal and {lit}`Q`
+unitary with {lit}`A = RQ` (the {lit}`RQ` variant of 7.58). -/
+theorem exercise_7D_20 {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜)
+    (hA : LinearIndependent 𝕜 (fun i => (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i))) :
+    ∃! RQ : Matrix (Fin N) (Fin N) 𝕜 × Matrix (Fin N) (Fin N) 𝕜,
+      (∀ i j, i < j → RQ.1 i j = 0) ∧
+        (∀ i, 0 < RCLike.re (RQ.1 i i) ∧ RCLike.im (RQ.1 i i) = 0) ∧
+        RQ.2 ∈ Matrix.unitaryGroup (Fin N) 𝕜 ∧ A = RQ.1 * RQ.2 := by
+  sorry
 
 end LADR.Section_7D
