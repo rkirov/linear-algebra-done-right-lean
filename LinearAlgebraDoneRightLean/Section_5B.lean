@@ -2854,22 +2854,23 @@ private theorem exists_monic_degree_two_dvd {p : Polynomial ℝ} (hp : p.Monic)
 theorem exercise_5B_29 {V : Type*} [AddCommGroup V] [Module ℝ V]
     [Finite ℝ V] (hV : 2 ≤ finrank ℝ V) (T : V →ₗ[ℝ] V) :
     ∃ U : Submodule ℝ V, InvariantUnder T U ∧ finrank ℝ U = 2 := by
-  -- over R we can factor the minimal polynomial into linear and quadratic factors, and
-  -- 1) take a quadratic factor f = X^2 + aX + b, minpoly = f g
-  --    deg g < deg minpoly, so g(T) ≠ 0: pick v with w := g(T) v ≠ 0
-  --    f(T) w = f(T) g(T) v = minpoly(T) v = 0, so w ∈ ker f(T)
-  --    then w, Tw span a 2-dim invariant subspace:
-  --    invariant because T^2 w = -a Tw - b w
-  --    dim 2 because Tw = c w would give c^2 + ac + b = 0, so f factors
-  -- 2) no quadratic factors
-  --    then all factors are linear
-  --    a) deg 1 -> T = a I , so any 2 dim space will do
-  --    b) deg > 1, so minpoly has at least two linear factors
-  --       i)  if Tw is not a multiple of w we are back in case 1)
-  --       ii) otherwise Tw = c w; choosing v off the kernel of (X - lam) g,
-  --           where lam is a root of f, forces c ≠ lam, and lam is an
-  --           eigenvalue too, so its eigenvector u and w span a 2-dim
-  --           invariant subspace
+  -- 1) deg minpoly ≤ 1 -> T = a I, so any 2 dim space will do
+  -- 2) deg minpoly ≥ 2 -> over R the minimal polynomial has a monic degree-2
+  --    divisor f = X^2 + aX + b (an irreducible quadratic factor, or a product
+  --    of two linear ones); write minpoly = f g
+  --    a) f has no real root:
+  --       deg g < deg minpoly, so g(T) ≠ 0: pick v with w := g(T) v ≠ 0
+  --       f(T) w = f(T) g(T) v = minpoly(T) v = 0, so w ∈ ker f(T)
+  --       Tw = c w would give c^2 + ac + b = 0, so Tw is not a multiple of w,
+  --       and w, Tw span a 2-dim invariant subspace (T^2 w = -a Tw - b w)
+  --    b) f has a real root lam:
+  --       deg (X - lam) g < deg minpoly, so pick v off its kernel and set
+  --       w := g(T) v; then (T - lam) w ≠ 0, hence w ≠ 0, and f(T) w = 0
+  --       i)  Tw not a multiple of w -> w, Tw as in a)
+  --       ii) Tw = c w -> c ≠ lam because (T - lam) w ≠ 0; and lam is a root
+  --           of f | minpoly, so it is an eigenvalue, with eigenvector u.
+  --           u and w are eigenvectors for distinct eigenvalues, so they span
+  --           a 2-dim invariant subspace
 
   have hnt : Nontrivial V := Module.nontrivial_of_finrank_pos (R := ℝ) (by omega)
   have hmonic : (minpoly ℝ T).Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
