@@ -5,6 +5,7 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.LinearAlgebra.Matrix.PosDef
 import Mathlib.FieldTheory.Minpoly.Field
 import LinearAlgebraDoneRightLean.Section_6C
+import LinearAlgebraDoneRightLean.Section_7B
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
 
@@ -16,6 +17,7 @@ namespace LADR.Section_7C
 
 open scoped InnerProductSpace RealInnerProductSpace ComplexConjugate
 open Module.End (HasEigenvalue)
+open LADR.Section_5A (InvariantUnder)
 
 variable {𝕜 : Type*} [RCLike 𝕜]
   {V : Type*} [NormedAddCommGroup V] [InnerProductSpace 𝕜 V] [FiniteDimensional 𝕜 V]
@@ -35,7 +37,7 @@ theorem isPositive_iff_symmetric_nonneg (T : V →ₗ[𝕜] V) :
 Definition 7.34: (a) the operator on {lit}`𝐅²` with matrix {lit}`!![2,-1;-1,1]`;
 (b) an orthogonal projection {lit}`P_U` ("as you should verify"); and (c)
 {lit}`T² + bT + cI` when {lit}`T` is self-adjoint and {lit}`b² < 4c` ("as shown by
-the proof of 7.26"). We formalize the concrete instance (a): its quadratic form is
+the proof of 7.26"). For (a) the quadratic form is
 {lit}`⟨T(w,z),(w,z)⟩ = 2|w|² - 2 Re(w̄z) + |z|² = |w - z|² + |w|² ≥ 0`. -/
 open scoped Matrix ComplexOrder in
 /-- 7.35(a): the operator on {lit}`ℂ²` whose matrix in the standard basis is
@@ -57,11 +59,49 @@ theorem toEuclideanLin_isPositive :
     rw [hval]
     exact_mod_cast add_nonneg (Complex.normSq_nonneg _) (Complex.normSq_nonneg _)
 
+omit [FiniteDimensional 𝕜 V] in
+/-- 7.35(b): the orthogonal projection {lit}`P_U` is a positive operator —
+{lit}`P_U` is self-adjoint (6C.19) and {lit}`⟨P_U v, v⟩ = ⟨P_U v, P_U v⟩ = ‖P_U v‖² ≥ 0`
+because {lit}`P_U` is idempotent. -/
+theorem starProjection_isPositive (U : Submodule 𝕜 V) [U.HasOrthogonalProjection] :
+    (U.starProjection : V →ₗ[𝕜] V).IsPositive := by
+  set P : V →ₗ[𝕜] V := (U.starProjection : V →ₗ[𝕜] V) with hP
+  have hsymm : P.IsSymmetric := fun x y => U.inner_starProjection_left_eq_right x y
+  refine ⟨hsymm, fun v => ?_⟩
+  have hidem : P (P v) = P v :=
+    Submodule.starProjection_eq_self_iff.mpr (U.starProjection_apply_mem v)
+  have hself : ⟪P v, v⟫_𝕜 = ⟪P v, P v⟫_𝕜 := by
+    conv_lhs => rw [← hidem]
+    exact hsymm (P v) v
+  rw [hself, inner_self_eq_norm_sq_to_K]
+  simp
+
+omit [FiniteDimensional 𝕜 V] in
+/-- 7.35(c): if {lit}`T` is self-adjoint and {lit}`b² < 4c`, then
+{lit}`T² + bT + cI` is a positive operator — the positivity of the quadratic form is
+exactly the step in the proof of 7.26 ({name}`LADR.Section_7B.quadratic_pos`). -/
+theorem quadratic_isPositive (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (b c : ℝ)
+    (hbc : b ^ 2 < 4 * c) :
+    (T ∘ₗ T + (b : 𝕜) • T + (c : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V)).IsPositive := by
+  constructor
+  · intro x y
+    simp only [LinearMap.add_apply, LinearMap.smul_apply, LinearMap.comp_apply,
+      LinearMap.id_apply, inner_add_left, inner_add_right, inner_smul_left, inner_smul_right,
+      RCLike.conj_ofReal, hT _ _]
+  · intro v
+    rcases eq_or_ne v 0 with rfl | hv
+    · simp
+    · exact (Section_7B.quadratic_pos T hT b c hbc v hv).le
+
 /-! 7.36 Definition: square root
 
-{lit}`R` is a *square root* of {lit}`T` if {lit}`R² = T`. -/
+{lit}`R` is a *square root* of {lit}`T` if {lit}`R² = T`. The notion is purely
+algebraic — no inner product is involved — so we state it for an operator on any
+module, which lets Example 7.37 use it on {lit}`ℂ³` with the plain (non-Euclidean)
+module structure. -/
 
-def IsSquareRoot (R T : V →ₗ[𝕜] V) : Prop := R ∘ₗ R = T
+def IsSquareRoot {F : Type*} [Semiring F] {W : Type*} [AddCommMonoid W] [Module F W]
+    (R T : W →ₗ[F] W) : Prop := R ∘ₗ R = T
 
 /-- The operator {lit}`T(z₁,z₂,z₃) = (z₃,0,0)` on {lit}`ℂ³` (Example 7.37). -/
 def T_7_37 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
@@ -78,14 +118,58 @@ def R_7_37 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
 /-- 7.37 Example: {lit}`R` is a square root of {lit}`T` — {lit}`R² = T` (the
 square-root relation of Definition 7.36, here stated directly since it is purely
 algebraic and needs no inner product). -/
-theorem R_7_37_sq : R_7_37 ∘ₗ R_7_37 = T_7_37 := by
+theorem R_7_37_sq : IsSquareRoot R_7_37 T_7_37 := by
   ext z i
   fin_cases i <;> simp [R_7_37, T_7_37]
 
 /-! 7.38 Characterizations of positive operators
 
-Among the equivalent conditions, the direction {lit}`T = R* R ⟹ T` positive
-(f ⟹ a) has a short direct proof, which we give. -/
+For {lit}`T ∈ ℒ(V)` the following are equivalent: (a) {lit}`T` is positive;
+(b) {lit}`T` is self-adjoint and all eigenvalues of {lit}`T` are nonnegative;
+(c) with respect to some orthonormal basis of {lit}`V` the matrix of {lit}`T` is
+diagonal with only nonnegative numbers on the diagonal; (d) {lit}`T` has a
+positive square root; (e) {lit}`T` has a self-adjoint square root; (f)
+{lit}`T = R* R` for some {lit}`R ∈ ℒ(V)`.
+
+Each implication of the cycle (a) ⟹ (b) ⟹ (c) ⟹ (d) ⟹ (e) ⟹ (f) ⟹ (a) is
+proved separately below, and {lit}`tfae_isPositive` assembles them into the
+equivalence. -/
+
+/-- Condition (c) of 7.38: with respect to some orthonormal basis of {lit}`V`, the
+matrix of {lit}`T` is a diagonal matrix with only nonnegative numbers on the
+diagonal. -/
+def HasNonnegDiagonalMatrix (T : V →ₗ[𝕜] V) : Prop :=
+  ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V) (d : Fin n → ℝ), (∀ i, 0 ≤ d i) ∧
+    LinearMap.toMatrixOrthonormal e T = Matrix.diagonal fun i => ((d i : ℝ) : 𝕜)
+
+/-- Reading a diagonal matrix as eigenvalue equations: if the matrix of {lit}`T`
+with respect to {lit}`e` is {lit}`diagonal d`, then each {lit}`e i` is an
+eigenvector with eigenvalue {lit}`d i`. -/
+theorem apply_eq_smul_of_toMatrixOrthonormal_eq_diagonal {n : ℕ} {T : V →ₗ[𝕜] V}
+    (e : OrthonormalBasis (Fin n) 𝕜 V) {d : Fin n → 𝕜}
+    (h : LinearMap.toMatrixOrthonormal e T = Matrix.diagonal d) (i : Fin n) :
+    T (e i) = d i • e i := by
+  have hentry : ∀ j, ⟪e j, T (e i)⟫_𝕜 = if j = i then d i else 0 := by
+    intro j
+    rw [← LinearMap.toMatrixOrthonormal_apply_apply e T j i, h, Matrix.diagonal_apply]
+    rcases eq_or_ne j i with rfl | hji
+    · simp
+    · simp [hji]
+  conv_lhs => rw [← e.sum_repr' (T (e i))]
+  rw [Finset.sum_eq_single i (fun j _ hj => by rw [hentry j, if_neg hj, zero_smul])
+    (fun hi => absurd (Finset.mem_univ i) hi), hentry i, if_pos rfl]
+
+/-- The converse reading: eigenvalue equations along an orthonormal basis make the
+matrix diagonal. -/
+theorem toMatrixOrthonormal_eq_diagonal {n : ℕ} {T : V →ₗ[𝕜] V}
+    (e : OrthonormalBasis (Fin n) 𝕜 V) {d : Fin n → 𝕜} (h : ∀ i, T (e i) = d i • e i) :
+    LinearMap.toMatrixOrthonormal e T = Matrix.diagonal d := by
+  ext j i
+  rw [LinearMap.toMatrixOrthonormal_apply_apply, h i, inner_smul_right,
+    orthonormal_iff_ite.mp e.orthonormal j i, Matrix.diagonal_apply]
+  rcases eq_or_ne j i with rfl | hji
+  · simp
+  · simp [hji]
 
 /-- {lit}`R* R` is always a positive operator (7.38 (f) ⟹ (a)). -/
 theorem adjoint_comp_self_isPositive (R : V →ₗ[𝕜] V) :
@@ -113,24 +197,33 @@ theorem eigenvalue_nonneg {T : V →ₗ[𝕜] V} (hT : T.IsPositive) {μ : 𝕜}
   have hvnorm : 0 < ‖v‖ ^ 2 := by positivity
   exact (mul_nonneg_iff_of_pos_left hvnorm).mp hpos
 
-/-! 7.38 (b) ⟹ (d) Every positive operator has a positive square root.
+/-! 7.38 (b) ⟹ (c) The spectral theorem turns "self-adjoint with nonnegative
+eigenvalues" into a diagonal matrix with nonnegative diagonal: take mathlib's
+orthonormal eigenbasis and read off the eigenvalues. -/
 
-We build {lit}`R` acting as {lit}`√λ` on each {lit}`T`-eigenvector (from the
-spectral theorem's orthonormal eigenbasis), and check {lit}`R` is positive and
-{lit}`R² = T`. -/
-
-theorem exists_positive_sqrt {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
-    ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ R ∘ₗ R = T := by
+/-- (b) ⟹ (c). -/
+theorem hasNonnegDiagonalMatrix_of_eigenvalue_nonneg {T : V →ₗ[𝕜] V}
+    (hs : T.IsSymmetric) (hev : ∀ μ : 𝕜, HasEigenvalue T μ → 0 ≤ RCLike.re μ) :
+    HasNonnegDiagonalMatrix T := by
   set n := Module.finrank 𝕜 V
-  set hs := hT.isSymmetric
-  set b := hs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) with hb
-  set μ := hs.eigenvalues (rfl : Module.finrank 𝕜 V = n) with hμ
-  have hμnn : ∀ i, 0 ≤ μ i := by
-    intro i
-    have hev : HasEigenvalue T ((μ i : ℝ) : 𝕜) :=
-      hs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i
-    have := (eigenvalue_nonneg hT hev).1
-    rwa [RCLike.ofReal_re] at this
+  refine ⟨n, hs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n),
+    hs.eigenvalues (rfl : Module.finrank 𝕜 V = n), fun i => ?_,
+    toMatrixOrthonormal_eq_diagonal _ fun i =>
+      hs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i⟩
+  have := hev _ (hs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i)
+  rwa [RCLike.ofReal_re] at this
+
+/-! 7.38 (c) ⟹ (d) An operator that is diagonal with nonnegative diagonal
+{lit}`λ₁, …, λₙ` in some orthonormal basis has a positive square root: the
+operator {lit}`R` acting as {lit}`√λⱼ` on the {lit}`j`-th basis vector. -/
+
+/-- (c) ⟹ (d). -/
+theorem exists_positive_sqrt_of_hasNonnegDiagonalMatrix {T : V →ₗ[𝕜] V}
+    (h : HasNonnegDiagonalMatrix T) :
+    ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ IsSquareRoot R T := by
+  obtain ⟨n, b, μ, hμnn, hdiag⟩ := h
+  have hTb : ∀ i, T (b i) = ((μ i : ℝ) : 𝕜) • b i :=
+    apply_eq_smul_of_toMatrixOrthonormal_eq_diagonal b hdiag
   set R := b.toBasis.constr 𝕜 (fun i => (Real.sqrt (μ i) : 𝕜) • b i) with hR
   have hRb : ∀ i, R (b i) = (Real.sqrt (μ i) : 𝕜) • b i := by
     intro i
@@ -164,13 +257,54 @@ theorem exists_positive_sqrt {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
       push_cast; ring
     rw [hterm, RCLike.ofReal_re]
     positivity
-  · apply b.toBasis.ext
+  · show R ∘ₗ R = T
+    apply b.toBasis.ext
     intro i
     simp only [LinearMap.comp_apply, OrthonormalBasis.coe_toBasis]
     rw [hRb, map_smul, hRb, smul_smul]
     rw [show (Real.sqrt (μ i) : 𝕜) * (Real.sqrt (μ i) : 𝕜) = ((μ i : ℝ) : 𝕜) by
       rw [← RCLike.ofReal_mul, Real.mul_self_sqrt (hμnn i)]]
-    rw [← hs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i]
+    rw [← hTb i]
+
+/-! 7.38 The remaining two links of the cycle are immediate: a positive operator
+is self-adjoint ((d) ⟹ (e)), and a self-adjoint {lit}`R` equals its own adjoint,
+so {lit}`R² = R* R` ((e) ⟹ (f)). -/
+
+/-- (e) ⟹ (f): a self-adjoint square root {lit}`R` of {lit}`T` exhibits
+{lit}`T = R* R`. -/
+theorem adjoint_comp_self_eq_of_isSymmetric_isSquareRoot {T R : V →ₗ[𝕜] V}
+    (hR : R.IsSymmetric) (hRT : IsSquareRoot R T) : LinearMap.adjoint R ∘ₗ R = T := by
+  have hadj : LinearMap.adjoint R = R := by
+    rw [← LinearMap.star_eq_adjoint]
+    exact (LinearMap.isSymmetric_iff_isSelfAdjoint R).mp hR
+  rw [hadj]
+  exact hRT
+
+/-- 7.38 Characterizations of positive operators: for {lit}`T ∈ ℒ(V)` the six
+conditions (a)–(f) are equivalent, proved as the cycle
+(a) ⟹ (b) ⟹ (c) ⟹ (d) ⟹ (e) ⟹ (f) ⟹ (a). -/
+theorem tfae_isPositive (T : V →ₗ[𝕜] V) :
+    [T.IsPositive,
+      T.IsSymmetric ∧ ∀ μ : 𝕜, HasEigenvalue T μ → 0 ≤ RCLike.re μ ∧ conj μ = μ,
+      HasNonnegDiagonalMatrix T,
+      ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ IsSquareRoot R T,
+      ∃ R : V →ₗ[𝕜] V, R.IsSymmetric ∧ IsSquareRoot R T,
+      ∃ R : V →ₗ[𝕜] V, LinearMap.adjoint R ∘ₗ R = T].TFAE := by
+  tfae_have 1 → 2 := fun hT => ⟨hT.isSymmetric, fun _ hμ => eigenvalue_nonneg hT hμ⟩
+  tfae_have 2 → 3 := fun h =>
+    hasNonnegDiagonalMatrix_of_eigenvalue_nonneg h.1 fun μ hμ => (h.2 μ hμ).1
+  tfae_have 3 → 4 := exists_positive_sqrt_of_hasNonnegDiagonalMatrix
+  tfae_have 4 → 5 := fun ⟨R, hR, hRT⟩ => ⟨R, hR.isSymmetric, hRT⟩
+  tfae_have 5 → 6 := fun ⟨R, hR, hRT⟩ =>
+    ⟨R, adjoint_comp_self_eq_of_isSymmetric_isSquareRoot hR hRT⟩
+  tfae_have 6 → 1 := fun ⟨R, hRT⟩ => hRT ▸ adjoint_comp_self_isPositive R
+  tfae_finish
+
+/-- 7.38 (a) ⟹ (d), the direction usually cited on its own: every positive
+operator has a positive square root. -/
+theorem exists_positive_sqrt {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
+    ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ R ∘ₗ R = T :=
+  ((tfae_isPositive T).out 0 3).mp hT
 
 /-! 7.39 Each positive operator has a *unique* positive square root.
 
@@ -248,30 +382,132 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
     rw [hST]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
   rw [sqrt_eigenvector hR (hμnn i) hwR, sqrt_eigenvector hS (hμnn i) hwS]
 
-/-- The (positive) operator {lit}`S(x,y) = (x, 2y)` on {lit}`ℝ²` (Example 7.41). -/
-def S_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
-  toFun p := ![p 0, 2 * p 1]
-  map_add' x y := by funext i; fin_cases i <;> simp; ring
-  map_smul' a x := by funext i; fin_cases i <;> simp; ring
+/-! 7.41 Example: square roots of positive operators
 
-/-- Its positive square root {lit}`√S(x,y) = (x, √2·y)` (Example 7.41). -/
-noncomputable def sqrtS_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
-  toFun p := ![p 0, Real.sqrt 2 * p 1]
-  map_add' x y := by funext i; fin_cases i <;> simp; ring
-  map_smul' a x := by funext i; fin_cases i <;> simp; ring
+Axler works out two operators on {lit}`𝐑²` with the usual Euclidean inner
+product: {lit}`S(x,y) = (x, 2y)` and {lit}`T(x,y) = (x + y, x + y)`. Both are
+self-adjoint (7.42: their matrices in the standard basis, {lit}`!![1,0;0,2]` and
+{lit}`!![1,1;1,1]`, equal their own transposes) and both have nonnegative
+quadratic form ({lit}`x² + 2y²` and {lit}`(x + y)²`), so both are positive. Their
+square roots are {lit}`√S(x,y) = (x, √2·y)` and
+{lit}`√T(x,y) = ((x+y)/√2, (x+y)/√2)`; each is itself positive, so by 7.39 it
+really is *the* square root denoted {lit}`√S`, {lit}`√T` in 7.40. -/
+
+/-- The operator {lit}`S(x,y) = (x, 2y)` on {lit}`𝐑²` (Example 7.41). -/
+def S_7_41 : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2) where
+  toFun p := !₂[p 0, 2 * p 1]
+  map_add' x y := by ext i; fin_cases i <;> simp; ring
+  map_smul' a x := by ext i; fin_cases i <;> simp; ring
+
+/-- The operator {lit}`T(x,y) = (x + y, x + y)` on {lit}`𝐑²` (Example 7.41). -/
+def T_7_41 : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2) where
+  toFun p := !₂[p 0 + p 1, p 0 + p 1]
+  map_add' x y := by ext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by ext i; fin_cases i <;> simp <;> ring
+
+/-- {lit}`√S(x,y) = (x, √2·y)` (Example 7.41). -/
+noncomputable def sqrtS_7_41 : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2) where
+  toFun p := !₂[p 0, Real.sqrt 2 * p 1]
+  map_add' x y := by ext i; fin_cases i <;> simp; ring
+  map_smul' a x := by ext i; fin_cases i <;> simp; ring
+
+/-- {lit}`√T(x,y) = ((x+y)/√2, (x+y)/√2)` (Example 7.41). -/
+noncomputable def sqrtT_7_41 : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2) where
+  toFun p := !₂[(p 0 + p 1) / Real.sqrt 2, (p 0 + p 1) / Real.sqrt 2]
+  map_add' x y := by ext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by ext i; fin_cases i <;> simp <;> ring
+
+/-- 7.42 The matrices of {lit}`S` and {lit}`T` with respect to the standard basis
+of {lit}`𝐑²`: {lit}`!![1,0;0,2]` and {lit}`!![1,1;1,1]`. Each equals its own
+transpose, so {lit}`S` and {lit}`T` are self-adjoint. -/
+theorem matrix_7_42 :
+    Matrix.toEuclideanLin (!![1, 0; 0, 2] : Matrix (Fin 2) (Fin 2) ℝ) = S_7_41 ∧
+      Matrix.toEuclideanLin (!![1, 1; 1, 1] : Matrix (Fin 2) (Fin 2) ℝ) = T_7_41 := by
+  constructor <;>
+    (ext p i
+     fin_cases i <;>
+       simp [S_7_41, T_7_41, Matrix.mulVec, Matrix.vecHead, Matrix.vecTail])
+
+/-- The quadratic form of {lit}`S`: {lit}`⟨S(x,y),(x,y)⟩ = x² + 2y²`. -/
+theorem inner_S_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
+    ⟪S_7_41 p, p⟫_ℝ = p 0 ^ 2 + 2 * p 1 ^ 2 := by
+  simp [S_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  ring
+
+/-- The quadratic form of {lit}`T`: {lit}`⟨T(x,y),(x,y)⟩ = (x + y)²`. -/
+theorem inner_T_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
+    ⟪T_7_41 p, p⟫_ℝ = (p 0 + p 1) ^ 2 := by
+  simp [T_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  ring
+
+/-- 7.41: {lit}`S` is a positive operator. -/
+theorem S_7_41_isPositive : S_7_41.IsPositive := by
+  constructor
+  · intro x y
+    simp [S_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    ring
+  · intro p
+    rw [inner_S_7_41, RCLike.re_to_real]
+    positivity
+
+/-- 7.41: {lit}`T` is a positive operator. -/
+theorem T_7_41_isPositive : T_7_41.IsPositive := by
+  constructor
+  · intro x y
+    simp [T_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    ring
+  · intro p
+    rw [inner_T_7_41, RCLike.re_to_real]
+    positivity
 
 /-- 7.41 Example: {lit}`√S` is a square root of {lit}`S`, i.e. {lit}`(√S)² = S`
 (using {lit}`√2 · √2 = 2`). -/
-theorem sqrtS_7_41_sq : sqrtS_7_41 ∘ₗ sqrtS_7_41 = S_7_41 := by
+theorem sqrtS_7_41_sq : IsSquareRoot sqrtS_7_41 S_7_41 := by
   have h2 : Real.sqrt 2 * Real.sqrt 2 = 2 := Real.mul_self_sqrt (by norm_num)
-  apply LinearMap.ext; intro p; funext i
-  fin_cases i
-  · show sqrtS_7_41 (sqrtS_7_41 p) 0 = S_7_41 p 0
-    simp [sqrtS_7_41, S_7_41]
-  · show sqrtS_7_41 (sqrtS_7_41 p) 1 = S_7_41 p 1
-    simp only [sqrtS_7_41, S_7_41, LinearMap.coe_mk, AddHom.coe_mk, Matrix.cons_val_one,
-      Matrix.cons_val_zero]
-    rw [← mul_assoc, h2]
+  show sqrtS_7_41 ∘ₗ sqrtS_7_41 = S_7_41
+  ext p i
+  fin_cases i <;> simp [sqrtS_7_41, S_7_41, ← mul_assoc, h2]
+
+/-- 7.41 Example: {lit}`√T` is a square root of {lit}`T`, i.e. {lit}`(√T)² = T`. -/
+theorem sqrtT_7_41_sq : IsSquareRoot sqrtT_7_41 T_7_41 := by
+  show sqrtT_7_41 ∘ₗ sqrtT_7_41 = T_7_41
+  ext p i
+  fin_cases i <;>
+    (simp [sqrtT_7_41, T_7_41]; field_simp; rw [Real.sq_sqrt (by norm_num : (0:ℝ) ≤ 2)]; ring)
+
+/-- The quadratic form of {lit}`√S`: {lit}`⟨√S(x,y),(x,y)⟩ = x² + √2·y²`. -/
+theorem inner_sqrtS_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
+    ⟪sqrtS_7_41 p, p⟫_ℝ = p 0 ^ 2 + Real.sqrt 2 * p 1 ^ 2 := by
+  simp [sqrtS_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  ring
+
+/-- The quadratic form of {lit}`√T`: {lit}`⟨√T(x,y),(x,y)⟩ = (x + y)²/√2`. -/
+theorem inner_sqrtT_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
+    ⟪sqrtT_7_41 p, p⟫_ℝ = (p 0 + p 1) ^ 2 / Real.sqrt 2 := by
+  simp [sqrtT_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  ring
+
+/-- 7.41: {lit}`√S` is itself positive, so by 7.39 it is *the* positive square
+root of {lit}`S`. -/
+theorem sqrtS_7_41_isPositive : sqrtS_7_41.IsPositive := by
+  constructor
+  · intro x y
+    simp [sqrtS_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    ring
+  · intro p
+    rw [inner_sqrtS_7_41, RCLike.re_to_real]
+    positivity
+
+/-- 7.41: {lit}`√T` is itself positive, so by 7.39 it is *the* positive square
+root of {lit}`T`. -/
+theorem sqrtT_7_41_isPositive : sqrtT_7_41.IsPositive := by
+  constructor
+  · intro x y
+    simp [sqrtT_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    ring
+  · intro p
+    rw [inner_sqrtT_7_41, RCLike.re_to_real]
+    positivity
 
 /-- 7.43 If {lit}`T` is a positive operator and {lit}`⟨Tv, v⟩ = 0`, then {lit}`Tv = 0`.
 Writing {lit}`T = R²` with {lit}`R` a positive (hence self-adjoint) square root
@@ -352,7 +588,7 @@ theorem exercise_7C_10 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (v w : V)
 /-- 7C.11 If {lit}`T` is positive and {lit}`U` is invariant, then {lit}`T|U` is
 positive. -/
 theorem exercise_7C_11 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (U : Submodule 𝕜 V)
-    (hU : ∀ u ∈ U, T u ∈ U) : (T.restrict hU).IsPositive := by
+    (hU : InvariantUnder T U) : hU.restrict.IsPositive := by
   sorry
 
 /-- 7C.12 If {lit}`T` is positive, then {lit}`Tᵏ` is positive for every positive
@@ -453,8 +689,12 @@ theorem exercise_7C_24 (S T : V →ₗ[𝕜] V) (hS : S.IsPositive) (hT : T.IsPo
     LinearMap.ker (S + T) = LinearMap.ker S ⊓ LinearMap.ker T := by
   sorry
 
-/-! 7C.25 (deferred): for the second-derivative operator {lit}`T` of Exercise
-7A.31(b), {lit}`−T` is a positive operator. Depends on the trigonometric
-{lit}`L²` function space of 7A.31, which is itself deferred. -/
+open LADR.Section_7A (trigSpan) in
+/-- 7C.25 For the second-derivative operator {lit}`T f = f″` of Exercise 7A.31(b),
+{lit}`−T` is a positive operator. -/
+theorem exercise_7C_25 (n : ℕ) (T : trigSpan n →ₗ[ℝ] trigSpan n)
+    (hT : ∀ f : trigSpan n, (T f : ℝ → ℝ) = deriv (deriv (f : ℝ → ℝ))) :
+    (-T).IsPositive := by
+  sorry
 
 end LADR.Section_7C
