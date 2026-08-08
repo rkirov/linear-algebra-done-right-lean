@@ -56,14 +56,13 @@ on the human-vs-AI split as we accumulate playthroughs.
 A row is *drafted* once the section's `.lean` file exists with all numbered
 Axler results stated and proved and all exercises stated as `sorry`. It is
 *reviewed* once a human has read it line-by-line and revised problems they
-found. *Playtested* means someone (other than the author) has worked through
-the section's exercises.
+found. *Playtested* means someone (the author or someone else) has worked through the section's exercises.
 
 | Section | Drafted | Reviewed | Playtested |
 |---|---|---|---|
-| 1A. ℝⁿ and ℂⁿ | ✓ | ✓ | — |
-| 1B. Definition of vector space | ✓ | ✓ | — |
-| 1C. Subspaces | ✓ | ✓ | — |
+| 1A. ℝⁿ and ℂⁿ | ✓ | ✓ | ✓ |
+| 1B. Definition of vector space | ✓ | ✓ | ✓ |
+| 1C. Subspaces | ✓ | ✓ | ✓ |
 | 2A. Span and Linear Independence | ✓ | ✓ | — |
 | 2B. Bases | ✓ | ✓ | — |
 | 2C. Dimension | ✓ | ✓ | — |
@@ -74,8 +73,8 @@ the section's exercises.
 | 3E. Products and Quotients of Vector Spaces | ✓ | ✓ | — |
 | 3F. Duality | ✓ | ✓ | — |
 | 4. Polynomials | ✓ | ✓ | — |
-| 5A. Invariant Subspaces | ✓ | ✓ | — |
-| 5B. The Minimal Polynomial | ✓ | ✓ | — |
+| 5A. Invariant Subspaces | ✓ | ✓ | ✓ |
+| 5B. The Minimal Polynomial | ✓ | ✓ | ✓ |
 | 5C. Upper-Triangular Matrices | ✓ | ✓ | — |
 | 5D. Diagonalizable Operators | ✓ | ✓ | — |
 | 5E. Commuting Operators | ✓ | ✓ | — |
@@ -99,8 +98,7 @@ the section's exercises.
 
 The whole book (Chapters 1–9) is drafted, and **every numbered Axler item —
 Definition, Result, and Example — is formalized in Lean.** Exercises remain as
-`sorry` (they are the point of the companion); there are no silent `sorry`s on any
-numbered item.
+`sorry` (they are the point of the companion); there are no silent `sorry`s on any numbered item.
 
 A few items are deliberately kept in prose, each captured formally elsewhere:
 
@@ -114,20 +112,18 @@ A few items are deliberately kept in prose, each captured formally elsewhere:
 Every numbered item is **axiom-clean** — depending only on mathlib's standard
 `propext` / `Classical.choice` / `Quot.sound`, with no `sorry`.
 
+My (currently incomplete) solutions live in the `solutions` branch.
+
 ## Building
 
 ```bash
 lake update mathlib && lake exe cache get   # first time only
 lake build
 ```
-Toolchain: `leanprover/lean4:v4.30.0-rc2`. Mathlib is pinned at `v4.30.0-rc2`.
 
 ## Contributing
 
-PRs fixing typos or improving comments are welcome. Please **don't** send PRs
-to `main` filling in the `sorry`s — they're the exercises. Solutions in your
-own fork (or a separate branch here) are fine; they just shouldn't land on
-`main`.
+PRs fixing typos or improving comments or lean style are welcome. Please **don't** send PRs to `main` filling in the `sorry`s — they're the exercises.
 
 ## License
 
