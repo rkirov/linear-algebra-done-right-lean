@@ -149,9 +149,8 @@ example (U : Submodule F V) {u : V} (hu : u ∈ U) : -u ∈ U := U.neg_mem hu
 
 /-! 1.35 Example: subspaces / Exercise 1C.2
 
-Verify that the sets in (a)–(e) are subspaces. We give the carrier, the
-{lit}`0`-membership proof, and the scalar-closure proof; the additive-closure
-{lit}`add_mem'` is left as {lit}`sorry` for the reader. -/
+Verify that the sets in (a)–(e) are subspaces: the carrier together with the
+{lit}`0`-membership, additive-closure, and scalar-closure proofs. -/
 
 /-! 1.35(a) The set {lit}`{(x₁, x₂, x₃, x₄) ∈ F⁴ : x₃ = 5 x₄ + b}` is a
 subspace of {lit}`F⁴` iff {lit}`b = 0` (the {lit}`b = 0` direction is shown
@@ -1230,8 +1229,7 @@ theorem exercise_1C_13 [CharZero F] (U W X : Submodule F V) :
         Set.union_subset (SetLike.coe_subset_coe.mpr h.1) (SetLike.coe_subset_coe.mpr h.2)
       exact (Set.union_eq_right.mpr h1).symm
 
-/-- 1C.14 The student fills in the predicate (replacing the {lit}`sorry` in
-the right-hand side) and proves the equality. -/
+/-- 1C.14 -/
 def exercise_1C_14_U : Submodule F (Fin 3 → F) where
   carrier := {v | ∃ x : F, v = ![x, -x, 2 * x]}
   zero_mem' := ⟨0, by
@@ -1376,9 +1374,8 @@ def exercise_1C_18_id :
   exact le_antisymm (sup_le le_rfl bot_le) le_sup_left
 
 /-- 1C.18(b) *Which subspaces have an additive inverse under sum?* (i.e., for
-which {lit}`U` does there exist {lit}`W` with {lit}`U + W = ⊥`?) Fill in the
-right-hand side {lit}`sorry` with the conjectured characterization
-of {lit}`U`, and then then proves the equivalence. -/
+which {lit}`U` does there exist {lit}`W` with {lit}`U + W = ⊥`?) Only
+{lit}`U = ⊥` does. -/
 theorem exercise_1C_18_inv (U : Submodule F V) :
     (∃ W : Submodule F V, U ⊔ W = ⊥) ↔ U = ⊥ := by
   constructor
