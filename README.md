@@ -107,7 +107,10 @@ A few items are deliberately kept in prose, each captured formally elsewhere:
   reformulated formally instead: the volume theorem 7.111
   (`volume T(Ω) = (s₁ ⋯ sₙ)·volume Ω`) is proved measure-theoretically in 9C, and
   the Jordan form is stated matrix-free via eigenvalue chains in 8C.
-- The purely numeric worked examples 8.24 and 8.27.
+- Examples that are *pictures* of a shape already defined formally — the
+  block-diagonal matrix 8.36, the ellipsoids 7.97, the parallelepipeds 7.103 and
+  boxes 7.106 — carry no propositional content of their own; the worked
+  instances that do (7.60, 8.38) are formalized and proved.
 
 Every numbered item is **axiom-clean** — depending only on mathlib's standard
 `propext` / `Classical.choice` / `Quot.sound`, with no `sorry`.

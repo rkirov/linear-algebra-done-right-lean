@@ -13,6 +13,7 @@ import Mathlib.RingTheory.Adjoin.Polynomial.Basic
 import Mathlib.RingTheory.Nilpotent.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
+import LinearAlgebraDoneRightLean.Section_5D
 import LinearAlgebraDoneRightLean.Section_8A
 import LinearAlgebraDoneRightLean.Section_8B
 import CompanionHelper
@@ -736,11 +737,85 @@ def T_ex_8C_5 : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ) where
 theorem exercise_8C_5 : minpoly ℂ T_ex_8C_5 = (X - C 2) ^ 2 := by
   sorry
 
-/-! Exercises 6–13 concern Jordan bases directly (finding one for the
-differentiation operator on {lit}`𝒫₄(ℝ)`, describing the matrix of {lit}`T²` or
-of {lit}`T` in a reversed Jordan basis, showing {lit}`n = dim null T`, etc.).
-They are stated in terms of the matrix-of-a-basis / Jordan-basis formalism
-deferred above (8.44), so we do not encode them here. -/
+/-! Exercises 6–13 concern Jordan bases, which 8.44 encodes matrix-free as
+{name}`LADR.Section_8C.HasJordanBasis` / {name}`LADR.Section_8C.HasNilpotentJordanBasis`:
+eigenvalue chains {lit}`v i, (T − λᵢ)(v i), …` of lengths {lit}`M i`, one per
+Jordan block. Exercises 6, 7, 9, 11, 12 and 13 are stated below in that encoding.
+Exercises 8 and 10 ("describe the matrix of {lit}`T²`", "describe the matrix of
+{lit}`T` in the reversed basis") ask for a description of {lit}`ℳ(T, basis)` for a
+Jordan basis, which the chain encoding deliberately does not carry, so they remain
+outside this formalization. -/
+
+/-- The vector generating the Jordan chain of 8C.6 — the polynomial to be found by
+the solver ({lit}`D⁴ v, …, D v, v` is then the Jordan basis). -/
+noncomputable def jordanVector_8C_6 : Polynomial.degreeLT ℝ 5 := sorry
+
+/-- 8C.6 A Jordan basis of {lit}`𝒫₄(ℝ)` for the differentiation operator
+{lit}`D p = p′`. Since {lit}`D` is nilpotent with a single Jordan block, a Jordan
+basis is one chain: {lit}`v, D v, …, D⁴ v` with {lit}`D⁵ v = 0`. -/
+theorem exercise_8C_6 (D : Polynomial.degreeLT ℝ 5 →ₗ[ℝ] Polynomial.degreeLT ℝ 5)
+    (hD : ∀ p : Polynomial.degreeLT ℝ 5,
+      (D p : Polynomial ℝ) = (p : Polynomial ℝ).derivative) :
+    (D ^ 5) jordanVector_8C_6 = 0 ∧
+      LADR.Section_2B.IsBasis ℝ (fun k : Fin 5 => (D ^ (k : ℕ)) jordanVector_8C_6) := by
+  sorry
+
+/-- 8C.7 For nilpotent {lit}`T` with a Jordan basis, the minimal polynomial is
+{lit}`z^{m+1}`, where {lit}`m` is the length of the longest consecutive string of
+{lit}`1`'s directly above the diagonal. A block of size {lit}`M i` contributes a
+string of {lit}`M i − 1` ones, so {lit}`m + 1` is the largest block size
+{lit}`sup M`. -/
+theorem exercise_8C_7 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) {ι : Type} [Fintype ι] [Nonempty ι]
+    (M : ι → ℕ) (v : ι → V) (hM : ∀ i, 0 < M i) (hkill : ∀ i, (T ^ M i) (v i) = 0)
+    (hLI : LinearIndependent ℂ (fun p : Σ i, Fin (M i) => (T ^ (p.2 : ℕ)) (v p.1)))
+    (hspan : Submodule.span ℂ
+      (Set.range fun p : Σ i, Fin (M i) => (T ^ (p.2 : ℕ)) (v p.1)) = ⊤) :
+    minpoly ℂ T = X ^ (Finset.univ.sup M) := by
+  sorry
+
+/-- 8C.9 Every nilpotent operator admits vectors {lit}`v₁, …, vₙ` and exponents
+{lit}`m₁, …, mₙ` whose chains {lit}`T^{mᵢ} vᵢ, …, T vᵢ, vᵢ` form a basis of
+{lit}`V` with {lit}`T^{mᵢ+1} vᵢ = 0`. This is exactly 8.45. -/
+theorem exercise_8C_9 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) : HasNilpotentJordanBasis T :=
+  hasNilpotentJordanBasis T hT
+
+/-- 8C.11 Every vector of a Jordan basis is a generalized eigenvector: the chain
+for {lit}`i` lies in {lit}`G(λᵢ, T)`, which needs only the chain-terminating
+condition {lit}`(T − λᵢ)^{M i} (v i) = 0`. -/
+theorem exercise_8C_11 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) {ι : Type} [Fintype ι] (M : ι → ℕ) (lam : ι → ℂ) (v : ι → V)
+    (hkill : ∀ i, ((T - lam i • 1) ^ M i) (v i) = 0) (p : Σ i, Fin (M i)) :
+    ((T - lam p.1 • 1) ^ (p.2 : ℕ)) (v p.1) ∈ maxGenEigenspace T (lam p.1) := by
+  sorry
+
+/-- 8C.12 If {lit}`T` is diagonalizable then every Jordan basis for {lit}`T` has
+all blocks of size {lit}`1` — equivalently {lit}`ℳ(T)` is diagonal with respect to
+it. -/
+theorem exercise_8C_12 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) (hT : LADR.Section_5D.IsDiagonalizable T) {ι : Type} [Fintype ι]
+    (M : ι → ℕ) (lam : ι → ℂ) (v : ι → V) (hM : ∀ i, 0 < M i)
+    (hkill : ∀ i, ((T - lam i • 1) ^ M i) (v i) = 0)
+    (hLI : LinearIndependent ℂ
+      (fun p : Σ i, Fin (M i) => ((T - lam p.1 • 1) ^ (p.2 : ℕ)) (v p.1)))
+    (hspan : Submodule.span ℂ
+      (Set.range fun p : Σ i, Fin (M i) => ((T - lam p.1 • 1) ^ (p.2 : ℕ)) (v p.1)) = ⊤) :
+    ∀ i, M i = 1 := by
+  sorry
+
+/-- 8C.13 For nilpotent {lit}`T`, the tops {lit}`T^{M i − 1} (v i)` of the Jordan
+chains form a basis of {lit}`null T`. In particular the number of chains is
+{lit}`dim null T`, so it depends only on {lit}`T`. -/
+theorem exercise_8C_13 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) {ι : Type} [Fintype ι]
+    (M : ι → ℕ) (v : ι → V) (hM : ∀ i, 0 < M i) (hkill : ∀ i, (T ^ M i) (v i) = 0)
+    (hLI : LinearIndependent ℂ (fun p : Σ i, Fin (M i) => (T ^ (p.2 : ℕ)) (v p.1)))
+    (hspan : Submodule.span ℂ
+      (Set.range fun p : Σ i, Fin (M i) => (T ^ (p.2 : ℕ)) (v p.1)) = ⊤) :
+    LinearIndependent ℂ (fun i => (T ^ (M i - 1)) (v i)) ∧
+      Submodule.span ℂ (Set.range fun i => (T ^ (M i - 1)) (v i)) = ker T := by
+  sorry
 
 /-- 8C.14 Over {lit}`ℂ`, there is no decomposition of {lit}`V` into two nonzero
 {lit}`T`-invariant subspaces iff the minimal polynomial of {lit}`T` is

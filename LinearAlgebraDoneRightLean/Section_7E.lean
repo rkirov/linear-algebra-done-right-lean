@@ -546,10 +546,19 @@ theorem exercise_7E_5 (T : EuclideanSpace ℂ (Fin 2) →ₗ[ℂ] EuclideanSpace
     ∀ s : ℝ, (∃ i, singularValues T i = s) ↔ s = 4 ∨ s = 1 := by
   sorry
 
-/-! 7E.6 (deferred): find the singular values of the differentiation operator
-{lit}`D p = p′` on {lit}`𝒫₂(ℝ)` with the {lit}`L²` inner product of Example 6.34.
-Needs that specific {lit}`L²` inner product together with a numeric computation of
-the singular values; deferred. -/
+/-- The singular values of the differentiation operator of 7E.6 — the numbers to
+be found by the solver. -/
+noncomputable def singularValues_7E_6 : Fin 3 → ℝ := sorry
+
+/-- 7E.6 Find the singular values of the differentiation operator {lit}`D p = p′`
+on {lit}`𝒫₂(ℝ)` with the {lit}`L²` inner product {lit}`⟨p, q⟩ = ∫₀¹ pq` of Example
+6.34 (the space is {name}`LADR.Section_7A.l2Core_7A14`'s
+{lit}`Polynomial.degreeLT ℝ 3`). The answer is {name}`singularValues_7E_6`. -/
+theorem exercise_7E_6 (D : Polynomial.degreeLT ℝ 3 →ₗ[ℝ] Polynomial.degreeLT ℝ 3)
+    (hD : ∀ p : Polynomial.degreeLT ℝ 3,
+      (D p : Polynomial ℝ) = (p : Polynomial ℝ).derivative) (s : ℝ) :
+    (∃ i, singularValues D i = s) ↔ ∃ j, singularValues_7E_6 j = s := by
+  sorry
 
 /-- 7E.7 For self-adjoint {lit}`T` (or {lit}`𝔽 = ℂ` and {lit}`T` normal), the
 singular values are the absolute values of the eigenvalues. -/

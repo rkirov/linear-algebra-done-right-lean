@@ -873,13 +873,13 @@ theorem exercise_7F_16 (S : V →ₗ[𝕜] V) (hS : S.IsPositive) (hSinv : Funct
       T.IsPositive := by
   sorry
 
-/-! 7F.17 (deferred): the Riesz functional {lit}`φ_u(v) = ⟨v, u⟩` has
-{lit}`‖φ_u‖ = ‖u‖`, where {lit}`‖φ_u‖` is the norm of {lit}`φ_u` as a map into the
-scalar field {lit}`𝔽` viewed as an inner product space. Deferred — this file's
-{name}`opNorm` (and the continuous-dual norm) require inner-product/{name}`CompleteSpace`
-instances on {lit}`𝔽`-as-{lit}`𝔽`-inner-product-space that the pin does not resolve
-here. ({name}`InnerProductSpace.toDual` is a linear isometry, so the fact itself is
-standard.) -/
+/-- 7F.17 The Riesz functional {lit}`φ_u(v) = ⟨v, u⟩` has {lit}`‖φ_u‖ = ‖u‖`,
+where {lit}`‖φ_u‖` is its norm as a linear map into the scalar field {lit}`𝔽`
+viewed as an inner product space over itself. Recall the slot convention: Axler's
+{lit}`⟨v, u⟩` is mathlib's {lit}`⟪u, v⟫`, so {lit}`φ_u` is {name}`innerₛₗ` applied
+to {lit}`u`. -/
+theorem exercise_7F_17 (u : V) : opNorm (innerₛₗ 𝕜 u) = ‖u‖ := by
+  sorry
 
 /-- 7F.18(a) For an orthonormal basis {lit}`e`,
 {lit}`max ‖Teₖ‖ ≤ ‖T‖ ≤ (∑ ‖Teₖ‖²)^(1/2)`. -/
@@ -912,10 +912,16 @@ theorem exercise_7F_21 (hV : 1 < finrank 𝕜 V) (hW : 1 < finrank 𝕜 W) :
       ∀ T : V →ₗ[𝕜] W, opNorm T = Real.sqrt (RCLike.re (core.inner T T)) := by
   sorry
 
-/-! 7F.22 (deferred): {lit}`min{‖T|U‖ : dim U = k} = s_{n−k+1}` (Courant–Fischer
-min-max). Deferred — a faithful statement requires the singular values indexed in
-decreasing order, whereas this file's {name}`singularValues` is unsorted; matching the
-{lit}`n−k+1` index would misstate the result. -/
+/-- 7F.22 (Courant–Fischer min-max) With {lit}`s₁ ≥ ⋯ ≥ sₙ` the singular values
+of {lit}`T` in decreasing order and {lit}`1 ≤ k ≤ n`,
+{lit}`min{‖T|U‖ : dim U = k} = s_{n−k+1}`. The decreasing order is
+{name}`svSortPerm`, under which Axler's {lit}`s_{n−k+1}` (1-indexed) is the
+{lit}`0`-indexed entry {lit}`n − k`. Stated for an operator on {lit}`V`, since
+that is where this file's sorted singular values are defined. -/
+theorem exercise_7F_22 (T : V →ₗ[𝕜] V) {k : ℕ} (hk1 : 1 ≤ k) (hkn : k ≤ finrank 𝕜 V) :
+    IsLeast {r : ℝ | ∃ U : Submodule 𝕜 V, finrank 𝕜 U = k ∧ opNorm (T ∘ₗ U.subtype) = r}
+      (LADR.Section_7E.singularValues T (svSortPerm T ⟨finrank 𝕜 V - k, by omega⟩)) := by
+  sorry
 
 /-- 7F.23 Every {lit}`T ∈ ℒ(V, W)` is uniformly continuous. -/
 theorem exercise_7F_23 (T : V →ₗ[𝕜] W) : UniformContinuous T := by
@@ -988,10 +994,18 @@ theorem exercise_7F_31 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ
         (∀ i, ∃ μ : ℂ, S (b i) = μ • b i) ∧ (∀ i, ∃ ν : ℂ, R (b i) = ν • b i) := by
   sorry
 
-/-! 7F.32 (deferred): with {lit}`s₁, …, sₘ` the positive singular values and an
-orthonormal basis {lit}`e` of {lit}`(null T)⟂`, the image
-{lit}`T(E(e₁/s₁, …, eₘ/sₘ))` of the ellipsoid is the unit ball of {lit}`range T`.
-Deferred with the ellipsoid/volume geometry (7.95–7.111) — it needs the
-set-image/measure machinery that the pinned mathlib does not package here. -/
+/-- 7F.32 For {lit}`T ≠ 0` with positive singular values {lit}`s₁, …, sₘ`, there
+is an orthonormal basis {lit}`e₁, …, eₘ` of {lit}`(null T)⟂` for which
+{lit}`T(E(e₁/s₁, …, eₘ/sₘ))` is the ball of radius {lit}`1` in {lit}`range T`.
+The positive singular values are listed with multiplicity by the equivalence
+{lit}`σ`, and {lit}`E(e₁/s₁, …)` is {name}`ellipsoid` with axis lengths
+{lit}`1/sⱼ`. -/
+theorem exercise_7F_32 (T : V →ₗ[𝕜] W) (hT : T ≠ 0) {m : ℕ}
+    (σ : Fin m ≃ {i : Fin (finrank 𝕜 V) // LADR.Section_7E.singularValues T i ≠ 0}) :
+    ∃ e : Fin m → ((LinearMap.ker T)ᗮ : Submodule 𝕜 V), Orthonormal 𝕜 e ∧
+      (T ∘ₗ (LinearMap.ker T)ᗮ.subtype) ''
+          ellipsoid (𝕜 := 𝕜) e (fun j => 1 / LADR.Section_7E.singularValues T (σ j)) =
+        {w : W | w ∈ LinearMap.range T ∧ ‖w‖ < 1} := by
+  sorry
 
 end LADR.Section_7F

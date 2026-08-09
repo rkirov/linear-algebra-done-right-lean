@@ -626,7 +626,7 @@ theorem exercise_9A_5 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ 
       (T.IsPositive ∧ Function.Bijective T) := by
   sorry
 
-/-! 9A.7 (deferred): explain why the proof of 9.13 (diagonalization of a symmetric
+/-! 9A.7 (prose, not formalizable): explain why the proof of 9.13 (diagonalization of a symmetric
 bilinear form by an orthonormal basis) fails when {lit}`𝔽 ≠ ℝ`. This is a prose
 "explain why the proof fails" exercise with no crisp propositional content to
 state in Lean. -/

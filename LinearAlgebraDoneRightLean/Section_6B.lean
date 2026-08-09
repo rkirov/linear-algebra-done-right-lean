@@ -809,8 +809,8 @@ noncomputable def diffP2 : Polynomial.degreeLT ℝ 3 →ₗ[ℝ] Polynomial.degr
 
 /-- 6B.8 (a) On {lit}`𝒫₂(ℝ)` with {lit}`⟨p, q⟩ = ∫₀¹ pq`, applying Gram–Schmidt to
 {lit}`1, x, x²` produces the orthonormal basis {name}`legendreBasis01`, stated as the
-pairwise integral identities {lit}`∫₀¹ eᵢeⱼ = δᵢⱼ`. (Analytic function-space exercise;
-deferred like the others.) -/
+pairwise integral identities {lit}`∫₀¹ eᵢeⱼ = δᵢⱼ`. (Analytic function-space exercise, stated
+as an integral identity.) -/
 theorem exercise_6B_8a :
     ∀ i j, (∫ x in (0:ℝ)..1,
         (legendreBasis01 i : Polynomial ℝ).eval x * (legendreBasis01 j : Polynomial ℝ).eval x)
@@ -856,8 +856,8 @@ evaluation {lit}`p ↦ p(½)` for {lit}`⟨p, q⟩ = ∫₀¹ pq`). -/
 noncomputable def q6B11 : ℝ → ℝ := sorry
 
 /-- 6B.11 The polynomial {name}`q6B11` satisfies {lit}`p(½) = ∫₀¹ pq` for every
-{lit}`p ∈ 𝒫₂(ℝ)` (written {lit}`p = a + bx + cx²`). (Analytic function-space exercise;
-deferred like the others.) -/
+{lit}`p ∈ 𝒫₂(ℝ)` (written {lit}`p = a + bx + cx²`). (Analytic function-space exercise, stated
+as an integral identity.) -/
 theorem exercise_6B_11 : ∀ a b c : ℝ,
     (a + b * (1 / 2) + c * (1 / 2) ^ 2)
       = ∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * q6B11 x := by
@@ -869,7 +869,7 @@ noncomputable def q6B12 : ℝ → ℝ := sorry
 
 /-- 6B.12 The polynomial {name}`q6B12` satisfies {lit}`∫₀¹ p(x)cos(πx) dx = ∫₀¹ pq`
 for every {lit}`p ∈ 𝒫₂(ℝ)` (written {lit}`p = a + bx + cx²`). (Analytic
-function-space exercise; deferred like the others.) -/
+function-space exercise, stated as an integral identity.) -/
 theorem exercise_6B_12 : ∀ a b c : ℝ,
     (∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * Real.cos (Real.pi * x))
       = ∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * q6B12 x := by

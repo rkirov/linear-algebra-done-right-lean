@@ -29,6 +29,7 @@ import LinearAlgebraDoneRightLean.Section_3D
 import LinearAlgebraDoneRightLean.Section_7C
 import LinearAlgebraDoneRightLean.Section_7D
 import LinearAlgebraDoneRightLean.Section_7E
+import LinearAlgebraDoneRightLean.Section_7F
 import CompanionHelper
 
 /-!
@@ -569,9 +570,14 @@ theorem exercise_9C_3 [Finite F V] (T : V →ₗ[F] V) (h : IsNilpotent T) :
     LinearMap.det (LinearMap.id + T) = 1 := by
   sorry
 
-/-! 9C.4 (deferred): {lit}`S` is unitary iff {lit}`|det S| = ‖S‖ = 1`. Deferred —
-it mixes the determinant with the operator norm {lit}`‖S‖` of Section 7F, whose
-inner-product-space norm machinery is outside this determinant-focused section. -/
+/-- 9C.4 {lit}`S` is unitary iff {lit}`|det S| = ‖S‖ = 1`. Needs an inner product,
+so it carries its own hypotheses rather than the section's bare {lit}`F`-vector
+space; {lit}`‖S‖` is the operator norm {name}`LADR.Section_7F.opNorm`. -/
+theorem exercise_9C_4 {𝕜 : Type*} [RCLike 𝕜] {E : Type*} [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (S : E →ₗ[𝕜] E) :
+    LADR.Section_7D.IsUnitary S ↔
+      ‖LinearMap.det S‖ = 1 ∧ LADR.Section_7F.opNorm S = 1 := by
+  sorry
 
 /-- 9C.5 The determinant of a block upper-triangular matrix is the product of the
 determinants of the diagonal blocks. -/
@@ -628,11 +634,15 @@ theorem exercise_9C_11 :
       0 < LinearMap.det T ∧ ¬ ∃ S : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ), S ∘ₗ S = T := by
   sorry
 
-/-! 9C.12 (deferred): for invertible {lit}`S`, {lit}`p(z) = det(zS − T)` is a
-polynomial of degree {lit}`dim V` with leading coefficient {lit}`det S`. Deferred —
-establishing that {lit}`z ↦ det(zS − T)` is a polynomial (and reading off its
-degree and leading coefficient) needs the determinant-as-polynomial-in-a-parameter
-development not set up here. -/
+/-- 9C.12 For invertible {lit}`S`, the function {lit}`p(z) = det(zS − T)` is a
+polynomial of degree {lit}`dim V` in which the coefficient of {lit}`z^{dim V}` is
+{lit}`det S`. "Is a polynomial" is stated as the existence of a
+{name}`Polynomial` whose evaluation agrees with it. -/
+theorem exercise_9C_12 [Finite F V] (S T : V →ₗ[F] V) (hS : IsInvertible S) :
+    ∃ p : Polynomial F, p.natDegree = finrank F V ∧
+      p.coeff (finrank F V) = LinearMap.det S ∧
+      ∀ z : F, p.eval z = LinearMap.det (z • S - T) := by
+  sorry
 
 /-- 9C.13 Over {lit}`ℂ` with {lit}`n = dim V > 2`, the coefficient of {lit}`z^{n−2}`
 in the characteristic polynomial is the elementary symmetric polynomial {lit}`e₂` of

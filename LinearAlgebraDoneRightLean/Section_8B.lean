@@ -219,11 +219,10 @@ theorem multiplicity_eq_finrank_ker_pow {V : Type*} [AddCommGroup V] [Module ℂ
 Let {lit}`T ∈ ℒ(ℂ³)` be {lit}`T(z₁, z₂, z₃) = (6z₁ + 3z₂ + 4z₃, 6z₂ + 2z₃, 7z₃)`.
 The eigenvalues of {lit}`T` are {lit}`6` and {lit}`7`, with
 {lit}`G(6, T) = span((1,0,0), (0,1,0))` and {lit}`G(7, T) = span((10,2,1))`, so
-the multiplicity of {lit}`6` is {lit}`2` and of {lit}`7` is {lit}`1`. We record
-the operator and verify that {lit}`6` and {lit}`7` are eigenvalues (with
-eigenvectors {lit}`(1,0,0)` and {lit}`(10,2,1)`); the full computation of the
-generalized eigenspaces (hence of the multiplicities) is omitted, as it requires
-the upper-triangular multiplicity count 8.31 which we defer below. -/
+the multiplicity of {lit}`6` is {lit}`2` and of {lit}`7` is {lit}`1`. The matrix
+of {lit}`T` in the standard basis is upper triangular with diagonal
+{lit}`6, 6, 7`, so 8.31 (proved below) reads off the multiplicities; the
+generalized eigenspaces then follow by comparing dimensions. -/
 
 def T_8_24 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
   toFun v := ![6 * v 0 + 3 * v 1 + 4 * v 2, 6 * v 1 + 2 * v 2, 7 * v 2]
@@ -243,6 +242,77 @@ example : HasEigenvalue T_8_24 7 := by
   · rw [Module.End.mem_eigenspace_iff]
     funext i; fin_cases i <;> simp [T_8_24] <;> ring
   · intro h; have := congrFun h 2; simp at this
+
+/-- The matrix of {name}`T_8_24` in the standard basis of {lit}`ℂ³`. -/
+theorem toMatrix_T_8_24 :
+    LinearMap.toMatrix (Pi.basisFun ℂ (Fin 3)) (Pi.basisFun ℂ (Fin 3)) T_8_24 =
+      !![6, 3, 4; 0, 6, 2; 0, 0, 7] := by
+  ext i j
+  fin_cases i <;> fin_cases j <;> simp [T_8_24]
+
+/-- 8.27 Example: the characteristic polynomial of {name}`T_8_24` is
+{lit}`(z − 6)²(z − 7)`. The matrix of 8.24 is upper triangular, so the
+characteristic polynomial is the product of {lit}`X − dᵢ` over its diagonal. -/
+theorem charpoly_T_8_24 :
+    LinearMap.charpoly T_8_24 = (X - C 6) ^ 2 * (X - C 7) := by
+  have hUT : (!![6, 3, 4; 0, 6, 2; 0, 0, 7] : Matrix (Fin 3) (Fin 3) ℂ).BlockTriangular id := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> first | exact absurd h (by decide) | simp
+  rw [← LinearMap.charpoly_toMatrix T_8_24 (Pi.basisFun ℂ (Fin 3)), toMatrix_T_8_24,
+    Matrix.charpoly_of_upperTriangular _ hUT, Fin.prod_univ_three]
+  norm_num [Matrix.cons_val_two, Matrix.tail_cons, sq]
+
+/-- 8.24 Example: the multiplicities of the eigenvalues {lit}`6` and {lit}`7` of
+{name}`T_8_24` are {lit}`2` and {lit}`1`, read off the characteristic
+polynomial. -/
+theorem multiplicity_T_8_24 : multiplicity T_8_24 6 = 2 ∧ multiplicity T_8_24 7 = 1 := by
+  have hne : ((X - C 6) ^ 2 * (X - C 7) : Polynomial ℂ) ≠ 0 := by
+    apply mul_ne_zero (pow_ne_zero 2 (Polynomial.X_sub_C_ne_zero 6))
+    exact Polynomial.X_sub_C_ne_zero 7
+  constructor
+  · rw [multiplicity_eq_rootMultiplicity, charpoly_T_8_24,
+      Polynomial.rootMultiplicity_mul hne, Polynomial.rootMultiplicity_X_sub_C_pow,
+      Polynomial.rootMultiplicity_eq_zero (by norm_num [Polynomial.IsRoot]), add_zero]
+  · rw [multiplicity_eq_rootMultiplicity, charpoly_T_8_24,
+      Polynomial.rootMultiplicity_mul hne, Polynomial.rootMultiplicity_X_sub_C,
+      Polynomial.rootMultiplicity_eq_zero (by norm_num [Polynomial.IsRoot]), zero_add,
+      if_pos rfl]
+
+/-- 8.24 Example: the generalized eigenspaces of {name}`T_8_24` are
+{lit}`G(6, T) = span((1,0,0), (0,1,0))` and {lit}`G(7, T) = span((10,2,1))`. Each
+containment is a computation; equality then follows from the multiplicities,
+since {lit}`dim G(μ, T)` is the multiplicity. -/
+theorem maxGenEigenspace_T_8_24 :
+    maxGenEigenspace T_8_24 6 = Submodule.span ℂ {![1, 0, 0], ![0, 1, 0]} ∧
+      maxGenEigenspace T_8_24 7 = Submodule.span ℂ {![10, 2, 1]} := by
+  obtain ⟨h6, h7⟩ := multiplicity_T_8_24
+  have hspan6 : finrank ℂ (Submodule.span ℂ ({![1, 0, 0], ![0, 1, 0]} : Set (Fin 3 → ℂ))) = 2 := by
+    have hli : LinearIndependent ℂ ![(![1, 0, 0] : Fin 3 → ℂ), ![0, 1, 0]] := by
+      rw [LinearIndependent.pair_iff]
+      refine fun s t hst => ⟨?_, ?_⟩
+      · have := congrFun hst 0; simpa using this
+      · have := congrFun hst 1; simpa using this
+    have hrange : ({![1, 0, 0], ![0, 1, 0]} : Set (Fin 3 → ℂ)) =
+        Set.range ![(![1, 0, 0] : Fin 3 → ℂ), ![0, 1, 0]] := by
+      ext x; simp [or_comm]
+    rw [hrange, finrank_span_eq_card hli, Fintype.card_fin]
+  constructor
+  · refine (Submodule.eq_of_le_of_finrank_eq ?_ ?_).symm
+    · rw [Submodule.span_le]
+      rintro x (rfl | rfl) <;> rw [SetLike.mem_coe, Module.End.mem_maxGenEigenspace]
+      · exact ⟨1, by funext i; fin_cases i <;> simp [T_8_24]⟩
+      · refine ⟨2, ?_⟩
+        rw [pow_two, Module.End.mul_apply]
+        funext i
+        fin_cases i <;> simp [T_8_24]
+    · rw [hspan6]; exact h6.symm
+  · refine (Submodule.eq_of_le_of_finrank_eq ?_ ?_).symm
+    · rw [Submodule.span_le]
+      rintro x rfl
+      rw [SetLike.mem_coe, Module.End.mem_maxGenEigenspace]
+      exact ⟨1, by funext i; fin_cases i <;> simp [T_8_24] <;> ring⟩
+    · rw [finrank_span_singleton (by intro h; have := congrFun h 2; simp at this)]
+      exact h7.symm
 
 /-! 8.25 The sum of the multiplicities equals {lit}`dim V`.
 
@@ -303,8 +373,9 @@ theorem charpoly_eq_charpoly {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite
 /-! 8.27 Example: the characteristic polynomial of the operator {lit}`T` of
 Example 8.24. Because the eigenvalues of {lit}`T` are {lit}`6` (multiplicity
 {lit}`2`) and {lit}`7` (multiplicity {lit}`1`), the characteristic polynomial of
-{lit}`T` is {lit}`(z − 6)²(z − 7)`. This depends on the multiplicity computation
-of 8.24, which we deferred, so we only record the statement here. -/
+{lit}`T` is {lit}`(z − 6)²(z − 7)`. Proved above as
+{name}`LADR.Section_8B.charpoly_T_8_24`, alongside the multiplicity computation
+{name}`LADR.Section_8B.multiplicity_T_8_24` that it feeds. -/
 
 /-! 8.28 Degree and zeros of the characteristic polynomial.
 
@@ -379,12 +450,14 @@ theorem multiplicity_eq_diagonal_count {V : Type*} [AddCommGroup V] [Module ℂ 
 
 /-! 8.35 Definition: block diagonal matrix. A *block diagonal matrix* is a
 square matrix with square matrices {lit}`A₁, …, Aₘ` along the diagonal and zeros
-elsewhere. In mathlib this is {name}`Matrix.blockDiagonal'`. We do not develop
-the matrix-of-a-basis correspondence here, so we describe it only in prose. -/
+elsewhere. In mathlib this is {name}`Matrix.blockDiagonal'`. Concrete instances
+are recorded as explicit matrices (see 8.38 below), which avoids the dependent
+{lit}`Sigma`-indexing of {name}`Matrix.blockDiagonal'`. -/
 
 /-! 8.36 Example: a block diagonal matrix — a {lit}`5`-by-{lit}`5` matrix built
 from a {lit}`1`-by-{lit}`1` block {lit}`(4)`, a {lit}`2`-by-{lit}`2` block, and
-another {lit}`2`-by-{lit}`2` block. Omitted (see 8.35). -/
+another {lit}`2`-by-{lit}`2` block. This is a picture of the shape defined in
+8.35, with no propositional content of its own; 8.38 is the worked instance. -/
 
 /-! 8.37 Block diagonal matrix with upper-triangular blocks.
 
@@ -444,8 +517,53 @@ theorem exists_upperTriangular_restrict_maxGenEigenspace [Finite F V] (T : V →
 
 /-! 8.38 Example: block diagonal matrix via generalized eigenvectors — for the
 operator of 8.24, with respect to the basis {lit}`(1,0,0), (0,1,0), (10,2,1)` of
-generalized eigenvectors, {lit}`T` has the block diagonal matrix with blocks
-{lit}`[[6,3],[0,6]]` and {lit}`(7)`. Omitted (see 8.37). -/
+generalized eigenvectors (the bases of {lit}`G(6,T)` and {lit}`G(7,T)` found in
+8.24 concatenated), {lit}`T` has the block diagonal matrix with blocks
+{lit}`[[6,3],[0,6]]` and {lit}`(7)`. -/
+
+/-- The basis of generalized eigenvectors of {name}`T_8_24` used in 8.38. -/
+def basisVec_8_38 : Fin 3 → (Fin 3 → ℂ) := ![![1, 0, 0], ![0, 1, 0], ![10, 2, 1]]
+
+theorem isBasis_basisVec_8_38 : IsBasis ℂ basisVec_8_38 := by
+  refine LADR.Section_2C.isBasis_of_linearIndependent_of_card_eq _ ?_ (by simp)
+  rw [Fintype.linearIndependent_iff]
+  intro g hg i
+  have h0 := congrFun hg 0
+  have h1 := congrFun hg 1
+  have h2 := congrFun hg 2
+  simp [basisVec_8_38, Fin.sum_univ_three] at h0 h1 h2
+  fin_cases i <;> simp_all
+
+/-- Reading off a coordinate of {name}`isBasis_basisVec_8_38`: if
+{lit}`x = ∑ cᵢ vᵢ` then the {lit}`j`-th coordinate of {lit}`x` is {lit}`cⱼ`. -/
+theorem repr_basisVec_8_38 (x : Fin 3 → ℂ) (c : Fin 3 → ℂ)
+    (hx : x = ∑ i, c i • basisVec_8_38 i) (j : Fin 3) :
+    isBasis_basisVec_8_38.toModuleBasis.repr x j = c j := by
+  have hb : ∀ i, basisVec_8_38 i = isBasis_basisVec_8_38.toModuleBasis i := fun i =>
+    (IsBasis.toModuleBasis_apply isBasis_basisVec_8_38 i).symm
+  subst hx
+  simp only [hb, map_sum, map_smul, Module.Basis.repr_self, Finsupp.coe_smul, Pi.smul_apply,
+    Finsupp.single_apply, smul_eq_mul, Finset.sum_apply', mul_ite, mul_one, mul_zero]
+  simp [eq_comm]
+
+/-- 8.38 Example: the matrix of {name}`T_8_24` with respect to the basis
+{name}`basisVec_8_38` of generalized eigenvectors is block diagonal, with blocks
+{lit}`[[6,3],[0,6]]` (for the eigenvalue {lit}`6`) and {lit}`(7)`. -/
+theorem matrixOf_T_8_24 :
+    matrixOf isBasis_basisVec_8_38 isBasis_basisVec_8_38 T_8_24 =
+      !![6, 3, 0; 0, 6, 0; 0, 0, 7] := by
+  ext j k
+  rw [matrixOf_apply]
+  fin_cases k
+  · rw [repr_basisVec_8_38 _ ![6, 0, 0]
+      (by funext i; fin_cases i <;> simp [T_8_24, basisVec_8_38, Fin.sum_univ_three])]
+    fin_cases j <;> simp
+  · rw [repr_basisVec_8_38 _ ![3, 6, 0]
+      (by funext i; fin_cases i <;> simp [T_8_24, basisVec_8_38, Fin.sum_univ_three])]
+    fin_cases j <;> simp
+  · rw [repr_basisVec_8_38 _ ![0, 0, 7]
+      (by funext i; fin_cases i <;> simp [T_8_24, basisVec_8_38, Fin.sum_univ_three] <;> ring)]
+    fin_cases j <;> simp
 
 /-! # Exercises -/
 
