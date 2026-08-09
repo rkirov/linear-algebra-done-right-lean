@@ -118,3 +118,23 @@ Derived from the review-pass commits: 0777fe5 (5D), cf54f39 (5E),
 - **Example:** 7.26 stated only as `quadratic_pos` (positivity of
   `⟨(T² + bT + cI)v, v⟩`); the book's claim — `T² + bT + cI` is invertible —
   added as `quadratic_isInvertible`.
+
+## P10 — Proof-internal coercion leaking into a statement
+
+- **Symptom:** a hypothesis or conclusion carries a type-synonym lift that only the
+  *proof* needs — most often columns of a matrix pushed through
+  `(EuclideanSpace.equiv n 𝕜).symm` so Gram–Schmidt applies, in a statement whose
+  claim (linear independence, triangularity) is purely algebraic.
+- **Detect:** `rg -n "EuclideanSpace.equiv|WithLp.toLp|PiLp" LinearAlgebraDoneRightLean/Section_X.lean`,
+  then ask of each hit in a *statement*: does the claim use the ℓ² norm or inner
+  product? If not, the lift belongs inside the proof.
+- **Why:** a reader must check the round-trip changes nothing, and callers must
+  manufacture the lift; `LinearIndependent 𝕜 A.col` is directly mathlib's idiom
+  (`Matrix.linearIndependent_cols_iff_isUnit`) while the lifted form is not.
+- **Fix:** state the plain form and transfer inside the proof along
+  `WithLp.linearEquiv` (`LinearIndependent.map'` in both directions). Prefer
+  `A.col`/`A.row` over `Aᵀ i`/eta-expanded lambdas, and `WithLp.toLp 2` over
+  `(EuclideanSpace.equiv …).symm` where a lift genuinely is needed (e.g. a norm).
+- **Example:** `QR_factorization`, `cholesky_factorization`, 7D.20 and 9.66/9C.19
+  restated on `A.col`; the ℓ² lift kept only where Hadamard's inequality measures
+  `‖·‖`.

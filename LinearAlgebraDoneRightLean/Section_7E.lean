@@ -296,7 +296,7 @@ theorem surjective_iff_card_pos_singularValues (T : V →ₗ[𝕜] W) :
 {lit}`1`, because {lit}`S` is an isometry {lit}`⟺ S* S = I` (7.49) {lit}`⟺` all
 eigenvalues of {lit}`S* S` equal {lit}`1` (spectral theorem). -/
 theorem isometry_iff_singularValues_eq_one (S : V →ₗ[𝕜] W) :
-    LADR.Section_7D.IsIsometry S ↔ ∀ i, singularValues S i = 1 := by
+    Isometry S ↔ ∀ i, singularValues S i = 1 := by
   rw [LADR.Section_7D.isometry_iff_adjoint_comp]
   constructor
   · intro hS i
@@ -653,7 +653,7 @@ theorem exercise_7E_12b (T : V →ₗ[𝕜] V) (hN : IsStarNormal T) :
 unitary {lit}`S₁, S₂`. -/
 theorem exercise_7E_13 (T₁ T₂ : V →ₗ[𝕜] V) :
     ({r : ℝ | ∃ i, singularValues T₁ i = r} = {r : ℝ | ∃ i, singularValues T₂ i = r}) ↔
-      ∃ S₁ S₂ : V →ₗ[𝕜] V, LADR.Section_7D.IsUnitary S₁ ∧ LADR.Section_7D.IsUnitary S₂ ∧
+      ∃ S₁ S₂ : V →ₗ[𝕜] V, S₁ ∈ unitary (V →ₗ[𝕜] V) ∧ S₂ ∈ unitary (V →ₗ[𝕜] V) ∧
         T₁ = S₁ ∘ₗ T₂ ∘ₗ S₂ := by
   sorry
 

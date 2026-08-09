@@ -298,10 +298,10 @@ variable {𝕜 : Type*} [RCLike 𝕜]
 Following Axler: {lit}`S* S = I` (7.53), so {lit}`conj(det S)·det S = det(S*)·det S
 = det(S* S) = 1` using 9.56(c) ({name}`det_adjoint_eq_conj`); taking norms gives
 {lit}`‖det S‖² = 1`. -/
-theorem det_unitary_norm_eq_one {S : E →ₗ[𝕜] E} (h : LADR.Section_7D.IsUnitary S) :
+theorem det_unitary_norm_eq_one {S : E →ₗ[𝕜] E} (h : S ∈ unitary (E →ₗ[𝕜] E)) :
     ‖LinearMap.det S‖ = 1 := by
   have hSS : LinearMap.adjoint S ∘ₗ S = 1 :=
-    ((LADR.Section_7D.isUnitary_iff_adjoint S).mp h).1
+    ((LADR.Section_7D.mem_unitary_iff_adjoint S).mp h).1
   have hdet : conj (LinearMap.det S) * LinearMap.det S = 1 := by
     rw [← det_adjoint_eq_conj, ← LinearMap.det_comp, hSS, Module.End.one_eq_id,
       LinearMap.det_id]
@@ -493,13 +493,11 @@ triangular), and {lit}`|Rₖₖ| ≤ ‖vₖ‖` because {lit}`‖vₖ‖² = (A
 ∑ⱼ |Rⱼₖ|² ≥ |Rₖₖ|²` (using {lit}`Q*Q = I`). -/
 theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
     (A : Matrix (Fin n) (Fin n) 𝕜) :
-    ‖A.det‖ ≤ ∏ i, ‖(EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i)‖ := by
+    ‖A.det‖ ≤ ∏ i, ‖(WithLp.toLp 2 (A.col i) : EuclideanSpace 𝕜 (Fin n))‖ := by
   classical
-  set col : Fin n → EuclideanSpace 𝕜 (Fin n) :=
-    fun i => (EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i) with hcol
-  by_cases hindep : LinearIndependent 𝕜 col
-  · obtain ⟨Q, R, hQ, hRtri, _, hAQR⟩ := LADR.Section_7D.QR_factorization A hindep
-    have hRupper : R.BlockTriangular id := hRtri
+  set col : Fin n → EuclideanSpace 𝕜 (Fin n) := fun i => WithLp.toLp 2 (A.col i) with hcol
+  by_cases hindep : LinearIndependent 𝕜 A.col
+  · obtain ⟨Q, R, hQ, hRupper, _, hAQR⟩ := LADR.Section_7D.QR_factorization A hindep
     have hQdet : ‖Q.det‖ = 1 := by
       have hu := (Unitary.mem_iff.mp (Matrix.det_of_mem_unitary hQ)).1
       rw [RCLike.star_def, RCLike.conj_mul] at hu
@@ -532,11 +530,7 @@ theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
       positivity
     have h1 := Real.sqrt_le_sqrt hge
     rwa [Real.sqrt_sq (norm_nonneg _), Real.sqrt_sq (norm_nonneg _)] at h1
-  · have hdet0 : A.det = 0 := by
-      apply Matrix.det_eq_zero_of_not_linearIndependent_cols
-      intro hdep
-      exact hindep (hdep.map' ((EuclideanSpace.equiv (Fin n) 𝕜).symm.toLinearEquiv.toLinearMap)
-        (LinearMap.ker_eq_bot.mpr (EuclideanSpace.equiv (Fin n) 𝕜).symm.injective))
+  · have hdet0 : A.det = 0 := Matrix.det_eq_zero_of_not_linearIndependent_cols hindep
     rw [hdet0, norm_zero]
     exact Finset.prod_nonneg (fun i _ => norm_nonneg _)
 
@@ -575,7 +569,7 @@ so it carries its own hypotheses rather than the section's bare {lit}`F`-vector
 space; {lit}`‖S‖` is the operator norm {name}`LADR.Section_7F.opNorm`. -/
 theorem exercise_9C_4 {𝕜 : Type*} [RCLike 𝕜] {E : Type*} [NormedAddCommGroup E]
     [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (S : E →ₗ[𝕜] E) :
-    LADR.Section_7D.IsUnitary S ↔
+    S ∈ unitary (E →ₗ[𝕜] E) ↔
       ‖LinearMap.det S‖ = 1 ∧ LADR.Section_7F.opNorm S = 1 := by
   sorry
 
@@ -699,10 +693,10 @@ vectors of {lit}`EuclideanSpace` exactly as in
 {name}`LADR.Section_9C.hadamard_inequality`. -/
 theorem exercise_9C_19 {𝕜 : Type*} [RCLike 𝕜] {n : ℕ} (A : Matrix (Fin n) (Fin n) 𝕜)
     (hA : IsUnit A.det) :
-    ‖A.det‖ = ∏ i, ‖(EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i)‖ ↔
+    ‖A.det‖ = ∏ i, ‖(WithLp.toLp 2 (A.col i) : EuclideanSpace 𝕜 (Fin n))‖ ↔
       ∀ i j, i ≠ j →
-        ⟪(EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i),
-          (EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ j)⟫_𝕜 = 0 := by
+        ⟪(WithLp.toLp 2 (A.col i) : EuclideanSpace 𝕜 (Fin n)),
+          (WithLp.toLp 2 (A.col j) : EuclideanSpace 𝕜 (Fin n))⟫_𝕜 = 0 := by
   sorry
 
 open scoped InnerProductSpace in
