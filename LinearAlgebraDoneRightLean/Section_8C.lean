@@ -591,12 +591,12 @@ end JordanBasis
 /-! For every {lit}`T ∈ ℒ(V)` over {lit}`ℂ` there is a basis giving a "nice"
 upper-triangular matrix (8.37); the Jordan form does better, producing a matrix
 that is {lit}`0` except on the diagonal and the line directly above it. The
-constructions and definitions in this subsection (8.44–8.46) are phrased entirely
-in terms of the matrix {lit}`ℳ(T, basis)` of an operator with respect to a
-basis, machinery that — as in the deferrals of 8.18(c) (Section 8A) and 8.31,
-8.37 (Section 8B) — is not developed in these companion sections. We record the
-two motivating nilpotent examples (8.42, 8.43), whose nilpotency we do prove, and
-state the definition and theorems in prose with deferral notes. -/
+constructions and definitions in this subsection (8.44–8.46) are phrased by Axler
+in terms of the matrix {lit}`ℳ(T, basis)` of an operator with respect to a basis.
+We instead encode them by their eigenvalue chains
+({name}`LADR.Section_8C.HasJordanBasis`), which carries the same content without
+committing to a block layout, and prove 8.45 and 8.46 in that form. We also record
+the two motivating nilpotent examples (8.42, 8.43). -/
 
 /-! 8.42 Example: nilpotent operator with nice matrix.
 

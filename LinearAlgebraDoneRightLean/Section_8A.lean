@@ -290,13 +290,11 @@ theorem isNilpotent_iff_exists_pow (T : V →ₗ[F] V) :
 {lit}`T² = 0`.
 
 (b) The operator on {lit}`F³` with matrix
-{lit}`[[-3, 9, 0], [-7, 9, 6], [4, 0, -6]]` is nilpotent (its cube is the zero
-matrix); we omit the explicit matrix computation.
+{lit}`[[-3, 9, 0], [-7, 9, 6], [4, 0, -6]]` is nilpotent, its cube being the zero
+matrix.
 
 (c) Differentiation on {lit}`𝒫ₘ(ℝ)` is nilpotent, since the {lit}`(m+1)`-th
-derivative of a polynomial of degree at most {lit}`m` is {lit}`0`; formalizing
-this needs the restriction operator on {lit}`degreeLT ℝ (m+1)` (cf. Exercise
-5A.10) and is omitted here. -/
+derivative of a polynomial of degree at most {lit}`m` is {lit}`0`. -/
 
 def T_8_15a (F : Type*) [Field F] : (Fin 4 → F) →ₗ[F] (Fin 4 → F) where
   toFun v := ![0, 0, v 0, v 1]
@@ -310,6 +308,49 @@ example : IsNilpotent (T_8_15a F) := by
   funext i
   fin_cases i <;>
     simp [pow_succ, Module.End.mul_apply, T_8_15a]
+
+/-- The matrix of 8.15(b). -/
+def A_8_15b (F : Type*) [Field F] : Matrix (Fin 3) (Fin 3) F :=
+  !![-3, 9, 0; -7, 9, 6; 4, 0, -6]
+
+/-- 8.15(b) The cube of the matrix of 8.15(b) is the zero matrix. -/
+theorem A_8_15b_pow_three : (A_8_15b F) ^ 3 = 0 := by
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [A_8_15b, pow_succ, Matrix.mul_apply, Fin.sum_univ_three] <;> ring
+
+/-- 8.15(b) The operator on {lit}`F³` with that matrix is therefore nilpotent. -/
+theorem isNilpotent_toLin'_A_8_15b : IsNilpotent (Matrix.toLinAlgEquiv' (A_8_15b F)) :=
+  ⟨3, by rw [← map_pow, A_8_15b_pow_three, map_zero]⟩
+
+/-- 8.15(c) Differentiation {lit}`D p = p′` on {lit}`𝒫ₘ(ℝ)`, modelled as
+{lit}`Polynomial.degreeLT ℝ (m+1)`, is nilpotent: {lit}`D^{m+1} = 0` because the
+{lit}`(m+1)`-th derivative of a polynomial of degree at most {lit}`m` is
+{lit}`0`. -/
+theorem isNilpotent_derivative_degreeLT (m : ℕ)
+    (D : Polynomial.degreeLT ℝ (m + 1) →ₗ[ℝ] Polynomial.degreeLT ℝ (m + 1))
+    (hD : ∀ p : Polynomial.degreeLT ℝ (m + 1),
+      (D p : Polynomial ℝ) = Polynomial.derivative (p : Polynomial ℝ)) :
+    IsNilpotent D := by
+  have hpow : ∀ (k : ℕ) (p : Polynomial.degreeLT ℝ (m + 1)),
+      ((D ^ k) p : Polynomial ℝ) = Polynomial.derivative^[k] (p : Polynomial ℝ) := by
+    intro k
+    induction k with
+    | zero => intro p; simp
+    | succ n ih =>
+      intro p
+      rw [pow_succ, Module.End.mul_apply, ih (D p), hD p, ← Function.iterate_succ_apply]
+  refine ⟨m + 1, ?_⟩
+  apply LinearMap.ext
+  intro p
+  apply Subtype.ext
+  rw [hpow]
+  have hdeg : (p : Polynomial ℝ).natDegree < m + 1 := by
+    rcases eq_or_ne (p : Polynomial ℝ) 0 with h0 | h0
+    · simp [h0]
+    · exact (Polynomial.natDegree_lt_iff_degree_lt h0).mpr (Polynomial.mem_degreeLT.mp p.2)
+  rw [Polynomial.iterate_derivative_eq_zero hdeg]
+  rfl
 
 /-! 8.16 A nilpotent operator raised to the dimension of the domain is
 {lit}`0`: if {lit}`T` is nilpotent then {lit}`T^{dim V} = 0`.
