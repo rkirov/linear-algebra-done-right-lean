@@ -24,6 +24,46 @@ variable {𝕜 : Type*} [RCLike 𝕜]
 
 /-! # Singular Values -/
 
+/-! 7.64 Properties of {lit}`T* T`
+
+For {lit}`T ∈ ℒ(V, W)`: (a) {lit}`T* T` is a positive operator on {lit}`V`;
+(b) {lit}`null (T* T) = null T`; (c) {lit}`range (T* T) = range T*`;
+(d) {lit}`dim range T = dim range T* = dim range (T* T)`. Axler proves this first
+because the whole section rests on it — the singular values of 7.65 are defined from the
+eigenvalues of {lit}`T* T`, which (a) makes nonnegative.
+
+All four parts are in mathlib, whose own docstrings cite this result by number:
+{name}`LinearMap.isPositive_adjoint_comp_self`, {name}`LinearMap.ker_adjoint_comp_self`
+(7.64(b)), {name}`LinearMap.range_adjoint_comp_self` (7.64(c)) and
+{name}`LinearMap.finrank_range_adjoint` (part of 7.64(d)), so the items below record
+Axler's statements in his phrasing. -/
+
+/-- 7.64(a) {lit}`T* T` is a positive operator on {lit}`V`, for any {lit}`T ∈ ℒ(V, W)`.
+The endomorphism case is {name}`LADR.Section_7C.adjoint_comp_self_isPositive`. -/
+theorem adjComp_self_isPositive (T : V →ₗ[𝕜] W) :
+    (LinearMap.adjoint T ∘ₗ T).IsPositive :=
+  LinearMap.isPositive_adjoint_comp_self T
+
+/-- 7.64(b) {lit}`null (T* T) = null T`. Axler's proof: {lit}`T* T v = 0` gives
+{lit}`‖T v‖² = ⟨T* T v, v⟩ = 0`; the other inclusion is immediate. -/
+theorem ker_adjComp_self (T : V →ₗ[𝕜] W) :
+    LinearMap.ker (LinearMap.adjoint T ∘ₗ T) = LinearMap.ker T :=
+  LinearMap.ker_adjoint_comp_self T
+
+/-- 7.64(c) {lit}`range (T* T) = range T*`. Axler's proof: {lit}`T* T` is self-adjoint by
+(a), so {lit}`range (T* T) = (null (T* T))⟂ = (null T)⟂ = range T*` using (b) and 7.6. -/
+theorem range_adjComp_self (T : V →ₗ[𝕜] W) :
+    LinearMap.range (LinearMap.adjoint T ∘ₗ T) = LinearMap.range (LinearMap.adjoint T) :=
+  LinearMap.range_adjoint_comp_self T
+
+/-- 7.64(d) {lit}`dim range T = dim range T* = dim range (T* T)`; the second equality is
+(c). -/
+theorem finrank_range_adjComp_self (T : V →ₗ[𝕜] W) :
+    finrank 𝕜 (LinearMap.range T) = finrank 𝕜 (LinearMap.range (LinearMap.adjoint T)) ∧
+      finrank 𝕜 (LinearMap.range (LinearMap.adjoint T)) =
+        finrank 𝕜 (LinearMap.range (LinearMap.adjoint T ∘ₗ T)) :=
+  ⟨(LinearMap.finrank_range_adjoint T).symm, by rw [range_adjComp_self]⟩
+
 /-! 7.65 Definition: singular values
 
 The *singular values* of {lit}`T ∈ ℒ(V, W)` are the nonnegative square roots of
@@ -39,21 +79,6 @@ so {lit}`singularValues T : Fin (finrank 𝕜 V) → ℝ` with
 multiplicity* (one value per basis vector); Axler additionally lists them in
 decreasing order, an ordering choice we do not track here as it plays no role in
 the results below. -/
-
-/-- {lit}`T* T` is a positive operator on {lit}`V` (7.64(a)), for any
-{lit}`T ∈ ℒ(V, W)`. This is the {lit}`V →ₗ W` analogue of
-{name}`LADR.Section_7C.adjoint_comp_self_isPositive` (which is stated for
-endomorphisms); the proof is identical. -/
-theorem adjComp_self_isPositive (T : V →ₗ[𝕜] W) :
-    (LinearMap.adjoint T ∘ₗ T).IsPositive := by
-  constructor
-  · intro x y
-    simp only [LinearMap.comp_apply]
-    rw [LinearMap.adjoint_inner_left, ← LinearMap.adjoint_inner_right]
-  · intro x
-    simp only [LinearMap.comp_apply, LinearMap.adjoint_inner_left]
-    rw [inner_self_eq_norm_sq_to_K]
-    simp
 
 /-- The orthonormal eigenbasis of {lit}`T* T` used throughout this section. -/
 noncomputable def svdBasis (T : V →ₗ[𝕜] W) :
@@ -84,7 +109,10 @@ theorem singularValues_sq (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
       (adjComp_self_isPositive T).isSymmetric.eigenvalues rfl i :=
   Real.sq_sqrt (eigenvalues_nonneg T i)
 
-/-- 7.72 The eigenbasis vectors satisfy {lit}`T* T eₖ = sₖ² eₖ`. -/
+/-- The spectral theorem applied to the positive operator {lit}`T* T`: the eigenbasis
+vectors satisfy {lit}`T* T eₖ = sₖ² eₖ`. Axler numbers this equation 7.72, inside the proof
+of 7.70, but it is available as soon as 7.65's eigenbasis exists and 7.68/7.69 below rest on
+it, so it is stated here with the rest of the 7.65 machinery. -/
 theorem adjComp_apply_svdBasis (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
     (LinearMap.adjoint T ∘ₗ T) (svdBasis T i) =
       (((singularValues T i) ^ 2 : ℝ) : 𝕜) • svdBasis T i := by
@@ -97,7 +125,8 @@ theorem svdBasis_ne_zero (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) : svd
   rw [h, norm_zero] at this
   norm_num at this
 
-/-! 7.73 The key orthogonality computation. Writing {lit}`eₖ = svdBasis T k`,
+/-! The key orthogonality computation, Axler's equation 7.73 in the proof of 7.70.
+Writing {lit}`eₖ = svdBasis T k`,
 {lit}`⟨T eⱼ, T eₖ⟩ = ⟨eⱼ, T* T eₖ⟩ = sₖ² ⟨eⱼ, eₖ⟩`, which is {lit}`sₖ²` when
 {lit}`j = k` and {lit}`0` otherwise. -/
 theorem inner_image_svdBasis (T : V →ₗ[𝕜] W) (j k : Fin (finrank 𝕜 V)) :
@@ -120,6 +149,301 @@ theorem norm_image_svdBasis (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
     rwa [← RCLike.ofReal_pow, RCLike.ofReal_re, RCLike.ofReal_re] at hre
   rw [← Real.sqrt_sq (norm_nonneg (T (svdBasis T i))), h2,
     Real.sqrt_sq (singularValues_nonneg T i)]
+
+/-! 7.66 Example: singular values of an operator on {lit}`𝔽⁴`
+
+For {lit}`T(z₁, z₂, z₃, z₄) = (0, 3z₁, 2z₂, −3z₄)` on {lit}`𝔽⁴`, Axler computes
+{lit}`T* T(z₁, z₂, z₃, z₄) = (9z₁, 4z₂, 0, 9z₄)` ("as you should verify"), reads off the
+eigenvalues {lit}`9, 4, 0` of {lit}`T* T` with
+{lit}`dim E(9, T* T) = 2`, {lit}`dim E(4, T* T) = 1`, {lit}`dim E(0, T* T) = 1`, and
+concludes that the singular values of {lit}`T` are {lit}`3, 3, 2, 0`. The point of the
+example: the only eigenvalues of {lit}`T` itself are {lit}`−3` and {lit}`0`, so the
+eigenvalues miss the {lit}`2` that governs {lit}`T`'s behaviour, while the singular values
+see it.
+
+We define {lit}`T` through its matrix in the standard basis, which makes {lit}`T* T` the
+matrix product {lit}`Aᴴ A`. -/
+
+/-- The matrix of the operator of Example 7.66 in the standard basis of {lit}`𝔽⁴`: its
+columns are {lit}`T e₁ = (0,3,0,0)`, {lit}`T e₂ = (0,0,2,0)`, {lit}`T e₃ = 0` and
+{lit}`T e₄ = (0,0,0,−3)`. -/
+def A_7_66 : Matrix (Fin 4) (Fin 4) 𝕜 :=
+  !![0, 0, 0, 0;
+     3, 0, 0, 0;
+     0, 2, 0, 0;
+     0, 0, 0, -3]
+
+/-- The operator {lit}`T(z₁, z₂, z₃, z₄) = (0, 3z₁, 2z₂, −3z₄)` of Example 7.66. -/
+noncomputable def T_7_66 : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4) :=
+  Matrix.toEuclideanLin A_7_66
+
+/-- 7.66 {lit}`T(z₁, z₂, z₃, z₄) = (0, 3z₁, 2z₂, −3z₄)`, coordinate by coordinate. -/
+theorem T_7_66_apply (z : EuclideanSpace 𝕜 (Fin 4)) :
+    T_7_66 z 0 = 0 ∧ T_7_66 z 1 = 3 * z 0 ∧ T_7_66 z 2 = 2 * z 1 ∧
+      T_7_66 z 3 = -3 * z 3 := by
+  refine ⟨?_, ?_, ?_, ?_⟩ <;>
+    simp [T_7_66, A_7_66, Matrix.toLpLin_apply, dotProduct, Fin.sum_univ_four]
+
+/-- 7.66 The matrix form of the computation Axler leaves to the reader:
+{lit}`Aᴴ A = diag(9, 4, 0, 9)`. -/
+theorem conjTranspose_mul_A_7_66 :
+    (A_7_66 (𝕜 := 𝕜))ᴴ * A_7_66 (𝕜 := 𝕜) = Matrix.diagonal ![9, 4, 0, 9] := by
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    norm_num [A_7_66, Matrix.mul_apply, Matrix.conjTranspose_apply, Fin.sum_univ_four,
+      Matrix.diagonal_apply, Matrix.cons_val_two, Matrix.cons_val_three, Matrix.vecHead,
+      Matrix.vecTail, map_ofNat, map_neg, map_zero, map_one]
+
+/-- 7.66 The computation Axler leaves to the reader:
+{lit}`T* T(z₁, z₂, z₃, z₄) = (9z₁, 4z₂, 0, 9z₄)`, so the standard basis diagonalizes
+{lit}`T* T`. -/
+theorem adjComp_T_7_66_apply (z : EuclideanSpace 𝕜 (Fin 4)) :
+    (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 0 = 9 * z 0 ∧
+      (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 1 = 4 * z 1 ∧
+      (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 2 = 0 ∧
+      (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 3 = 9 * z 3 := by
+  have hadj : LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) = Matrix.toEuclideanLin (A_7_66 (𝕜 := 𝕜))ᴴ := by
+    rw [T_7_66, Matrix.toEuclideanLin_conjTranspose_eq_adjoint]
+  rw [LinearMap.comp_apply, hadj, T_7_66, Matrix.toLpLin_apply, Matrix.toLpLin_apply,
+    WithLp.ofLp_toLp, Matrix.mulVec_mulVec, conjTranspose_mul_A_7_66]
+  refine ⟨?_, ?_, ?_, ?_⟩ <;>
+    simp [Matrix.mulVec, dotProduct, Matrix.diagonal_apply]
+
+/-- 7.66 {lit}`T* T` *is* the diagonal operator {lit}`diag(9, 4, 0, 9)`: the operator form of
+{name}`conjTranspose_mul_A_7_66`, which is what lets the eigenvalues be read off. -/
+theorem adjComp_T_7_66_eq :
+    LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66 =
+      Matrix.toEuclideanLin (Matrix.diagonal ![(9 : 𝕜), 4, 0, 9]) := by
+  have hadj : LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) = Matrix.toEuclideanLin (A_7_66 (𝕜 := 𝕜))ᴴ := by
+    rw [T_7_66, Matrix.toEuclideanLin_conjTranspose_eq_adjoint]
+  have hmul : ∀ M P : Matrix (Fin 4) (Fin 4) 𝕜,
+      (M * P).toEuclideanLin = M.toEuclideanLin ∘ₗ P.toEuclideanLin := by
+    intro M P; ext v
+    simp only [LinearMap.comp_apply, Matrix.toLpLin_apply, WithLp.ofLp_toLp,
+      Matrix.mulVec_mulVec]
+  rw [hadj, T_7_66, ← hmul, conjTranspose_mul_A_7_66]
+
+/-- 7.66 The eigenvalues of {lit}`T* T` are exactly {lit}`9, 4, 0`, read off the diagonal
+form {name}`adjComp_T_7_66_eq` via {name}`spectrum_diagonal`. -/
+theorem hasEigenvalue_adjComp_T_7_66 (μ : 𝕜) :
+    HasEigenvalue (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) μ ↔ μ = 9 ∨ μ = 4 ∨ μ = 0 := by
+  rw [adjComp_T_7_66_eq, Module.End.hasEigenvalue_iff_mem_spectrum,
+    Matrix.toEuclideanLin_eq_toLin_orthonormal, Matrix.spectrum_toLin, spectrum_diagonal]
+  constructor
+  · rintro ⟨i, rfl⟩
+    fin_cases i <;>
+      norm_num [Matrix.cons_val_two, Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail]
+  · rintro (rfl | rfl | rfl)
+    exacts [⟨0, rfl⟩, ⟨1, rfl⟩, ⟨2, rfl⟩]
+
+/-- 7.66 The eigenspace dimensions {lit}`dim E(9, T* T) = 2`, {lit}`dim E(4, T* T) = 1`,
+{lit}`dim E(0, T* T) = 1`, which is what turns the eigenvalue *set* into Axler's list
+{lit}`3, 3, 2, 0` with multiplicity. -/
+theorem finrank_eigenspace_adjComp_T_7_66 :
+    finrank 𝕜 (Module.End.eigenspace (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) 9) = 2 ∧
+      finrank 𝕜
+          (Module.End.eigenspace (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) 4) = 1 ∧
+      finrank 𝕜
+          (Module.End.eigenspace (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) 0) = 1 := by
+  sorry
+
+/-- 7.66 The singular values of {lit}`T` are {lit}`3, 3, 2, 0` — as a multiset, i.e. with
+multiplicity, which is how 7.65 lists them. (This pin's
+{name}`LinearMap.IsSymmetric.eigenvalues` are sorted decreasingly, so
+{name}`singularValues` is in fact already Axler's decreasing list; the multiset form avoids
+transporting along {lit}`finrank 𝕜 (EuclideanSpace 𝕜 (Fin 4)) = 4`.) -/
+theorem singularValues_T_7_66 :
+    Multiset.map (singularValues (T_7_66 (𝕜 := 𝕜))) Finset.univ.val = {3, 3, 2, 0} := by
+  sorry
+
+/-! 7.67 Example: singular values of a linear map from {lit}`𝔽⁴` to {lit}`𝔽³`
+
+For the {lit}`T ∈ ℒ(𝔽⁴, 𝔽³)` with matrix {lit}`!![0,0,0,-5; 0,0,0,0; 1,1,0,0]` in the
+standard bases, the matrix of {lit}`T* T` is {lit}`!![1,1,0,0; 1,1,0,0; 0,0,0,0; 0,0,0,25]`,
+whose eigenvalues are {lit}`25, 2, 0` with {lit}`dim E(25, T* T) = 1`,
+{lit}`dim E(2, T* T) = 1` and {lit}`dim E(0, T* T) = 2`; so the singular values of
+{lit}`T` are {lit}`5, √2, 0, 0`. -/
+
+/-- The matrix of the map of Example 7.67. -/
+def A_7_67 : Matrix (Fin 3) (Fin 4) 𝕜 :=
+  !![0, 0, 0, -5;
+     0, 0, 0, 0;
+     1, 1, 0, 0]
+
+/-- The map {lit}`T ∈ ℒ(𝔽⁴, 𝔽³)` of Example 7.67. -/
+noncomputable def T_7_67 : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3) :=
+  Matrix.toEuclideanLin A_7_67
+
+/-- 7.67 The matrix of {lit}`T* T` is {lit}`!![1,1,0,0; 1,1,0,0; 0,0,0,0; 0,0,0,25]`
+("you can verify"). -/
+theorem conjTranspose_mul_A_7_67 :
+    (A_7_67 (𝕜 := 𝕜))ᴴ * A_7_67 (𝕜 := 𝕜) =
+      !![1, 1, 0, 0;
+         1, 1, 0, 0;
+         0, 0, 0, 0;
+         0, 0, 0, 25] := by
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    norm_num [A_7_67, Matrix.mul_apply, Matrix.conjTranspose_apply, Fin.sum_univ_three,
+      Matrix.cons_val_two, Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail,
+      map_ofNat, map_neg, map_zero, map_one]
+
+/-- 7.67 The eigenvalues of {lit}`T* T` are {lit}`25, 2, 0`, with
+{lit}`dim E(25, T* T) = 1`, {lit}`dim E(2, T* T) = 1` and {lit}`dim E(0, T* T) = 2`. -/
+theorem eigenvalues_adjComp_T_7_67 :
+    (∀ μ : 𝕜, HasEigenvalue (LinearMap.adjoint T_7_67 ∘ₗ T_7_67) μ ↔ μ = 25 ∨ μ = 2 ∨ μ = 0) ∧
+      finrank 𝕜
+          (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) 25) = 1 ∧
+      finrank 𝕜
+          (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) 2) = 1 ∧
+      finrank 𝕜
+          (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) 0) = 2 := by
+  sorry
+
+/-- 7.67 The singular values of {lit}`T` are {lit}`5, √2, 0, 0`, as a multiset. -/
+theorem singularValues_T_7_67 :
+    Multiset.map (singularValues (T_7_67 (𝕜 := 𝕜))) Finset.univ.val =
+      {5, Real.sqrt 2, 0, 0} := by
+  sorry
+
+
+/-! # Role of Positive Singular Values -/
+
+/-- The pointwise reading of 7.64(b) ({name}`ker_adjComp_self`): {lit}`T* T v = 0 ⟺ T v = 0`.
+Convenient in the arguments below. -/
+theorem adjComp_eq_zero_iff (T : V →ₗ[𝕜] W) (v : V) :
+    (LinearMap.adjoint T ∘ₗ T) v = 0 ↔ T v = 0 := by
+  rw [← LinearMap.mem_ker, ← LinearMap.mem_ker, ker_adjComp_self]
+
+/-- If all singular values are nonzero then {lit}`T* T` is injective. -/
+theorem adjComp_injective (T : V →ₗ[𝕜] W) (hs : ∀ i, singularValues T i ≠ 0) :
+    Function.Injective (LinearMap.adjoint T ∘ₗ T) := by
+  rw [← LinearMap.ker_eq_bot, Submodule.eq_bot_iff]
+  intro v hv
+  rw [LinearMap.mem_ker] at hv
+  have hzero : ∀ i, ⟪svdBasis T i, v⟫_𝕜 = 0 := by
+    intro i
+    have hsym := (adjComp_self_isPositive T).isSymmetric
+    have h1 : ⟪svdBasis T i, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪svdBasis T i, v⟫_𝕜 := by
+      rw [← hsym (svdBasis T i) v, adjComp_apply_svdBasis, inner_smul_left, RCLike.conj_ofReal]
+    rw [hv, inner_zero_right] at h1
+    have hs2 : (((singularValues T i) ^ 2 : ℝ) : 𝕜) ≠ 0 := by
+      have : (singularValues T i) ^ 2 ≠ 0 := pow_ne_zero 2 (hs i)
+      exact_mod_cast this
+    rcases mul_eq_zero.mp h1.symm with hc | hc
+    · exact absurd hc hs2
+    · exact hc
+  have : v = ∑ i, ⟪svdBasis T i, v⟫_𝕜 • svdBasis T i := ((svdBasis T).sum_repr' v).symm
+  rw [this]
+  apply Finset.sum_eq_zero
+  intro i _
+  rw [hzero i, zero_smul]
+
+/-- 7.68(a) {lit}`T` is injective {lit}`⟺` {lit}`0` is not a singular value of
+{lit}`T`. -/
+theorem injective_iff_singularValues_ne_zero (T : V →ₗ[𝕜] W) :
+    Function.Injective T ↔ ∀ i, singularValues T i ≠ 0 := by
+  constructor
+  · intro hinj i hzero
+    have hz : (((singularValues T i) ^ 2 : ℝ) : 𝕜) = 0 := by rw [hzero]; norm_num
+    have hzero2 : (LinearMap.adjoint T ∘ₗ T) (svdBasis T i) = 0 := by
+      rw [adjComp_apply_svdBasis, hz, zero_smul]
+    have hTe : T (svdBasis T i) = 0 := (adjComp_eq_zero_iff T _).mp hzero2
+    have hv0 : svdBasis T i = 0 := hinj (by rw [hTe, map_zero])
+    exact svdBasis_ne_zero T i hv0
+  · intro hs a b hab
+    have h0 : T (a - b) = 0 := by rw [map_sub, hab, sub_self]
+    have h1 : (LinearMap.adjoint T ∘ₗ T) (a - b) = 0 := (adjComp_eq_zero_iff T _).mpr h0
+    have h2 : a - b = 0 := adjComp_injective T hs (by rw [h1, map_zero])
+    exact sub_eq_zero.mp h2
+
+/-! 7.68 Role of positive singular values, parts (b) and (c)
+
+(b) the number of positive singular values of {lit}`T` equals {lit}`dim range T`;
+(c) {lit}`T` is surjective {lit}`⟺` the number of positive singular values equals
+{lit}`dim W`.
+
+Part (a) is proved above. For (b) Axler argues through {lit}`T* T` rather than through
+the SVD (which comes later): the spectral theorem makes
+{lit}`dim range (T* T)` the number of positive eigenvalues of {lit}`T* T`, and 7.64(d)
+transports that to {lit}`dim range T`. (c) then follows from (b). -/
+
+/-- 7.68(b) The number of positive singular values of {lit}`T` equals
+{lit}`dim range T`. The eigenbasis vectors {lit}`eₖ` with {lit}`sₖ ≠ 0` span
+{lit}`range (T* T)` — each is {lit}`(sₖ²)⁻¹ • T* T eₖ`, and conversely {lit}`T* T v`
+expands over them by 7.72 — and they are orthonormal, so
+{lit}`dim range (T* T)` is their number; 7.64(d) then replaces
+{lit}`range (T* T)` by {lit}`range T`. -/
+theorem card_pos_singularValues_eq_finrank_range (T : V →ₗ[𝕜] W) :
+    Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0}
+      = finrank 𝕜 (LinearMap.range T) := by
+  have hindep : LinearIndependent 𝕜
+      (fun i : {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} => svdBasis T i.1) :=
+    ((svdBasis T).orthonormal.comp _ Subtype.val_injective).linearIndependent
+  have hsq : ∀ i : Fin (finrank 𝕜 V), singularValues T i ≠ 0 →
+      (((singularValues T i) ^ 2 : ℝ) : 𝕜) ≠ 0 := by
+    intro i hi
+    have : (singularValues T i) ^ 2 ≠ 0 := pow_ne_zero 2 hi
+    exact_mod_cast this
+  have hspan : Submodule.span 𝕜
+      (Set.range fun i : {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} => svdBasis T i.1)
+      = LinearMap.range (LinearMap.adjoint T ∘ₗ T) := by
+    apply le_antisymm
+    · rw [Submodule.span_le]
+      rintro _ ⟨i, rfl⟩
+      exact ⟨(((singularValues T i.1) ^ 2 : ℝ) : 𝕜)⁻¹ • svdBasis T i.1, by
+        rw [map_smul, adjComp_apply_svdBasis, smul_smul, inv_mul_cancel₀ (hsq i.1 i.2), one_smul]⟩
+    · rintro _ ⟨v, rfl⟩
+      have hv : (LinearMap.adjoint T ∘ₗ T) v
+          = ∑ i, ⟪svdBasis T i, v⟫_𝕜 • (((singularValues T i) ^ 2 : ℝ) : 𝕜) • svdBasis T i := by
+        conv_lhs => rw [← (svdBasis T).sum_repr' v]
+        rw [map_sum]
+        exact Finset.sum_congr rfl fun i _ => by rw [map_smul, adjComp_apply_svdBasis]
+      rw [hv]
+      refine Submodule.sum_mem _ fun i _ => ?_
+      by_cases hi : singularValues T i = 0
+      · rw [hi]; simp
+      · exact Submodule.smul_mem _ _ (Submodule.smul_mem _ _
+          (Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩))
+  rw [(finrank_range_adjComp_self T).1.trans (finrank_range_adjComp_self T).2, ← hspan]
+  exact (finrank_span_eq_card hindep).symm
+
+/-- 7.68(c) {lit}`T` is surjective iff the number of positive singular values of
+{lit}`T` equals {lit}`dim W`. -/
+theorem surjective_iff_card_pos_singularValues (T : V →ₗ[𝕜] W) :
+    Function.Surjective T ↔
+      Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} = finrank 𝕜 W := by
+  rw [card_pos_singularValues_eq_finrank_range, ← LinearMap.range_eq_top]
+  constructor
+  · intro h; rw [h]; exact finrank_top 𝕜 W
+  · intro h; exact Submodule.eq_top_of_finrank_eq h
+
+/-! 7.69 Isometries characterized by having all singular values equal 1
+
+{lit}`S ∈ ℒ(V, W)` is an isometry {lit}`⟺` all singular values of {lit}`S` equal
+{lit}`1`, because {lit}`S` is an isometry {lit}`⟺ S* S = I` (7.49) {lit}`⟺` all
+eigenvalues of {lit}`S* S` equal {lit}`1` (spectral theorem). -/
+theorem isometry_iff_singularValues_eq_one (S : V →ₗ[𝕜] W) :
+    Isometry S ↔ ∀ i, singularValues S i = 1 := by
+  rw [LADR.Section_7D.isometry_iff_adjoint_comp]
+  constructor
+  · intro hS i
+    have hself : ⟪svdBasis S i, svdBasis S i⟫_𝕜 = 1 := by
+      rw [orthonormal_iff_ite.mp (svdBasis S).orthonormal i i, if_pos rfl]
+    have h1 : (((singularValues S i) ^ 2 : ℝ) : 𝕜) * ⟪svdBasis S i, svdBasis S i⟫_𝕜
+        = ⟪svdBasis S i, svdBasis S i⟫_𝕜 := by
+      rw [← inner_smul_right, ← adjComp_apply_svdBasis, hS, Module.End.one_apply]
+    rw [hself, mul_one] at h1
+    have hr : (singularValues S i) ^ 2 = 1 := by exact_mod_cast h1
+    have : singularValues S i = Real.sqrt ((singularValues S i) ^ 2) :=
+      (Real.sqrt_sq (singularValues_nonneg S i)).symm
+    rw [this, hr, Real.sqrt_one]
+  · intro hS
+    apply (svdBasis S).toBasis.ext
+    intro i
+    rw [OrthonormalBasis.coe_toBasis, Module.End.one_apply, adjComp_apply_svdBasis, hS i]
+    norm_num
 
 /-! # Singular Value Decomposition -/
 
@@ -179,142 +503,25 @@ theorem svd_apply (T : V →ₗ[𝕜] W) (v : V) :
   rw [map_smul, svdBasis_image_eq]
   exact smul_comm _ _ _
 
-/-- 7.70 Existence of a singular value decomposition, packaged as Axler states it:
-orthonormal basis {lit}`e` of {lit}`V`, image vectors {lit}`f` orthonormal on the
-positive-singular-value indices, with {lit}`T eₖ = sₖ fₖ` and the SVD formula. -/
+/-- 7.70 Existence of a singular value decomposition, exactly what Axler asserts:
+orthonormal lists {lit}`e` (here an orthonormal basis of {lit}`V`) and {lit}`f`
+(orthonormal on the positive-singular-value indices) for which the formula 7.71 holds.
+Axler's statement stops there; the construction also gives {lit}`T eₖ = sₖ fₖ`, which is
+{name}`svdBasis_image_eq` and is what the later sections use. -/
 theorem singularValueDecomposition (T : V →ₗ[𝕜] W) :
     ∃ (e : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) (f : Fin (finrank 𝕜 V) → W),
       Orthonormal 𝕜 (fun i : {i // singularValues T i ≠ 0} => f i.1) ∧
-      (∀ i, T (e i) = (singularValues T i : 𝕜) • f i) ∧
       ∀ v, T v = ∑ i, (singularValues T i : 𝕜) • ⟪e i, v⟫_𝕜 • f i :=
-  ⟨svdBasis T, svdImage T, svdImage_orthonormal T, svdBasis_image_eq T, svd_apply T⟩
+  ⟨svdBasis T, svdImage T, svdImage_orthonormal T, svd_apply T⟩
 
-/-! # Role of Positive Singular Values -/
-
-/-- 7.64(b) {lit}`null (T* T) = null T`: {lit}`T* T v = 0 ⟺ T v = 0`. -/
-theorem adjComp_eq_zero_iff (T : V →ₗ[𝕜] W) (v : V) :
-    (LinearMap.adjoint T ∘ₗ T) v = 0 ↔ T v = 0 := by
-  constructor
-  · intro h
-    have h2 : ⟪T v, T v⟫_𝕜 = 0 := by
-      rw [← LinearMap.adjoint_inner_left, ← LinearMap.comp_apply, h, inner_zero_left]
-    exact inner_self_eq_zero.mp h2
-  · intro h; rw [LinearMap.comp_apply, h, map_zero]
-
-/-- If all singular values are nonzero then {lit}`T* T` is injective. -/
-theorem adjComp_injective (T : V →ₗ[𝕜] W) (hs : ∀ i, singularValues T i ≠ 0) :
-    Function.Injective (LinearMap.adjoint T ∘ₗ T) := by
-  rw [← LinearMap.ker_eq_bot, Submodule.eq_bot_iff]
-  intro v hv
-  rw [LinearMap.mem_ker] at hv
-  have hzero : ∀ i, ⟪svdBasis T i, v⟫_𝕜 = 0 := by
-    intro i
-    have hsym := (adjComp_self_isPositive T).isSymmetric
-    have h1 : ⟪svdBasis T i, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
-        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪svdBasis T i, v⟫_𝕜 := by
-      rw [← hsym (svdBasis T i) v, adjComp_apply_svdBasis, inner_smul_left, RCLike.conj_ofReal]
-    rw [hv, inner_zero_right] at h1
-    have hs2 : (((singularValues T i) ^ 2 : ℝ) : 𝕜) ≠ 0 := by
-      have : (singularValues T i) ^ 2 ≠ 0 := pow_ne_zero 2 (hs i)
-      exact_mod_cast this
-    rcases mul_eq_zero.mp h1.symm with hc | hc
-    · exact absurd hc hs2
-    · exact hc
-  have : v = ∑ i, ⟪svdBasis T i, v⟫_𝕜 • svdBasis T i := ((svdBasis T).sum_repr' v).symm
-  rw [this]
-  apply Finset.sum_eq_zero
-  intro i _
-  rw [hzero i, zero_smul]
-
-/-- 7.68(a) {lit}`T` is injective {lit}`⟺` {lit}`0` is not a singular value of
-{lit}`T`. -/
-theorem injective_iff_singularValues_ne_zero (T : V →ₗ[𝕜] W) :
-    Function.Injective T ↔ ∀ i, singularValues T i ≠ 0 := by
-  constructor
-  · intro hinj i hzero
-    have hz : (((singularValues T i) ^ 2 : ℝ) : 𝕜) = 0 := by rw [hzero]; norm_num
-    have hzero2 : (LinearMap.adjoint T ∘ₗ T) (svdBasis T i) = 0 := by
-      rw [adjComp_apply_svdBasis, hz, zero_smul]
-    have hTe : T (svdBasis T i) = 0 := (adjComp_eq_zero_iff T _).mp hzero2
-    have hv0 : svdBasis T i = 0 := hinj (by rw [hTe, map_zero])
-    exact svdBasis_ne_zero T i hv0
-  · intro hs a b hab
-    have h0 : T (a - b) = 0 := by rw [map_sub, hab, sub_self]
-    have h1 : (LinearMap.adjoint T ∘ₗ T) (a - b) = 0 := (adjComp_eq_zero_iff T _).mpr h0
-    have h2 : a - b = 0 := adjComp_injective T hs (by rw [h1, map_zero])
-    exact sub_eq_zero.mp h2
-
-/-! 7.68 Role of positive singular values, parts (b) and (c)
-
-(b) the number of positive singular values of {lit}`T` equals {lit}`dim range T`;
-(c) {lit}`T` is surjective {lit}`⟺` the number of positive singular values equals
-{lit}`dim W`.
-
-Part (a) is proved above; (b) and (c) follow from the SVD, since the image
-vectors {lit}`fₖ` with {lit}`sₖ ≠ 0` form an orthonormal basis of {lit}`range T`. -/
-
-/-- 7.68(b) The number of positive singular values of {lit}`T` equals
-{lit}`dim range T`: the image vectors {lit}`fₖ` with {lit}`sₖ ≠ 0` are orthonormal
-({name}`svdImage_orthonormal`) and span {lit}`range T` (from the SVD formula), so
-they form an orthonormal basis of {lit}`range T`. -/
-theorem card_pos_singularValues_eq_finrank_range (T : V →ₗ[𝕜] W) :
-    Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0}
-      = finrank 𝕜 (LinearMap.range T) := by
-  set g : {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} → W :=
-    fun i => svdImage T i.1 with hg
-  have hindep : LinearIndependent 𝕜 g := (svdImage_orthonormal T).linearIndependent
-  have hspan : Submodule.span 𝕜 (Set.range g) = LinearMap.range T := by
-    apply le_antisymm
-    · rw [Submodule.span_le]
-      rintro _ ⟨i, rfl⟩
-      simp only [hg, svdImage, if_neg i.2]
-      exact Submodule.smul_mem _ _ ⟨svdBasis T i.1, rfl⟩
-    · rintro _ ⟨v, rfl⟩
-      rw [svd_apply]
-      apply Submodule.sum_mem
-      intro i _
-      by_cases hi : singularValues T i = 0
-      · rw [hi, RCLike.ofReal_zero, zero_smul]; exact Submodule.zero_mem _
-      · exact Submodule.smul_mem _ _ (Submodule.smul_mem _ _
-          (Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩))
-  rw [← hspan]
-  exact (finrank_span_eq_card hindep).symm
-
-/-- 7.68(c) {lit}`T` is surjective iff the number of positive singular values of
-{lit}`T` equals {lit}`dim W`. -/
-theorem surjective_iff_card_pos_singularValues (T : V →ₗ[𝕜] W) :
-    Function.Surjective T ↔
-      Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} = finrank 𝕜 W := by
-  rw [card_pos_singularValues_eq_finrank_range, ← LinearMap.range_eq_top]
-  constructor
-  · intro h; rw [h]; exact finrank_top 𝕜 W
-  · intro h; exact Submodule.eq_top_of_finrank_eq h
-
-/-! 7.69 Isometries characterized by having all singular values equal 1
-
-{lit}`S ∈ ℒ(V, W)` is an isometry {lit}`⟺` all singular values of {lit}`S` equal
-{lit}`1`, because {lit}`S` is an isometry {lit}`⟺ S* S = I` (7.49) {lit}`⟺` all
-eigenvalues of {lit}`S* S` equal {lit}`1` (spectral theorem). -/
-theorem isometry_iff_singularValues_eq_one (S : V →ₗ[𝕜] W) :
-    Isometry S ↔ ∀ i, singularValues S i = 1 := by
-  rw [LADR.Section_7D.isometry_iff_adjoint_comp]
-  constructor
-  · intro hS i
-    have hself : ⟪svdBasis S i, svdBasis S i⟫_𝕜 = 1 := by
-      rw [orthonormal_iff_ite.mp (svdBasis S).orthonormal i i, if_pos rfl]
-    have h1 : (((singularValues S i) ^ 2 : ℝ) : 𝕜) * ⟪svdBasis S i, svdBasis S i⟫_𝕜
-        = ⟪svdBasis S i, svdBasis S i⟫_𝕜 := by
-      rw [← inner_smul_right, ← adjComp_apply_svdBasis, hS, Module.End.one_apply]
-    rw [hself, mul_one] at h1
-    have hr : (singularValues S i) ^ 2 = 1 := by exact_mod_cast h1
-    have : singularValues S i = Real.sqrt ((singularValues S i) ^ 2) :=
-      (Real.sqrt_sq (singularValues_nonneg S i)).symm
-    rw [this, hr, Real.sqrt_one]
-  · intro hS
-    apply (svdBasis S).toBasis.ext
-    intro i
-    rw [OrthonormalBasis.coe_toBasis, Module.End.one_apply, adjComp_apply_svdBasis, hS i]
-    norm_num
+/-! Note on the {lit}`e`'s and {lit}`f`'s. The witnesses just supplied are
+{lit}`e i = svdBasis T i` and {lit}`f i = svdImage T i`, and everything from here on —
+7.75 and its consequences (7.77 for the adjoint, 7.78 for the pseudoinverse), and Section 7F
+— is stated with {lit}`svdBasis`/{lit}`svdImage` rather than through this existential. So
+when Axler writes "let {lit}`e₁, …, eₙ` and {lit}`f₁, …, fₙ` be as in the singular value
+decomposition 7.70", read {lit}`eₖ = svdBasis T k` and {lit}`fₖ = svdImage T k`; the facts
+those proofs use about them are {name}`svdBasis_image_eq` ({lit}`T eₖ = sₖ fₖ`),
+{name}`svd_apply` (7.71) and the orthonormality of each family. -/
 
 /-! # Diagonal Matrices and the Adjoint -/
 
@@ -499,13 +706,26 @@ theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
 
 /-! # Examples
 
-The numeric examples 7.66 ({lit}`T ∈ ℒ(𝔽⁴)`, singular values {lit}`3, 3, 2, 0`),
-7.67 and 7.79 ({lit}`T ∈ ℒ(𝔽⁴, 𝔽³)`, singular values {lit}`5, √2, 0, 0`) are
-concrete computations of the eigenvalues of specific {lit}`T* T` matrices. They
-illustrate the definitions above and are omitted from formalization: extracting
-the eigenvalues of an explicit {lit}`T* T` through the abstract
-{lit}`eigenvectorBasis`/{lit}`eigenvalues` API (rather than by inspection, as Axler
-does) would be disproportionate to their illustrative role. -/
+Examples 7.66 and 7.67 are formalized at their book positions above, following 7.65:
+the maps are given by their matrices ({lit}`A_7_66`, {lit}`A_7_67`), and the
+{lit}`T* T` computations Axler assigns to the reader are proved
+({name}`adjComp_T_7_66_apply`, {name}`conjTranspose_mul_A_7_66`,
+{name}`adjComp_T_7_66_eq`, {name}`conjTranspose_mul_A_7_67`), as is the eigenvalue *set*
+of 7.66's {lit}`T* T` ({name}`hasEigenvalue_adjComp_T_7_66`, via
+{name}`spectrum_diagonal`).
+
+What still carries a {lit}`sorry` is the passage from the eigenvalue set to Axler's list
+*with multiplicity*: the eigenspace dimensions ({lit}`finrank_eigenspace_adjComp_T_7_66`,
+{lit}`eigenvalues_adjComp_T_7_67`) and the singular-value multisets
+({lit}`singularValues_T_7_66`, {lit}`singularValues_T_7_67`). Axler reads these off by
+inspection; in Lean they want a lemma computing {lit}`dim E(μ, S)` for an operator diagonal
+in a given orthonormal basis — mathlib has this only for its own
+{lit}`eigenvectorBasis` ({name}`LinearMap.IsSymmetric.card_filter_eigenvalues_eq`) — plus,
+for 7.67, a diagonalization of the non-diagonal {lit}`T* T` (its {lit}`(1,1;1,1)` block has
+eigenvectors {lit}`(1,±1,0,0)`).
+
+Example 7.79 ({lit}`T ∈ ℒ(𝔽⁴, 𝔽³)`, the pseudoinverse of the same map) remains
+unformalized for the same reason. -/
 
 /-! # Exercises 7E -/
 
