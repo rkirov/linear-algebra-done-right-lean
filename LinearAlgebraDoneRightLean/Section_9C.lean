@@ -688,9 +688,43 @@ theorem exercise_9C_17 (a b c : ℝ) (ha : 0 < a) (hb : 0 < b) (hc : 0 < c)
         MeasureTheory.volume {x : EuclideanSpace ℝ (Fin 3) | ‖x‖ < 1} := by
   sorry
 
-/-! 9C.18–9C.20: Hadamard's inequality (9.66) is proved above as
-{lit}`hadamard_inequality`, which is Exercise 9C.18. Its equality case (9C.19) and
-the matrix-entry bound (9C.20) build on it and are left as exercises. -/
+/-! 9C.18: Hadamard's inequality (9.66) is proved above as
+{name}`LADR.Section_9C.hadamard_inequality`. Its equality case (9C.19) and the
+positive-operator form (9C.20) are stated below. -/
+
+open scoped Matrix InnerProductSpace in
+/-- 9C.19 For an invertible {lit}`A`, Hadamard's inequality is an equality iff
+each column of {lit}`A` is orthogonal to the other columns. Columns are read as
+vectors of {lit}`EuclideanSpace` exactly as in
+{name}`LADR.Section_9C.hadamard_inequality`. -/
+theorem exercise_9C_19 {𝕜 : Type*} [RCLike 𝕜] {n : ℕ} (A : Matrix (Fin n) (Fin n) 𝕜)
+    (hA : IsUnit A.det) :
+    ‖A.det‖ = ∏ i, ‖(EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i)‖ ↔
+      ∀ i j, i ≠ j →
+        ⟪(EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i),
+          (EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ j)⟫_𝕜 = 0 := by
+  sorry
+
+open scoped InnerProductSpace in
+/-- 9C.20 (a) For a positive operator {lit}`T` and an orthonormal basis
+{lit}`e₁, …, eₙ`, {lit}`det T ≤ ∏ ⟨T eₖ, eₖ⟩`. Both sides are real, so the
+inequality is stated on real parts. -/
+theorem exercise_9C_20a {𝕜 : Type*} [RCLike 𝕜] {E : Type*} [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] {n : ℕ}
+    (e : OrthonormalBasis (Fin n) 𝕜 E) (T : E →ₗ[𝕜] E) (hT : T.IsPositive) :
+    RCLike.re (LinearMap.det T) ≤ ∏ k, RCLike.re ⟪T (e k), e k⟫_𝕜 := by
+  sorry
+
+open scoped InnerProductSpace in
+/-- 9C.20 (b) If moreover {lit}`T` is invertible, 9C.20(a) is an equality iff each
+{lit}`eₖ` is an eigenvector of {lit}`T`. -/
+theorem exercise_9C_20b {𝕜 : Type*} [RCLike 𝕜] {E : Type*} [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] {n : ℕ}
+    (e : OrthonormalBasis (Fin n) 𝕜 E) (T : E →ₗ[𝕜] E) (hT : T.IsPositive)
+    (hTinv : Function.Bijective T) :
+    RCLike.re (LinearMap.det T) = ∏ k, RCLike.re ⟪T (e k), e k⟫_𝕜 ↔
+      ∀ k, ∃ μ : 𝕜, T (e k) = μ • e k := by
+  sorry
 
 /-- 9C.21 The determinant is the unique multiplicative function on complex square
 matrices that agrees with the product of diagonal entries on diagonal matrices. -/

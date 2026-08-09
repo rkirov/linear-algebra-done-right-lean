@@ -657,13 +657,49 @@ theorem exercise_8A_23 :
       (∀ lam : ℝ, HasEigenvalue T lam → lam = 0) ∧ ¬ IsNilpotent T := by
   sorry
 
-/-! 8A.24 (exercise): for each item in Example 8.15, exhibit a basis putting the
-nilpotent operator into the strictly-upper-triangular normal form of 8.18(c).
-8.18(c) itself is proved above ({lit}`exists_strictUpperTriangular_of_nilpotent`);
-the per-example exhibition is left as an exercise. -/
+/-! 8A.24 For each operator of Example 8.15, exhibit a basis putting it into the
+strictly-upper-triangular normal form of 8.18(c). 8.18(c) itself is proved above
+({name}`LADR.Section_8A.exists_strictUpperTriangular_of_nilpotent`); what is asked
+here is the explicit basis in each case, so each part gets a named
+{lit}`def … := sorry` for the solver to fill in. -/
 
-/-! 8A.25 (exercise): on an inner product space, a nilpotent operator has an
-orthonormal basis giving the strictly-upper-triangular form of 8.18(c). Left as an
-exercise. -/
+/-- The basis of {lit}`F⁴` for 8A.24 putting {name}`T_8_15a` into strictly
+upper-triangular form. -/
+def basis_8A_24a (F : Type*) [Field F] : Fin 4 → (Fin 4 → F) := sorry
+
+theorem exercise_8A_24a (hv : IsBasis F (basis_8A_24a F)) :
+    IsUpperTriangular (matrixOf hv hv (T_8_15a F)) ∧
+      ∀ k, matrixOf hv hv (T_8_15a F) k k = 0 := by
+  sorry
+
+/-- The basis of {lit}`F³` for 8A.24 putting the operator of {name}`A_8_15b` into
+strictly upper-triangular form. -/
+def basis_8A_24b (F : Type*) [Field F] : Fin 3 → (Fin 3 → F) := sorry
+
+theorem exercise_8A_24b (hv : IsBasis F (basis_8A_24b F)) :
+    IsUpperTriangular (matrixOf hv hv (Matrix.toLinAlgEquiv' (A_8_15b F))) ∧
+      ∀ k, matrixOf hv hv (Matrix.toLinAlgEquiv' (A_8_15b F)) k k = 0 := by
+  sorry
+
+/-- The basis of {lit}`𝒫ₘ(ℝ)` for 8A.24 putting differentiation into strictly
+upper-triangular form. -/
+noncomputable def basis_8A_24c (m : ℕ) : Fin (m + 1) → Polynomial.degreeLT ℝ (m + 1) := sorry
+
+theorem exercise_8A_24c (m : ℕ) (hv : IsBasis ℝ (basis_8A_24c m))
+    (D : Polynomial.degreeLT ℝ (m + 1) →ₗ[ℝ] Polynomial.degreeLT ℝ (m + 1))
+    (hD : ∀ p : Polynomial.degreeLT ℝ (m + 1),
+      (D p : Polynomial ℝ) = Polynomial.derivative (p : Polynomial ℝ)) :
+    IsUpperTriangular (matrixOf hv hv D) ∧ ∀ k, matrixOf hv hv D k k = 0 := by
+  sorry
+
+/-- 8A.25 On an inner product space, a nilpotent operator has an *orthonormal*
+basis giving the strictly-upper-triangular form of 8.18(c) — the Gram–Schmidt
+refinement of {name}`LADR.Section_8A.exists_strictUpperTriangular_of_nilpotent`. -/
+theorem exercise_8A_25 {𝕜 : Type*} [RCLike 𝕜] {E : Type*} [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] [Nontrivial E] (T : E →ₗ[𝕜] E)
+    (hT : IsNilpotent T) :
+    ∃ (n : ℕ) (e : Fin n → E) (he : Orthonormal 𝕜 e) (hb : IsBasis 𝕜 e),
+      IsUpperTriangular (matrixOf hb hb T) ∧ ∀ k, matrixOf hb hb T k k = 0 := by
+  sorry
 
 end LADR.Section_8A
