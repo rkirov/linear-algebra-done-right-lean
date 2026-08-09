@@ -427,11 +427,26 @@ theorem toMatrix_toEuclideanLin (Q : Matrix n n 𝕜) :
 For a square matrix {lit}`Q`: (a) the columns of {lit}`Q` are orthonormal, i.e.
 {lit}`Q` is unitary; (b) the rows are orthonormal; (c) {lit}`‖Q v‖ = ‖v‖` for all
 {lit}`v ∈ 𝔽ⁿ`; (d) {lit}`Q* Q = Q Q* = I`, i.e. {lit}`Q ∈ Matrix.unitaryGroup`.
-Axler leaves the proof as Exercise 17. (a) ⟺ (d) and (b) ⟺ (d) are
-{lit}`orthonormal_columns_iff` / {lit}`orthonormal_rows_iff` combined with
-{name}`Matrix.mem_unitaryGroup_iff'` / {name}`Matrix.mem_unitaryGroup_iff` (using
-{lit}`star Q = Q*`, the conjugate transpose); (c) ⟺ (a) is 7.49 for the operator
+
+Axler states this result but leaves its proof to Exercise 17 ("whose proof will be left as
+an exercise for the reader"). We prove it outright, because assembling it is routine once
+its one substantive ingredient is available — the square-matrix exchange
+{lit}`Q* Q = I ⟺ Q Q* = I`, which is itself Exercise 13 (stated as
+{lit}`exercise_7D_13` and left to the reader there) and which mathlib supplies as
+{name}`Matrix.mem_unitaryGroup_iff'` / {name}`Matrix.mem_unitaryGroup_iff`. The remaining
+steps come from the text: (a) ⟺ {lit}`Q* Q = I` and (b) ⟺ {lit}`Q Q* = I` are
+{lit}`orthonormal_columns_iff` / {lit}`orthonormal_rows_iff`; (d) is unitary membership
+unfolded ({lit}`mem_unitaryGroup_iff_conjTranspose`, definitional via
+{name}`Unitary.mem_iff`); and (c) ⟺ (a) is 7.49 for the operator
 {name}`Matrix.toEuclideanLin` {lit}`Q` in the standard basis. -/
+
+/-- (d) as an equation pair. Definitional: membership in {name}`unitary` *is* the
+conjunction of the two equations ({name}`Unitary.mem_iff`), with
+{lit}`star Q = Q*` the conjugate transpose. Also the form used by the QR proofs below. -/
+theorem mem_unitaryGroup_iff_conjTranspose (Q : Matrix n n 𝕜) :
+    Q ∈ Matrix.unitaryGroup n 𝕜 ↔ Qᴴ * Q = 1 ∧ Q * Qᴴ = 1 := by
+  rw [← Matrix.star_eq_conjTranspose]
+  exact Unitary.mem_iff
 
 theorem tfae_mem_unitaryGroup (Q : Matrix n n 𝕜) :
     [(Orthonormal 𝕜 fun j => (WithLp.toLp 2 fun i => Q i j : EuclideanSpace 𝕜 n)),
@@ -447,13 +462,6 @@ theorem tfae_mem_unitaryGroup (Q : Matrix n n 𝕜) :
       orthonormal_image_iff_orthonormal_columns (EuclideanSpace.basisFun n 𝕜)
         (EuclideanSpace.basisFun n 𝕜) (Matrix.toEuclideanLin Q), toMatrix_toEuclideanLin]
   tfae_finish
-
-/-- (a) ⟺ (d) in the equational form used by the QR proofs below. -/
-theorem mem_unitaryGroup_iff_conjTranspose (Q : Matrix n n 𝕜) :
-    Q ∈ Matrix.unitaryGroup n 𝕜 ↔ Qᴴ * Q = 1 ∧ Q * Qᴴ = 1 := by
-  rw [← Matrix.star_eq_conjTranspose]
-  exact ⟨fun h => ⟨(Matrix.mem_unitaryGroup_iff').mp h, (Matrix.mem_unitaryGroup_iff).mp h⟩,
-    fun h => (Matrix.mem_unitaryGroup_iff').mpr h.1⟩
 
 /-- {lit}`R` has only positive numbers on its diagonal, in the sense Axler uses for
 {lit}`𝐅 = ℂ` as well: each {lit}`R i i` is a *positive real*. This is the normalization
@@ -950,7 +958,14 @@ theorem exercise_7D_3a {S T : V →ₗ[𝕜] V} (hS : S ∈ unitary (V →ₗ[�
     (hT : T ∈ unitary (V →ₗ[𝕜] V)) : S ∘ₗ T ∈ unitary (V →ₗ[𝕜] V) := by
   sorry
 
-/-- 7D.3(b) The adjoint (inverse) of a unitary operator is unitary. -/
+/-- 7D.3(b) The inverse of a unitary operator is unitary.
+
+The book says {lit}`S⁻¹`; we say {lit}`S*`. These name the same operator: a unitary
+{lit}`S` is invertible with {lit}`S⁻¹ = S*`, since {lit}`S* S = S S* = I`
+({name}`mem_unitary_inverse`, which is 7.53(c)). Stating the exercise for
+{lit}`S*` avoids wrapping it in a {lit}`V ≃ₗ[𝕜] V` or {name}`Ring.inverse` just to
+name the inverse, and loses nothing: {lit}`S*` *is* the inverse whose unitarity the
+exercise asks about. -/
 theorem exercise_7D_3b {S : V →ₗ[𝕜] V} (hS : S ∈ unitary (V →ₗ[𝕜] V)) :
     LinearMap.adjoint S ∈ unitary (V →ₗ[𝕜] V) := by
   sorry
@@ -985,24 +1000,48 @@ theorem exercise_7D_6
         T₁ = LinearMap.adjoint S ∘ₗ T₂ ∘ₗ S := by
   sorry
 
-/-- 7D.7 There are self-adjoint operators on {lit}`𝔽⁴` both with eigenvalues
-{lit}`2, 5, 7` that are not unitarily equivalent. -/
+/-- 7D.7 The student supplies two operators on {lit}`𝔽⁴` (replacing the
+{lit}`sorry`s), both self-adjoint with eigenvalues {lit}`2, 5, 7`, that are *not*
+unitarily equivalent. The exercise asks for an example, so the witnesses are answers
+in their own right rather than an existential to be discharged. -/
+noncomputable def exercise_7D_7_T₁ :
+    EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4) := sorry
+
+/-- The second witness operator for 7D.7. -/
+noncomputable def exercise_7D_7_T₂ :
+    EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4) := sorry
+
+theorem exercise_7D_7_isSymmetric_T₁ :
+    LinearMap.IsSymmetric (exercise_7D_7_T₁ (𝕜 := 𝕜)) := by sorry
+
+theorem exercise_7D_7_isSymmetric_T₂ :
+    LinearMap.IsSymmetric (exercise_7D_7_T₂ (𝕜 := 𝕜)) := by sorry
+
+theorem exercise_7D_7_eigenvalues_T₁ (μ : 𝕜) :
+    HasEigenvalue exercise_7D_7_T₁ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7 := by sorry
+
+theorem exercise_7D_7_eigenvalues_T₂ (μ : 𝕜) :
+    HasEigenvalue exercise_7D_7_T₂ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7 := by sorry
+
+/-- 7D.7 The content of the exercise: the two operators above are not unitarily
+equivalent, even though they are self-adjoint with the same eigenvalues (so the
+converse of 7D.6 fails once an eigenvalue can repeat — {lit}`dim = 4` with three
+eigenvalues leaves the multiplicities free). -/
 theorem exercise_7D_7 :
-    ∃ T₁ T₂ : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4),
-      LinearMap.IsSymmetric T₁ ∧ LinearMap.IsSymmetric T₂ ∧
-      (∀ μ : 𝕜, HasEigenvalue T₁ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7) ∧
-      (∀ μ : 𝕜, HasEigenvalue T₂ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7) ∧
-      ¬ ∃ S : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4),
-        S ∈ unitary (EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4)) ∧
-          T₁ = LinearMap.adjoint S ∘ₗ T₂ ∘ₗ S := by
+    ¬ ∃ S : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4),
+      S ∈ unitary (EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4)) ∧
+        exercise_7D_7_T₁ = LinearMap.adjoint S ∘ₗ exercise_7D_7_T₂ ∘ₗ S := by
   sorry
 
-/-- 7D.8 Counterexample: {lit}`‖S eₖ‖ = 1` on an orthonormal basis does not imply
-{lit}`S` is unitary. -/
-theorem exercise_7D_8 :
-    ¬ ∀ (E : Type) [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
-      (S : E →ₗ[𝕜] E) (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 E),
-      (∀ k, ‖S (e k)‖ = 1) → S ∈ unitary (E →ₗ[𝕜] E) := by
+/-- 7D.8 *Prove or counterexample.* If {lit}`S ∈ ℒ(V)` and there is an orthonormal
+basis {lit}`e₁, …, eₙ` of {lit}`V` with {lit}`‖S eₖ‖ = 1` for each {lit}`eₖ`, is
+{lit}`S` unitary? The space is quantified inside the proposition, since a
+counterexample is allowed to choose it. -/
+def exercise_7D_8 :
+    Decidable (∀ (E : Type) [NormedAddCommGroup E] [InnerProductSpace 𝕜 E]
+      [FiniteDimensional 𝕜 E] (S : E →ₗ[𝕜] E) (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 E),
+      (∀ k, ‖S (e k)‖ = 1) → S ∈ unitary (E →ₗ[𝕜] E)) := by
+  -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 7D.9 Over {lit}`ℂ`, if every eigenvalue of {lit}`T` has absolute value 1 and
@@ -1028,17 +1067,25 @@ theorem exercise_7D_11 (S : V →ₗ[𝕜] V) :
     S ∈ unitary (V →ₗ[𝕜] V) ↔ (S '' {v | ‖v‖ ≤ 1}) = {v | ‖v‖ ≤ 1} := by
   sorry
 
-/-- 7D.12 Counterexample: {lit}`S` invertible with {lit}`‖S⁻¹v‖ = ‖Sv‖` for all
-{lit}`v` need not be unitary. -/
-theorem exercise_7D_12 :
-    ¬ ∀ (E : Type) [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
-      (S : E ≃ₗ[𝕜] E), (∀ v, ‖S.symm v‖ = ‖S v‖) → (S : E →ₗ[𝕜] E) ∈ unitary (E →ₗ[𝕜] E) := by
+/-- 7D.12 *Prove or counterexample.* If {lit}`S ∈ ℒ(V)` is invertible and
+{lit}`‖S⁻¹ v‖ = ‖S v‖` for every {lit}`v`, is {lit}`S` unitary? As in 7D.8 the space
+is quantified inside the proposition, since a counterexample may choose it. -/
+def exercise_7D_12 :
+    Decidable (∀ (E : Type) [NormedAddCommGroup E] [InnerProductSpace 𝕜 E]
+      [FiniteDimensional 𝕜 E] (S : E ≃ₗ[𝕜] E), (∀ v, ‖S.symm v‖ = ‖S v‖) →
+      (S : E →ₗ[𝕜] E) ∈ unitary (E →ₗ[𝕜] E)) := by
+  -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
-/-- 7D.13 For a square complex matrix, the columns form an orthonormal list iff the
-rows do (equivalently {lit}`Q* Q = I ⟺ Q Q* = I`). -/
+/-- 7D.13 For a square matrix, the columns form an orthonormal list in {lit}`𝔽ⁿ` if and
+only if the rows do. Rows and columns are read as vectors of {lit}`EuclideanSpace` —
+that is where "orthonormal" gets its inner product — using {name}`Matrix.col` and
+{name}`Matrix.row`. Under the hood this is {lit}`Qᴴ Q = I ⟺ Q Qᴴ = I`, the exchange
+that lets {name}`Matrix.unitaryGroup` be defined by either equation and that condition
+(e) of 7.53 relies on. -/
 theorem exercise_7D_13 {n : Type*} [Fintype n] [DecidableEq n] (Q : Matrix n n 𝕜) :
-    Qᴴ * Q = 1 ↔ Q * Qᴴ = 1 := by
+    Orthonormal 𝕜 (fun j => (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 n)) ↔
+      Orthonormal 𝕜 (fun i => (WithLp.toLp 2 (Q.row i) : EuclideanSpace 𝕜 n)) := by
   sorry
 
 /-- 7D.14 For a unit vector {lit}`v` and {lit}`b ∈ 𝔽` (with {lit}`dim V ≥ 2`), there
@@ -1061,21 +1108,40 @@ theorem exercise_7D_15b {E : Type*} [NormedAddCommGroup E] [InnerProductSpace �
     LinearMap.IsSymmetric (Complex.I • ((T + 1) ∘ₗ Tinv)) := by
   sorry
 
-/-- 7D.16 Over {lit}`ℂ`, for self-adjoint {lit}`T`, {lit}`(T + iI)(T − iI)⁻¹` is
-unitary and {lit}`1` is not an eigenvalue of it. -/
-theorem exercise_7D_16 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
-    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hT : LinearMap.IsSymmetric T)
-    (Tinv : E →ₗ[ℂ] E) (hi1 : Tinv ∘ₗ (T - Complex.I • 1) = 1)
-    (hi2 : (T - Complex.I • 1) ∘ₗ Tinv = 1) :
-    (T + Complex.I • 1) ∘ₗ Tinv ∈ unitary (E →ₗ[ℂ] E) ∧
-      ¬ HasEigenvalue ((T + Complex.I • 1) ∘ₗ Tinv) 1 := by
+/-- 7D.16 (first step) Over {lit}`ℂ`, for self-adjoint {lit}`T` the operator
+{lit}`T − iI` is invertible. Axler does not state this as a hypothesis — unlike 7D.15,
+where {lit}`T − I` invertible is a genuine restriction on the unitary {lit}`T` (take
+{lit}`T = I`) — because here it is a consequence: {lit}`i` is not an eigenvalue of a
+self-adjoint operator, since every eigenvalue is real
+({name}`LADR.Section_7A.eigenvalue_real`), and injective is invertible in finite
+dimensions. Alternatively {lit}`(T + iI)(T − iI) = T² + I` is invertible by 7.26
+({name}`LADR.Section_7B.quadratic_isInvertible` with {lit}`b = 0`, {lit}`c = 1`), so both
+factors are. Prove this before 7D.16, which presupposes it by writing
+{lit}`(T − iI)⁻¹`. -/
+theorem exercise_7D_16_isUnit {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hT : LinearMap.IsSymmetric T) :
+    IsUnit (T - Complex.I • (1 : E →ₗ[ℂ] E)) := by
   sorry
 
-/-- 7D.17 (7.57) A matrix is unitary iff its conjugate transpose is unitary
-(columns orthonormal iff rows orthonormal). -/
-theorem exercise_7D_17 {n : Type*} [Fintype n] [DecidableEq n] (Q : Matrix n n 𝕜) :
-    Q ∈ Matrix.unitaryGroup n 𝕜 ↔ Qᴴ ∈ Matrix.unitaryGroup n 𝕜 := by
+/-- 7D.16 Over {lit}`ℂ`, for self-adjoint {lit}`T`, {lit}`(T + iI)(T − iI)⁻¹` is
+unitary and {lit}`1` is not an eigenvalue of it. The inverse is spelled with
+{name}`Ring.inverse` on the ring {lit}`ℒ(E)` (composition as multiplication), so the
+statement assumes no inverse of its own: it exists by
+{name}`exercise_7D_16_isUnit`. -/
+theorem exercise_7D_16 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hT : LinearMap.IsSymmetric T) :
+    (T + Complex.I • 1) * Ring.inverse (T - Complex.I • (1 : E →ₗ[ℂ] E)) ∈
+        unitary (E →ₗ[ℂ] E) ∧
+      ¬ HasEigenvalue ((T + Complex.I • 1) *
+        Ring.inverse (T - Complex.I • (1 : E →ₗ[ℂ] E))) 1 := by
   sorry
+
+/-! 7D.17 asks to explain why the characterizations of unitary matrices in 7.57 hold. It is
+a straightforward application of 7D.13 — the columns-versus-rows exchange
+{lit}`Q* Q = I ⟺ Q Q* = I` is the only ingredient not already in the text — so no separate
+statement is left here: 7.57 is proved above as
+{name}`LADR.Section_7D.tfae_mem_unitaryGroup`, and the exchange itself is
+{name}`LADR.Section_7D.exercise_7D_13`. -/
 
 /-- 7D.18 A real symmetric matrix is orthogonally diagonalizable: there is a real
 unitary {lit}`Q` with {lit}`Q* A Q` diagonal. -/
@@ -1084,21 +1150,55 @@ theorem exercise_7D_18 {n : Type*} [Fintype n] [DecidableEq n] (A : Matrix n n �
     ∃ Q : Matrix n n ℝ, Q ∈ Matrix.unitaryGroup n ℝ ∧ Matrix.IsDiag (Qᴴ * A * Q) := by
   sorry
 
-/-- 7D.19 The discrete Fourier transform {lit}`ℱ` on {lit}`ℂⁿ` is unitary and
-satisfies {lit}`ℱ⁴ = I`. -/
-theorem exercise_7D_19 {n : ℕ} (hn : 0 < n)
-    (F : EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n))
-    (hF : ∀ (z : EuclideanSpace ℂ (Fin n)) (j : Fin n),
-      F z j = (1 / Real.sqrt n : ℂ) *
-        ∑ m : Fin n, z m *
-          Complex.exp (-2 * Real.pi * Complex.I * (j : ℂ) * (m : ℂ) / (n : ℂ))) :
-    F ∈ unitary (EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n)) ∧
-      F ∘ₗ F ∘ₗ F ∘ₗ F = 1 := by
+/-- The discrete Fourier transform of 7D.19:
+{lit}`(ℱ z)ⱼ = n^(-1/2) ∑ₘ zₘ e^(−2πijm/n)`, with {lit}`ℂⁿ` indexed by
+{lit}`0, …, n−1` as Axler does. Extracted as a predicate because 7D.19 has three parts
+about the same operator. -/
+def IsDFT {n : ℕ} (F : EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n)) : Prop :=
+  ∀ (z : EuclideanSpace ℂ (Fin n)) (j : Fin n),
+    F z j = (1 / Real.sqrt n : ℂ) *
+      ∑ m : Fin n, z m *
+        Complex.exp (-2 * Real.pi * Complex.I * (j : ℂ) * (m : ℂ) / (n : ℂ))
+
+/-- 7D.19 (a) The discrete Fourier transform {lit}`ℱ` on {lit}`ℂⁿ` is a unitary
+operator. -/
+theorem exercise_7D_19a {n : ℕ} (hn : 0 < n)
+    (F : EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n)) (hF : IsDFT F) :
+    F ∈ unitary (EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n)) := by
+  sorry
+
+/-- 7D.19 (b) {lit}`ℱ⁻¹(z₀, …, z_{n−1}) = ℱ(zₙ, z_{n−1}, …, z₁)` where {lit}`zₙ = z₀`.
+The reversal is {lit}`j ↦ z (-j)` in {lit}`Fin n` arithmetic
+({name}`Fin.instInvolutiveNeg`), which is {lit}`z 0 = zₙ` at {lit}`j = 0` and
+{lit}`z (n − j)` otherwise — exactly Axler's list. The inverse exists by (a) and is
+spelled with {name}`Ring.inverse` on the ring {lit}`ℒ(ℂⁿ)`, so the statement needs no
+inverse hypothesis of its own. -/
+theorem exercise_7D_19b {n : ℕ} (hn : 0 < n)
+    (F : EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n)) (hF : IsDFT F)
+    (z : EuclideanSpace ℂ (Fin n)) :
+    Ring.inverse F z = F (WithLp.toLp 2 fun j => z (-j)) := by
+  sorry
+
+/-- 7D.19 (c) {lit}`ℱ⁴ = I`. -/
+theorem exercise_7D_19c {n : ℕ} (hn : 0 < n)
+    (F : EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n)) (hF : IsDFT F) :
+    F ∘ₗ F ∘ₗ F ∘ₗ F = 1 := by
   sorry
 
 /-- 7D.20 A square matrix with linearly independent columns has unique matrices
 {lit}`R` lower triangular with only positive numbers on its diagonal and {lit}`Q`
-unitary with {lit}`A = RQ` (the {lit}`RQ` variant of 7.58). -/
+unitary with {lit}`A = RQ` (the {lit}`RQ` variant of 7.58).
+
+*Why {lit}`BlockTriangular OrderDual.toDual` is "lower triangular".* Everywhere else in
+this file triangularity is {lit}`BlockTriangular id`; this is the one place the index map
+is not {lit}`id`. Unfolding {name}`Matrix.BlockTriangular`, {lit}`M.BlockTriangular b`
+means {lit}`∀ i j, b j < b i → M i j = 0`. Taking {lit}`b = id` gives
+{lit}`j < i → M i j = 0`: the entries strictly *below* the diagonal vanish, i.e. upper
+triangular. Taking {lit}`b = OrderDual.toDual` reverses the order —
+{lit}`toDual j < toDual i ↔ i < j` ({name}`OrderDual.toDual_lt_toDual`) — so the condition
+becomes {lit}`i < j → M i j = 0`: the entries strictly *above* the diagonal vanish, i.e.
+lower triangular. This is the same spelling mathlib uses in
+{name}`Matrix.det_of_lowerTriangular`. -/
 theorem exercise_7D_20 {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜)
     (hA : LinearIndependent 𝕜 A.col) :
     ∃! RQ : Matrix (Fin N) (Fin N) 𝕜 × Matrix (Fin N) (Fin N) 𝕜,

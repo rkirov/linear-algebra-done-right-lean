@@ -84,7 +84,7 @@ found. *Playtested* means someone (the author or someone else) has worked throug
 | 7A. Self-Adjoint and Normal Operators | ✓ | ✓ | — |
 | 7B. Spectral Theorem | ✓ | ✓ | — |
 | 7C. Positive Operators | ✓ | ✓ | — |
-| 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓ | — | — |
+| 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓ | ✓ | — |
 | 7E. Singular Value Decomposition | ✓ | — | — |
 | 7F. Consequences of Singular Value Decomposition | ✓ | — | — |
 | 8A. Generalized Eigenvectors and Nilpotent Operators | ✓ | — | — |
