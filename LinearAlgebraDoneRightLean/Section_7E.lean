@@ -112,6 +112,7 @@ theorem eigenvalues_nonneg (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
   have := (LADR.Section_7C.eigenvalue_nonneg hpos hev).1
   rwa [RCLike.ofReal_re] at this
 
+omit [FiniteDimensional 𝕜 V] in
 /-- Eigenspace dimensions from *any* diagonalizing orthonormal basis: if
 {lit}`S bᵢ = dᵢ bᵢ` for an orthonormal basis {lit}`b`, then {lit}`dim E(μ, S)` is the number
 of indices with {lit}`dᵢ = μ`. mathlib has this only for its own
@@ -164,6 +165,7 @@ theorem finrank_eigenspace_of_orthonormalBasis {m : ℕ} {S : V →ₗ[𝕜] V}
   exact finrank_span_eq_card
     ((b.orthonormal.comp _ Subtype.val_injective).linearIndependent)
 
+omit [FiniteDimensional 𝕜 V] in
 /-- The eigenvalue list is independent of the diagonalizing basis: if {lit}`S` is diagonal
 with eigenvalues {lit}`d` in one orthonormal basis and with {lit}`d'` in another, then
 {lit}`d` and {lit}`d'` agree as multisets — with multiplicity, and even for bases of different
@@ -364,7 +366,7 @@ theorem finrank_eigenspace_adjComp_T_7_66 :
     · ext i
       fin_cases i <;>
         norm_num [Matrix.cons_val_two, Matrix.cons_val_three, Matrix.vecHead,
-          Matrix.vecTail] <;> decide
+          Matrix.vecTail]
   · rw [key, Fintype.card_subtype,
       show (Finset.univ.filter fun i => ![(9 : 𝕜), 4, 0, 9] i = 0) = {2} from ?_]
     · decide
@@ -497,11 +499,7 @@ theorem orthonormal_u_7_67 : Orthonormal 𝕜 (u_7_67 (𝕜 := 𝕜)) := by
   fin_cases i <;> fin_cases j <;> rw [PiLp.inner_apply] <;>
     simp [u_7_67, RCLike.inner_apply, Fin.sum_univ_four, map_inv₀,
       RCLike.conj_ofReal, abs_of_nonneg (Real.sqrt_nonneg 2), ofReal_sqrt_two_sq] <;>
-    field_simp <;>
-    first
-      | norm_num
-      | linear_combination ofReal_sqrt_two_sq (𝕜 := 𝕜)
-      | linear_combination ofReal_sqrt_two_mul_self (𝕜 := 𝕜)
+    field_simp <;> norm_num
 
 /-- {lit}`u_7_67` is an orthonormal basis: four orthonormal vectors in a 4-dimensional
 space. -/
@@ -523,12 +521,8 @@ theorem adjComp_T_7_67_apply_basis (i : Fin 4) :
   rw [adjComp_T_7_67_eq, basis_7_67_apply]
   ext k
   fin_cases i <;> fin_cases k <;>
-    simp [u_7_67, Matrix.toLpLin_apply, Matrix.mulVec, dotProduct, Fin.sum_univ_four,
-      ofReal_sqrt_two_inv, RCLike.ofReal_ofNat, RCLike.ofReal_zero] <;>
-    field_simp <;>
-    first
-      | ring
-      | linear_combination ofReal_sqrt_two_mul_self (𝕜 := 𝕜)
+    simp [u_7_67, Matrix.toLpLin_apply, RCLike.ofReal_ofNat, RCLike.ofReal_zero] <;>
+    field_simp <;> ring
 
 /-- 7.67 The eigenvalues of {lit}`T* T` are {lit}`25, 2, 0`, with
 {lit}`dim E(25, T* T) = 1`, {lit}`dim E(2, T* T) = 1` and {lit}`dim E(0, T* T) = 2`. -/
@@ -578,7 +572,7 @@ theorem eigenvalues_adjComp_T_7_67 :
     · ext i
       fin_cases i <;>
         norm_num [RCLike.ofReal_ofNat, RCLike.ofReal_zero, Matrix.cons_val_two,
-          Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail] <;> decide
+          Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail]
   · rw [hfilter 0 {1, 2} ?_]
     · decide
     · ext i
@@ -611,20 +605,20 @@ theorem singularValues_T_7_67 :
     norm_num at this
   rw [hcast, hsq, show (Finset.univ : Finset (Fin 4)).val = {0, 1, 2, 3} from rfl]
   simp only [Multiset.insert_eq_cons, Multiset.map_cons, Multiset.map_singleton,
-    Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.head_cons, Matrix.cons_val_two,
-    Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail, h25, Real.sqrt_zero]
+    Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two,
+    Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail, Real.sqrt_zero]
   refine Multiset.ext.mpr fun r => ?_
   by_cases h5 : r = 5
   · subst h5
-    simp [Multiset.count_cons, h25, Ne.symm hs5, Ne.symm hs0,
+    simp [h25, Ne.symm hs5,
       (by norm_num : (5 : ℝ) ≠ 0)]
   · by_cases hsr : r = Real.sqrt 2
     · subst hsr
-      simp [Multiset.count_cons, h25, hs5, hs0, Ne.symm hs0]
+      simp [h25, hs5, hs0]
     · by_cases h0 : r = 0
       · subst h0
-        simp [Multiset.count_cons, h25, Ne.symm hs0, (by norm_num : (0 : ℝ) ≠ 5)]
-      · simp [Multiset.count_cons, h25, h5, hsr, h0]
+        simp [h25, Ne.symm hs0, (by norm_num : (0 : ℝ) ≠ 5)]
+      · simp [h25, h5, hsr, h0]
 
 /-! # Role of Positive Singular Values -/
 
@@ -998,14 +992,12 @@ theorem svd_7_79 :
   refine ⟨?_, ?_, ?_⟩
   · rw [orthonormal_iff_ite]
     intro i j
-    fin_cases i <;> fin_cases j <;> rw [PiLp.inner_apply] <;>
-      simp [e_7_79, RCLike.inner_apply, Fin.sum_univ_four, hinv, map_inv₀,
-        RCLike.conj_ofReal, abs_of_nonneg (Real.sqrt_nonneg 2), hcsq] <;>
-      field_simp <;>
-      first
-        | norm_num
-        | linear_combination hcsq
-        | linear_combination hc2
+    fin_cases i <;> fin_cases j <;>
+      (rw [PiLp.inner_apply]
+       simp [e_7_79, RCLike.inner_apply, Fin.sum_univ_four, hinv, map_inv₀,
+         RCLike.conj_ofReal, abs_of_nonneg (Real.sqrt_nonneg 2), hcsq]
+       try field_simp
+       try norm_num)
   · rw [orthonormal_iff_ite]
     intro i j
     fin_cases i <;> fin_cases j <;> rw [PiLp.inner_apply] <;>
@@ -1022,8 +1014,7 @@ theorem svd_7_79 :
         RCLike.conj_ofReal, mul_comm]
     ext k
     fin_cases k <;>
-      simp [hT0, hT1, hT2, he0, he1, f_7_79, RCLike.real_smul_eq_coe_mul] <;>
-      field_simp <;> ring
+      simp [hT0, hT1, hT2, he0, he1, f_7_79, RCLike.real_smul_eq_coe_mul]
 
 /-- The {lit}`(k,l)` entry of {lit}`A` read off the SVD of {lit}`Matrix.toEuclideanLin A`:
 `A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the {lit}`sᵢ = 0` terms vanish).
