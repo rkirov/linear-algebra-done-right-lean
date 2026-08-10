@@ -76,9 +76,11 @@ supplied by the spectral theorem ({name}`LinearMap.IsSymmetric.eigenvectorBasis`
 so {lit}`singularValues T : Fin (finrank 𝕜 V) → ℝ` with
 {lit}`singularValues T i = √(λᵢ)` where {lit}`λᵢ` is the eigenvalue of
 {lit}`T* T` on {lit}`eᵢ`. This captures the multiset of singular values *with
-multiplicity* (one value per basis vector); Axler additionally lists them in
-decreasing order, an ordering choice we do not track here as it plays no role in
-the results below. -/
+multiplicity* (one value per basis vector), and it captures Axler's ordering too:
+mathlib's {name}`LinearMap.IsSymmetric.eigenvalues` are sorted in decreasing order
+({name}`LinearMap.IsSymmetric.eigenvalues_antitone`) and {lit}`√` is monotone, so
+{lit}`singularValues T` is already Axler's decreasing list
+({lit}`singularValues_antitone` below). -/
 
 /-- The orthonormal eigenbasis of {lit}`T* T` used throughout this section. -/
 noncomputable def svdBasis (T : V →ₗ[𝕜] W) :
@@ -92,6 +94,13 @@ noncomputable def singularValues (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V
 theorem singularValues_nonneg (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
     0 ≤ singularValues T i :=
   Real.sqrt_nonneg _
+
+/-- 7.65 The singular values are listed in decreasing order, as Axler's definition
+requires: mathlib sorts the eigenvalues of a self-adjoint operator decreasingly and
+{lit}`√` preserves that. -/
+theorem singularValues_antitone (T : V →ₗ[𝕜] W) : Antitone (singularValues T) :=
+  fun _ _ hij =>
+    Real.sqrt_le_sqrt ((adjComp_self_isPositive T).isSymmetric.eigenvalues_antitone rfl hij)
 
 /-- The eigenvalues of the positive operator {lit}`T* T` are nonnegative (7.64(a)). -/
 theorem eigenvalues_nonneg (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
@@ -624,52 +633,140 @@ theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
   rw [← sub_eq_zero]
   exact inner_self_eq_zero.mp hzero
 
+
+/-! 7.79 Example: finding a singular value decomposition
+
+For the {lit}`T ∈ ℒ(𝔽⁴, 𝔽³)` of Example 7.67, {lit}`T(x₁,x₂,x₃,x₄) = (−5x₄, 0, x₁+x₂)`,
+the positive eigenvalues of {lit}`T* T` are {lit}`25, 2` (each of multiplicity one), so the
+positive singular values are {lit}`5, √2`. Orthonormal bases of the two eigenspaces are
+{lit}`(0,0,0,1)` and {lit}`(1/√2, 1/√2, 0, 0)`, so following the proof of 7.70 Axler takes
+{lit}`e₁ = (0,0,0,1)`, {lit}`e₂ = (1/√2, 1/√2, 0, 0)` and
+{lit}`f₁ = T e₁ / 5 = (−1,0,0)`, {lit}`f₂ = T e₂ / √2 = (0,0,1)`, giving
+{lit}`T v = 5⟨v, e₁⟩ f₁ + √2⟨v, e₂⟩ f₂`.
+
+Where the eigenvalues came from is 7.67's computation; what makes *this* example checkable
+on its own is that Axler's concluding "as expected, we see that …" is a direct verification:
+the two lists are orthonormal and the formula holds, both by coordinate arithmetic. That is
+what {lit}`svd_7_79` proves — no eigenvalue extraction needed. (Axler's {lit}`⟨v, eₖ⟩` is
+mathlib's {lit}`⟪eₖ, v⟫`.) -/
+
+/-- {lit}`e₁ = (0,0,0,1)`, {lit}`e₂ = (1/√2, 1/√2, 0, 0)`: the orthonormal list in
+{lit}`𝔽⁴` of Example 7.79. -/
+noncomputable def e_7_79 : Fin 2 → EuclideanSpace 𝕜 (Fin 4) :=
+  ![!₂[0, 0, 0, 1], !₂[(((Real.sqrt 2)⁻¹ : ℝ) : 𝕜), (((Real.sqrt 2)⁻¹ : ℝ) : 𝕜), 0, 0]]
+
+/-- {lit}`f₁ = T e₁ / 5 = (−1,0,0)`, {lit}`f₂ = T e₂ / √2 = (0,0,1)`: the orthonormal list
+in {lit}`𝔽³` of Example 7.79. -/
+def f_7_79 : Fin 2 → EuclideanSpace 𝕜 (Fin 3) :=
+  ![!₂[-1, 0, 0], !₂[0, 0, 1]]
+
+/-- 7.79 {lit}`T(x₁,x₂,x₃,x₄) = (−5x₄, 0, x₁+x₂)`, coordinate by coordinate. -/
+theorem T_7_67_apply (v : EuclideanSpace 𝕜 (Fin 4)) :
+    T_7_67 v 0 = -5 * v 3 ∧ T_7_67 v 1 = 0 ∧ T_7_67 v 2 = v 0 + v 1 := by
+  refine ⟨?_, ?_, ?_⟩ <;>
+    simp [T_7_67, A_7_67, Matrix.toLpLin_apply, dotProduct, Fin.sum_univ_four]
+
+/-- 7.79 Axler's lists really are a singular value decomposition of {lit}`T`: {lit}`e` is
+orthonormal in {lit}`𝔽⁴`, {lit}`f` is orthonormal in {lit}`𝔽³`, and
+{lit}`T v = 5 ⟪e₁, v⟫ f₁ + √2 ⟪e₂, v⟫ f₂` for every {lit}`v`. -/
+theorem svd_7_79 :
+    Orthonormal 𝕜 (e_7_79 (𝕜 := 𝕜)) ∧ Orthonormal 𝕜 (f_7_79 (𝕜 := 𝕜)) ∧
+      ∀ v : EuclideanSpace 𝕜 (Fin 4), T_7_67 v =
+        (5 : 𝕜) • ⟪e_7_79 0, v⟫_𝕜 • f_7_79 0 +
+          (((Real.sqrt 2 : ℝ) : 𝕜)) • ⟪e_7_79 1, v⟫_𝕜 • f_7_79 1 := by
+  -- Elementary coordinate arithmetic in each of the three parts; the inner products are
+  -- `⟪e₁,e₁⟫ = 1`, `⟪e₂,e₂⟫ = 2·(1/√2)² = 1`, `⟪e₁,e₂⟫ = 0` and similarly for the `f`'s,
+  -- and the formula reduces to `√2 · (1/√2) = 1` in coordinate 3. Not yet discharged: the
+  -- `ℝ → 𝕜` coercions around `√2` fight the simp normal forms (`|√2|`, `algebraMap`,
+  -- real-`smul`), so it wants patient rewriting rather than `norm_num`.
+  sorry
+
 /-- The {lit}`(k,l)` entry of {lit}`A` read off the SVD of {lit}`Matrix.toEuclideanLin A`:
-`A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the {lit}`sᵢ = 0` terms vanish). -/
-theorem toEuclideanLin_entry_eq_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) (k l : Fin N) :
-    A k l = ∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))),
+`A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the {lit}`sᵢ = 0` terms vanish).
+
+This is the entrywise form of 7.71, and it exists only as a step in the proof of 7.80
+below: that proof compares {lit}`A k l` with {lit}`(B D Cᴴ) k l`, whose expansion is
+exactly the right-hand side here. Axler does it inline; it is separated out because
+getting from the SVD formula to a single entry (apply it to
+{lit}`EuclideanSpace.single l 1`, then read coordinate {lit}`k`) takes long enough to
+obscure the entry comparison. -/
+theorem toEuclideanLin_entry_eq_svd {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜)
+    (k : Fin p) (l : Fin n) :
+    A k l = ∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin n))),
       (singularValues (Matrix.toEuclideanLin A) i : 𝕜)
       * (starRingEnd 𝕜) (svdBasis (Matrix.toEuclideanLin A) i l)
       * svdImage (Matrix.toEuclideanLin A) i k := by
   set T := Matrix.toEuclideanLin A with hTdef
-  have hL := congrArg (⇑(EuclideanSpace.equiv (Fin N) 𝕜))
+  have hL := congrArg (⇑(EuclideanSpace.equiv (Fin p) 𝕜))
     (svd_apply T (EuclideanSpace.single l (1 : 𝕜)))
   rw [map_sum] at hL
   simp only [map_smul] at hL
   have hLk := congrFun hL k
   simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at hLk
-  have hAkl : A k l = (⇑(EuclideanSpace.equiv (Fin N) 𝕜)
+  have hAkl : A k l = (⇑(EuclideanSpace.equiv (Fin p) 𝕜)
       (T (EuclideanSpace.single l (1:𝕜)))) k := by
     rw [hTdef, Matrix.toLpLin_apply]
     simp [EuclideanSpace.single, Matrix.mulVec_single]
   rw [hAkl, hLk]
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [EuclideanSpace.inner_single_right]
-  simp only [show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N),
-    ⇑(EuclideanSpace.equiv (Fin N) 𝕜) w m = w m from fun _ _ => rfl, one_mul]
+  simp only [show ∀ (w : EuclideanSpace 𝕜 (Fin p)) (m : Fin p),
+    ⇑(EuclideanSpace.equiv (Fin p) 𝕜) w m = w m from fun _ _ => rfl, one_mul]
   ring
 
-/-- 7.80 Matrix version of the SVD. A square matrix {lit}`A` factors as {lit}`A = B D Cᴴ`
-with {lit}`B`, {lit}`C` having orthonormal columns (`Bᴴ B = Cᴴ C = 1`) and {lit}`D` a diagonal
-matrix carrying the positive singular values. Following Axler, the columns of {lit}`B`
-are the image vectors {lit}`fₖ`, the columns of {lit}`C` are the eigenbasis vectors {lit}`eₖ`
-(both indexed by the positive singular values), and {lit}`D` holds the {lit}`sₖ`. -/
-theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
-    ∃ (B C : Matrix (Fin N)
-        {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
-          // singularValues (Matrix.toEuclideanLin A) i ≠ 0} 𝕜)
-      (D : Matrix {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
-          // singularValues (Matrix.toEuclideanLin A) i ≠ 0}
-        {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
-          // singularValues (Matrix.toEuclideanLin A) i ≠ 0} 𝕜),
-      Bᴴ * B = 1 ∧ Cᴴ * C = 1
-        ∧ (∀ i, D i i = (singularValues (Matrix.toEuclideanLin A) i.1 : 𝕜))
-        ∧ (∀ i j, i ≠ j → D i j = 0) ∧ A = B * D * Cᴴ := by
+/-- Axler's index set {lit}`1, …, m` in 7.80: the indices carrying a *positive* singular
+value of {lit}`A`. Its cardinality is {lit}`A.rank`
+({lit}`rank_eq_card_posSingularIdx`), so using it as the middle index of the
+factorization is Axler's "rank {lit}`m`" without a numeral and an equation to carry
+around. -/
+abbrev posSingularIdx {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) :=
+  {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin n))) //
+    singularValues (Matrix.toEuclideanLin A) i ≠ 0}
+
+/-- The number of positive singular values of {lit}`A` is the rank of {lit}`A`: 7.68(b)
+({name}`card_pos_singularValues_eq_finrank_range`) transported from
+{lit}`dim range (toEuclideanLin A)` to {name}`Matrix.rank` along
+{name}`Matrix.rank_eq_finrank_range_toLin`. -/
+theorem rank_eq_card_posSingularIdx {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) :
+    A.rank = Fintype.card (posSingularIdx A) := by
+  rw [Matrix.rank_eq_finrank_range_toLin A (EuclideanSpace.basisFun (Fin p) 𝕜).toBasis
+      (EuclideanSpace.basisFun (Fin n) 𝕜).toBasis,
+    ← Matrix.toEuclideanLin_eq_toLin_orthonormal]
+  exact (card_pos_singularValues_eq_finrank_range _).symm
+
+/-- 7.80 Matrix version of the SVD, in Axler's generality: a {lit}`p`-by-{lit}`n` matrix
+{lit}`A` of rank {lit}`m` factors as {lit}`A = B D Cᴴ` where {lit}`B` is
+{lit}`p`-by-{lit}`m` with orthonormal columns, {lit}`D` is {lit}`m`-by-{lit}`m` diagonal
+with positive numbers on the diagonal, and {lit}`C` is {lit}`n`-by-{lit}`m` with
+orthonormal columns.
+
+Here {lit}`m` is {name}`posSingularIdx` {lit}`A`, of cardinality {lit}`A.rank`. Following
+Axler's proof, the columns of {lit}`B` are the image vectors {lit}`fₖ`, the columns of
+{lit}`C` are the eigenbasis vectors {lit}`eₖ`, and {lit}`D` holds the positive singular
+values {lit}`sₖ` — but as with 7.70, Axler's statement asserts only that {lit}`D` is
+diagonal with positive entries, not what those entries are, so neither does this one.
+"Orthonormal columns" is read as Axler reads it, "orthonormal with respect to the standard
+Euclidean inner product": the columns {lit}`B.col i` as vectors of {lit}`EuclideanSpace`.
+That is equivalent to {lit}`Bᴴ B = Cᴴ C = 1`, because {lit}`(Bᴴ B) i j` *is* the inner
+product of columns {lit}`i` and {lit}`j`
+({name}`LADR.Section_7D.orthonormal_columns_iff`, which is how the proof below discharges
+it). The positive diagonal is {name}`LADR.Section_7D.HasPosRealDiag`.
+
+Axler's hypothesis {lit}`m ≥ 1` is not needed: for {lit}`A = 0` the index type is empty and
+the factorization holds trivially. -/
+theorem matrix_svd {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) :
+    ∃ (B : Matrix (Fin p) (posSingularIdx A) 𝕜) (C : Matrix (Fin n) (posSingularIdx A) 𝕜)
+      (D : Matrix (posSingularIdx A) (posSingularIdx A) 𝕜),
+      Orthonormal 𝕜 (fun i => (WithLp.toLp 2 (B.col i) : EuclideanSpace 𝕜 (Fin p))) ∧
+        Orthonormal 𝕜 (fun i => (WithLp.toLp 2 (C.col i) : EuclideanSpace 𝕜 (Fin n))) ∧
+        D.IsDiag ∧ LADR.Section_7D.HasPosRealDiag D ∧ A = B * D * Cᴴ := by
   classical
   set T := Matrix.toEuclideanLin A with hTdef
   refine ⟨Matrix.of fun k i => svdImage T i.1 k, Matrix.of fun k i => svdBasis T i.1 k,
-    Matrix.diagonal fun i => (singularValues T i.1 : 𝕜), ?_, ?_,
-    fun i => Matrix.diagonal_apply_eq _ _, fun i j hij => Matrix.diagonal_apply_ne _ hij, ?_⟩
+    Matrix.diagonal fun i => (singularValues T i.1 : 𝕜),
+    (LADR.Section_7D.orthonormal_columns_iff _).mpr ?_,
+    (LADR.Section_7D.orthonormal_columns_iff _).mpr ?_,
+    fun _ _ hij => Matrix.diagonal_apply_ne _ hij, fun i => ?_, ?_⟩
   · ext i j
     rw [Matrix.mul_apply, Matrix.one_apply,
       ← orthonormal_iff_ite.mp (svdImage_orthonormal T) i j, PiLp.inner_apply]
@@ -684,11 +781,16 @@ theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
     simp only [Matrix.conjTranspose_apply, Matrix.of_apply, RCLike.inner_apply, RCLike.star_def,
       Function.comp_apply]
     ring
+  · -- the diagonal entries are positive reals: `sᵢ ≥ 0` and `sᵢ ≠ 0`
+    rw [Matrix.diagonal_apply_eq]
+    exact ⟨by rw [RCLike.ofReal_re]
+              exact lt_of_le_of_ne (singularValues_nonneg T i.1) (Ne.symm i.2),
+      by rw [RCLike.ofReal_im]⟩
   · ext k l
     rw [Matrix.mul_assoc, Matrix.mul_apply, toEuclideanLin_entry_eq_svd A k l]
-    rw [show (∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))),
+    rw [show (∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin n))),
         (singularValues T i : 𝕜) * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k)
-        = ∑ i : {x : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))) // singularValues T x ≠ 0},
+        = ∑ i : posSingularIdx A,
           (singularValues T i.1 : 𝕜) * (starRingEnd 𝕜) (svdBasis T i.1 l) * svdImage T i.1 k
       from ?_]
     · refine Finset.sum_congr rfl fun i _ => ?_
@@ -698,34 +800,11 @@ theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
       · intro b _ hb; rw [Matrix.diagonal_apply_ne _ (Ne.symm hb), zero_mul]
       · intro h; exact absurd (Finset.mem_univ i) h
     · rw [← Finset.sum_subtype (Finset.univ.filter fun i => singularValues T i ≠ 0)
-        (fun x => by simp) fun i => (singularValues T i : 𝕜)
+        (fun x => by simp [hTdef]) fun i => (singularValues T i : 𝕜)
           * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k]
       exact (Finset.sum_filter_of_ne fun i _ hne => by
         intro hz
         exact hne (by rw [hz, RCLike.ofReal_zero, zero_mul, zero_mul])).symm
-
-/-! # Examples
-
-Examples 7.66 and 7.67 are formalized at their book positions above, following 7.65:
-the maps are given by their matrices ({lit}`A_7_66`, {lit}`A_7_67`), and the
-{lit}`T* T` computations Axler assigns to the reader are proved
-({name}`adjComp_T_7_66_apply`, {name}`conjTranspose_mul_A_7_66`,
-{name}`adjComp_T_7_66_eq`, {name}`conjTranspose_mul_A_7_67`), as is the eigenvalue *set*
-of 7.66's {lit}`T* T` ({name}`hasEigenvalue_adjComp_T_7_66`, via
-{name}`spectrum_diagonal`).
-
-What still carries a {lit}`sorry` is the passage from the eigenvalue set to Axler's list
-*with multiplicity*: the eigenspace dimensions ({lit}`finrank_eigenspace_adjComp_T_7_66`,
-{lit}`eigenvalues_adjComp_T_7_67`) and the singular-value multisets
-({lit}`singularValues_T_7_66`, {lit}`singularValues_T_7_67`). Axler reads these off by
-inspection; in Lean they want a lemma computing {lit}`dim E(μ, S)` for an operator diagonal
-in a given orthonormal basis — mathlib has this only for its own
-{lit}`eigenvectorBasis` ({name}`LinearMap.IsSymmetric.card_filter_eigenvalues_eq`) — plus,
-for 7.67, a diagonalization of the non-diagonal {lit}`T* T` (its {lit}`(1,1;1,1)` block has
-eigenvectors {lit}`(1,±1,0,0)`).
-
-Example 7.79 ({lit}`T ∈ ℒ(𝔽⁴, 𝔽³)`, the pseudoinverse of the same map) remains
-unformalized for the same reason. -/
 
 /-! # Exercises 7E -/
 
@@ -743,12 +822,18 @@ theorem exercise_7E_2 (T : V →ₗ[𝕜] W) {s : ℝ} (hs : 0 < s) :
         T v = (s : 𝕜) • w ∧ LinearMap.adjoint T w = (s : 𝕜) • v := by
   sorry
 
-/-- 7E.3 There is an operator on {lit}`ℂ²` whose only eigenvalue is {lit}`0` but
-whose singular values are {lit}`5, 0`. -/
+/-- The operator of 7E.3, to be supplied by the solver: the exercise says "give an example",
+so the witness is the answer and the two properties below are the obligations. -/
+noncomputable def T_7E_3 : EuclideanSpace ℂ (Fin 2) →ₗ[ℂ] EuclideanSpace ℂ (Fin 2) := sorry
+
+/-- 7E.3 Give an example of {lit}`T ∈ ℒ(ℂ²)` whose only eigenvalue is {lit}`0` but whose
+singular values are {lit}`5, 0`. Here the *numbers* are Axler's, so they appear in the
+statement; what the solver supplies is {lit}`T_7E_3`. The singular values are compared as an
+ordered list, which is legitimate because {name}`singularValues_antitone` says
+{name}`singularValues` is already listed decreasingly, as in 7.65. -/
 theorem exercise_7E_3 :
-    ∃ T : EuclideanSpace ℂ (Fin 2) →ₗ[ℂ] EuclideanSpace ℂ (Fin 2),
-      (∀ μ : ℂ, HasEigenvalue T μ ↔ μ = 0) ∧
-      (∀ s : ℝ, (∃ i, singularValues T i = s) ↔ s = 5 ∨ s = 0) := by
+    (∀ μ : ℂ, HasEigenvalue T_7E_3 μ ↔ μ = 0) ∧
+      List.ofFn (singularValues T_7E_3) = [5, 0] := by
   sorry
 
 /-- 7E.4 With {lit}`s₁` the largest and {lit}`sₙ` the smallest singular value,
@@ -759,11 +844,19 @@ theorem exercise_7E_4 (T : V →ₗ[𝕜] W) (s₁ sₙ : ℝ)
     {r : ℝ | ∃ v : V, ‖v‖ = 1 ∧ ‖T v‖ = r} = Set.Icc sₙ s₁ := by
   sorry
 
-/-- 7E.5 The operator {lit}`T(x, y) = (−4y, x)` on {lit}`ℂ²` has singular values
-{lit}`4, 1`. -/
+/-- The singular values of the operator of 7E.5 — the numbers to be found by the solver,
+as with {lit}`singularValues_7E_6` below. -/
+noncomputable def singularValues_7E_5 : Fin 2 → ℝ := sorry
+
+/-- 7E.5 Find the singular values of {lit}`T(x, y) = (−4y, x)` on {lit}`ℂ²`. The answer is
+{lit}`singularValues_7E_5`: stating it that way leaves the numbers to the solver instead of
+giving them away in the statement. The two are compared as ordered lists —
+{name}`List.ofFn` avoids transporting along
+{lit}`finrank ℂ (EuclideanSpace ℂ (Fin 2)) = 2`, and the order is meaningful because
+{name}`singularValues_antitone` lists them decreasingly. -/
 theorem exercise_7E_5 (T : EuclideanSpace ℂ (Fin 2) →ₗ[ℂ] EuclideanSpace ℂ (Fin 2))
     (hT : ∀ z : EuclideanSpace ℂ (Fin 2), T z = !₂[-4 * z 1, z 0]) :
-    ∀ s : ℝ, (∃ i, singularValues T i = s) ↔ s = 4 ∨ s = 1 := by
+    List.ofFn (singularValues T) = List.ofFn singularValues_7E_5 := by
   sorry
 
 /-- The singular values of the differentiation operator of 7E.6 — the numbers to
@@ -776,18 +869,42 @@ on {lit}`𝒫₂(ℝ)` with the {lit}`L²` inner product {lit}`⟨p, q⟩ = ∫�
 {lit}`Polynomial.degreeLT ℝ 3`). The answer is {name}`singularValues_7E_6`. -/
 theorem exercise_7E_6 (D : Polynomial.degreeLT ℝ 3 →ₗ[ℝ] Polynomial.degreeLT ℝ 3)
     (hD : ∀ p : Polynomial.degreeLT ℝ 3,
-      (D p : Polynomial ℝ) = (p : Polynomial ℝ).derivative) (s : ℝ) :
-    (∃ i, singularValues D i = s) ↔ ∃ j, singularValues_7E_6 j = s := by
+      (D p : Polynomial ℝ) = (p : Polynomial ℝ).derivative) :
+    List.ofFn (singularValues D) = List.ofFn singularValues_7E_6 := by
   sorry
 
-/-- 7E.7 For self-adjoint {lit}`T` (or {lit}`𝔽 = ℂ` and {lit}`T` normal), the
-singular values are the absolute values of the eigenvalues. -/
-theorem exercise_7E_7 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
-    {s : ℝ | ∃ i, singularValues T i = s} =
-      {s : ℝ | ∃ μ : 𝕜, HasEigenvalue T μ ∧ ‖μ‖ = s} := by
+/-- 7E.7(a) For self-adjoint {lit}`T`, the singular values of {lit}`T` are the absolute
+values of its eigenvalues.
+
+Two things about the phrasing. First, Axler's hypothesis is "{lit}`T` is self-adjoint, *or*
+{lit}`𝔽 = ℂ` and {lit}`T` is normal" — two separate problems, so they are (a) and (b) here.
+Second, his conclusion counts multiplicities ("each included as many times as the dimension
+of the corresponding eigenspace", then sorted decreasingly), so the comparison is of
+*multisets*: a pointwise claim would be false, since taking absolute values need not preserve
+the decreasing order (from {lit}`1, −5` one gets {lit}`1, 5`). The eigenvalues with
+multiplicity are the roots of the characteristic polynomial
+({name}`Module.End.hasEigenvalue_iff_isRoot_charpoly`); for the diagonalizable operators in
+this exercise root multiplicity is exactly the eigenspace dimension Axler counts. -/
+theorem exercise_7E_7a (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
+    Multiset.map (singularValues T) Finset.univ.val
+      = (LinearMap.charpoly T).roots.map (fun μ => ‖μ‖) := by
   sorry
 
-/-- 7E.8(a) In an SVD, {lit}`f₁, …, fₘ` is an orthonormal basis of {lit}`range T`. -/
+/-- 7E.7(b) The other half of 7E.7: over {lit}`ℂ` the same holds for *normal* {lit}`T`. -/
+theorem exercise_7E_7b {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hT : IsStarNormal T) :
+    Multiset.map (singularValues T) Finset.univ.val
+      = (LinearMap.charpoly T).roots.map (fun μ => ‖μ‖) := by
+  sorry
+
+/-- 7E.8(a) In an SVD, {lit}`f₁, …, fₘ` is an orthonormal basis of {lit}`range T`.
+
+The conclusion is spelled as {lit}`span {f₁, …, fₘ} = range T`, which for an *orthonormal*
+family is the same as "is an orthonormal basis of {lit}`range T`": orthonormal families are
+linearly independent ({name}`Orthonormal.linearIndependent`), and a linearly independent
+spanning family is a basis ({lit}`Basis.mk`). So the only content left to prove is the
+spanning, and no basis needs to be constructed to state it. (The same reading is used in
+7.68(b) above, where {lit}`svdImage` spans {lit}`range T`.) -/
 theorem exercise_7E_8a {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
     (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
     (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) :
@@ -802,12 +919,18 @@ theorem exercise_7E_8b {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : F
     Submodule.span 𝕜 (Set.range e) = (LinearMap.ker T)ᗮ := by
   sorry
 
-/-- 7E.8(c) In an SVD, {lit}`s₁, …, sₘ` are the positive singular values of
-{lit}`T`. -/
+/-- 7E.8(c) In an SVD, {lit}`s₁, …, sₘ` are the positive singular values of {lit}`T`.
+
+Compared as multisets, not as sets of values: Axler's {lit}`s₁, …, sₘ` is a list, so a
+repeated singular value has to appear as often on both sides. The set reading is strictly
+weaker — it would accept {lit}`s = (2, 2)` for an operator whose only positive singular value
+is a single {lit}`2`. Filtering by {lit}`0 < r` drops the zero singular values, which have no
+counterpart among the {lit}`sₖ` (positive by hypothesis). -/
 theorem exercise_7E_8c {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
     (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
     (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) :
-    {r : ℝ | 0 < r ∧ ∃ i, singularValues T i = r} = {r : ℝ | ∃ i, s i = r} := by
+    Multiset.filter (fun r => 0 < r) (Multiset.map (singularValues T) Finset.univ.val)
+      = Multiset.map s Finset.univ.val := by
   sorry
 
 /-- 7E.8(d) Given a singular value decomposition with orthonormal lists {lit}`e`,
@@ -826,18 +949,26 @@ theorem exercise_7E_8e {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : F
     T (LinearMap.adjoint T w) = ∑ i, ((s i) ^ 2 : 𝕜) • ⟪f i, w⟫_𝕜 • f i := by
   sorry
 
-/-- 7E.9 {lit}`T` and {lit}`T*` have the same positive singular values. -/
+/-- 7E.9 {lit}`T` and {lit}`T*` have the same positive singular values — as multisets, so
+with multiplicity, as in 7E.8(c). The two lists are indexed by {lit}`Fin (dim V)` and
+{lit}`Fin (dim W)` respectively, which the multiset comparison bridges without a cast. -/
 theorem exercise_7E_9 (T : V →ₗ[𝕜] W) :
-    {s : ℝ | 0 < s ∧ ∃ i, singularValues T i = s} =
-      {s : ℝ | 0 < s ∧ ∃ j, singularValues (LinearMap.adjoint T) j = s} := by
+    Multiset.filter (fun r => 0 < r) (Multiset.map (singularValues T) Finset.univ.val)
+      = Multiset.filter (fun r => 0 < r)
+          (Multiset.map (singularValues (LinearMap.adjoint T)) Finset.univ.val) := by
   sorry
 
-/-- 7E.10 If {lit}`T` is invertible, then {lit}`T⁻¹` has singular values the
-reciprocals of those of {lit}`T`. -/
+/-- 7E.10 If {lit}`T` is invertible, then the singular values of {lit}`T⁻¹` are the
+reciprocals of those of {lit}`T`.
+
+As multisets, with multiplicity, as in 7E.8(c) and 7E.9. Axler writes the answer as
+{lit}`1/sₙ, …, 1/s₁`: reciprocation reverses the order, and the list has to come back sorted
+decreasingly — a multiset comparison makes that bookkeeping unnecessary. No {lit}`sᵢ ≠ 0`
+guard is needed either, since an invertible {lit}`T` has all singular values positive
+({name}`injective_iff_singularValues_ne_zero`, 7.68(a)). -/
 theorem exercise_7E_10 (T : V ≃ₗ[𝕜] V) :
-    {r : ℝ | ∃ i, singularValues (T.symm : V →ₗ[𝕜] V) i = r} =
-      {r : ℝ | ∃ i, singularValues (T : V →ₗ[𝕜] V) i ≠ 0 ∧
-        r = (singularValues (T : V →ₗ[𝕜] V) i)⁻¹} := by
+    Multiset.map (singularValues (T.symm : V →ₗ[𝕜] V)) Finset.univ.val
+      = Multiset.map (fun i => (singularValues (T : V →ₗ[𝕜] V) i)⁻¹) Finset.univ.val := by
   sorry
 
 /-- 7E.11(a) For any orthonormal basis {lit}`c` of {lit}`V`,
@@ -851,28 +982,36 @@ theorem exercise_7E_11a (T : V →ₗ[𝕜] W) (c : OrthonormalBasis (Fin (finra
 {lit}`∑ ⟨T vⱼ, vⱼ⟩ = ∑ sⱼ`. -/
 theorem exercise_7E_11b (T : V →ₗ[𝕜] V) (hT : T.IsPositive)
     (c : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) :
-    RCLike.re (∑ j, ⟪c j, T (c j)⟫_𝕜) = ∑ i, singularValues T i := by
+    ∑ j, ⟪c j, T (c j)⟫_𝕜 = ((∑ i, singularValues T i : ℝ) : 𝕜) := by
   sorry
 
-/-- 7E.12(a) There is an operator whose {lit}`T²` singular values are not the
-squares of the singular values of {lit}`T`. -/
+/-- The operator of 7E.12(a), to be supplied by the solver: the exercise says "give an
+example", so the witness is the answer, as in 7E.3 and 7E.5. -/
+noncomputable def T_7E_12a : EuclideanSpace 𝕜 (Fin 2) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 2) := sorry
+
+/-- 7E.12(a) Give an operator whose {lit}`T²` singular values are not the squares of the
+singular values of {lit}`T`. Compared as multisets, so the counterexample may also be one
+where the two lists agree as *sets* but not with multiplicity. -/
 theorem exercise_7E_12a :
-    ∃ T : EuclideanSpace 𝕜 (Fin 2) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 2),
-      {r : ℝ | ∃ i, singularValues (T ∘ₗ T) i = r} ≠
-        {r : ℝ | ∃ i, singularValues T i ^ 2 = r} := by
+    Multiset.map (singularValues (T_7E_12a (𝕜 := 𝕜) ∘ₗ T_7E_12a)) Finset.univ.val ≠
+      Multiset.map (fun i => singularValues (T_7E_12a (𝕜 := 𝕜)) i ^ 2) Finset.univ.val := by
   sorry
 
 /-- 7E.12(b) For normal {lit}`T`, the singular values of {lit}`T²` are the squares
-of the singular values of {lit}`T`. -/
+of the singular values of {lit}`T` — as multisets, with multiplicity. -/
 theorem exercise_7E_12b (T : V →ₗ[𝕜] V) (hN : IsStarNormal T) :
-    {r : ℝ | ∃ i, singularValues (T ∘ₗ T) i = r} =
-      {r : ℝ | ∃ i, singularValues T i ^ 2 = r} := by
+    Multiset.map (singularValues (T ∘ₗ T)) Finset.univ.val
+      = Multiset.map (fun i => singularValues T i ^ 2) Finset.univ.val := by
   sorry
 
 /-- 7E.13 {lit}`T₁, T₂` have the same singular values iff {lit}`T₁ = S₁ T₂ S₂` for
-unitary {lit}`S₁, S₂`. -/
+unitary {lit}`S₁, S₂`. "Same singular values" as multisets, with multiplicity: the set
+reading would be false here — {lit}`diag(1,1)` and {lit}`diag(1,0)`… have different
+multiplicities but overlapping value sets, and no unitary pair relates operators whose
+singular values differ in multiplicity. -/
 theorem exercise_7E_13 (T₁ T₂ : V →ₗ[𝕜] V) :
-    ({r : ℝ | ∃ i, singularValues T₁ i = r} = {r : ℝ | ∃ i, singularValues T₂ i = r}) ↔
+    (Multiset.map (singularValues T₁) Finset.univ.val
+        = Multiset.map (singularValues T₂) Finset.univ.val) ↔
       ∃ S₁ S₂ : V →ₗ[𝕜] V, S₁ ∈ unitary (V →ₗ[𝕜] V) ∧ S₂ ∈ unitary (V →ₗ[𝕜] V) ∧
         T₁ = S₁ ∘ₗ T₂ ∘ₗ S₂ := by
   sorry

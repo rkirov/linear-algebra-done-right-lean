@@ -147,10 +147,12 @@ theorem orthonormal_image_iff_orthonormal_columns {ι κ : Type*} [Fintype ι] [
     [DecidableEq ι] [DecidableEq κ]
     (e : OrthonormalBasis ι 𝕜 V) (f : OrthonormalBasis κ 𝕜 W) (S : V →ₗ[𝕜] W) :
     Orthonormal 𝕜 (fun i => S (e i)) ↔
-      Orthonormal 𝕜 (fun j => (WithLp.toLp 2 fun i =>
-        LinearMap.toMatrix e.toBasis f.toBasis S i j : EuclideanSpace 𝕜 κ)) := by
-  have hcol : (fun j => (WithLp.toLp 2 fun i =>
-      LinearMap.toMatrix e.toBasis f.toBasis S i j : EuclideanSpace 𝕜 κ))
+      Orthonormal 𝕜 (fun j =>
+        (WithLp.toLp 2 ((LinearMap.toMatrix e.toBasis f.toBasis S).col j) :
+          EuclideanSpace 𝕜 κ)) := by
+  have hcol : (fun j =>
+      (WithLp.toLp 2 ((LinearMap.toMatrix e.toBasis f.toBasis S).col j) :
+        EuclideanSpace 𝕜 κ))
       = f.repr ∘ fun j => S (e j) := by
     funext j
     ext i
@@ -165,8 +167,9 @@ theorem tfae_isometry {ι κ : Type*} [Fintype ι] [Fintype κ] [DecidableEq ι]
       LinearMap.adjoint S ∘ₗ S = 1,
       ∀ u v, ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜,
       (Orthonormal 𝕜 fun i => S (e i)),
-      (Orthonormal 𝕜 fun j => (WithLp.toLp 2 fun i =>
-        LinearMap.toMatrix e.toBasis f.toBasis S i j : EuclideanSpace 𝕜 κ))].TFAE := by
+      (Orthonormal 𝕜 fun j =>
+        (WithLp.toLp 2 ((LinearMap.toMatrix e.toBasis f.toBasis S).col j) :
+          EuclideanSpace 𝕜 κ))].TFAE := by
   tfae_have 1 ↔ 2 := isometry_iff_adjoint_comp S
   tfae_have 1 ↔ 3 := isometry_iff_inner S
   tfae_have 1 ↔ 4 := isometry_iff_orthonormal_image e S
@@ -289,10 +292,10 @@ theorem adjoint_comp_iff_isUnit (S : V →ₗ[𝕜] V) :
 iff {lit}`Mᴴ M = I`. -/
 theorem orthonormal_columns_iff {n m : Type*} [Fintype m] [DecidableEq n]
     (M : Matrix m n 𝕜) :
-    Orthonormal 𝕜 (fun j => (WithLp.toLp 2 fun i => M i j : EuclideanSpace 𝕜 m)) ↔
+    Orthonormal 𝕜 (fun j => (WithLp.toLp 2 (M.col j) : EuclideanSpace 𝕜 m)) ↔
       Mᴴ * M = 1 := by
-  have hinner : ∀ j k, ⟪(WithLp.toLp 2 fun i => M i j : EuclideanSpace 𝕜 m),
-      (WithLp.toLp 2 fun i => M i k : EuclideanSpace 𝕜 m)⟫_𝕜 = (Mᴴ * M) j k := by
+  have hinner : ∀ j k, ⟪(WithLp.toLp 2 (M.col j) : EuclideanSpace 𝕜 m),
+      (WithLp.toLp 2 (M.col k) : EuclideanSpace 𝕜 m)⟫_𝕜 = (Mᴴ * M) j k := by
     intro j k
     simp [PiLp.inner_apply, Matrix.mul_apply, RCLike.inner_apply, Matrix.conjTranspose_apply,
       mul_comm]
@@ -304,10 +307,10 @@ theorem orthonormal_columns_iff {n m : Type*} [Fintype m] [DecidableEq n]
 /-- Dually, the rows of {lit}`M` are orthonormal iff {lit}`M Mᴴ = I`. -/
 theorem orthonormal_rows_iff {n m : Type*} [Fintype n] [DecidableEq m]
     (M : Matrix m n 𝕜) :
-    Orthonormal 𝕜 (fun i => (WithLp.toLp 2 fun j => M i j : EuclideanSpace 𝕜 n)) ↔
+    Orthonormal 𝕜 (fun i => (WithLp.toLp 2 (M.row i) : EuclideanSpace 𝕜 n)) ↔
       M * Mᴴ = 1 := by
-  have hinner : ∀ i i', ⟪(WithLp.toLp 2 fun j => M i j : EuclideanSpace 𝕜 n),
-      (WithLp.toLp 2 fun j => M i' j : EuclideanSpace 𝕜 n)⟫_𝕜 = (M * Mᴴ) i' i := by
+  have hinner : ∀ i i', ⟪(WithLp.toLp 2 (M.row i) : EuclideanSpace 𝕜 n),
+      (WithLp.toLp 2 (M.row i') : EuclideanSpace 𝕜 n)⟫_𝕜 = (M * Mᴴ) i' i := by
     intro i i'
     simp [PiLp.inner_apply, Matrix.mul_apply, RCLike.inner_apply, Matrix.conjTranspose_apply]
   rw [orthonormal_iff_ite]
@@ -326,8 +329,9 @@ theorem tfae_mem_unitary {ι : Type*} [Fintype ι] [DecidableEq ι]
       LinearMap.adjoint S ∘ₗ S = 1 ∧ S ∘ₗ LinearMap.adjoint S = 1,
       IsUnit S ∧ Ring.inverse S = LinearMap.adjoint S,
       (Orthonormal 𝕜 fun i => S (e i)),
-      (Orthonormal 𝕜 fun i => (WithLp.toLp 2 fun j =>
-        LinearMap.toMatrix e.toBasis e.toBasis S i j : EuclideanSpace 𝕜 ι)),
+      (Orthonormal 𝕜 fun i =>
+        (WithLp.toLp 2 ((LinearMap.toMatrix e.toBasis e.toBasis S).row i) :
+          EuclideanSpace 𝕜 ι)),
       LinearMap.adjoint S ∈ unitary (V →ₗ[𝕜] V)].TFAE := by
   tfae_have 1 ↔ 2 := mem_unitary_iff_adjoint S
   tfae_have 2 ↔ 3 := adjoint_comp_iff_isUnit S
@@ -449,8 +453,8 @@ theorem mem_unitaryGroup_iff_conjTranspose (Q : Matrix n n 𝕜) :
   exact Unitary.mem_iff
 
 theorem tfae_mem_unitaryGroup (Q : Matrix n n 𝕜) :
-    [(Orthonormal 𝕜 fun j => (WithLp.toLp 2 fun i => Q i j : EuclideanSpace 𝕜 n)),
-      (Orthonormal 𝕜 fun i => (WithLp.toLp 2 fun j => Q i j : EuclideanSpace 𝕜 n)),
+    [(Orthonormal 𝕜 fun j => (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 n)),
+      (Orthonormal 𝕜 fun i => (WithLp.toLp 2 (Q.row i) : EuclideanSpace 𝕜 n)),
       Isometry (Matrix.toEuclideanLin Q),
       Q ∈ Matrix.unitaryGroup n 𝕜].TFAE := by
   tfae_have 1 ↔ 4 := by
