@@ -768,20 +768,77 @@ def exercise_5C_1 :
         IsUpperTriangular (matrixOf hv hv (T ∘ₗ T))) →
       ∃ (v : Fin 2 → (Fin 2 → ℝ)) (hv : IsBasis ℝ v),
         IsUpperTriangular (matrixOf hv hv T)) := by
-  -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  -- use T = ((0, -1), (1, 0)) — rotation by 90° — so T² = -I, which is upper
+  -- triangular, while T itself has no real eigenvalue.
+  apply isFalse
+  intro h
+  -- {lit}`T² = −I` is diagonal in the standard basis, hence upper triangular.
+  have hsq : ∃ (v : Fin 2 → (Fin 2 → ℝ)) (hv : IsBasis ℝ v),
+      IsUpperTriangular (matrixOf hv hv
+        (LADR.Section_5A.T_5_9 ℝ ∘ₗ LADR.Section_5A.T_5_9 ℝ)) := by
+    refine ⟨_, isBasis_stdBasis 2, ?_⟩
+    intro j k hkj
+    rw [matrixOf_apply, isBasis_stdBasis_repr]
+    fin_cases j <;> fin_cases k <;> simp_all [LADR.Section_5A.T_5_9]
+  obtain ⟨v, hv, hupper⟩ := h _ hsq
+  -- The first column of an upper-triangular matrix is {lit}`(A₀₀, 0)`, so
+  -- {lit}`v₀` is an eigenvector of {lit}`T` with eigenvalue {lit}`A₀₀`.
+  set c := matrixOf hv hv (LADR.Section_5A.T_5_9 ℝ) 0 0 with hc
+  have hT0 : LADR.Section_5A.T_5_9 ℝ (v 0) = c • v 0 := by
+    rw [matrixOf_spec hv hv _ 0, Fin.sum_univ_two, hupper 1 0 (by decide)]
+    simp [hc]
+  -- Its coordinates read {lit}`−(v₀)₁ = c (v₀)₀` and {lit}`(v₀)₀ = c (v₀)₁`,
+  -- forcing {lit}`(1 + c²) v₀ = 0`, i.e. {lit}`v₀ = 0` — impossible for a
+  -- basis vector.
+  have h0 : -(v 0) 1 = c * (v 0) 0 := by
+    simpa [LADR.Section_5A.T_5_9] using congrFun hT0 0
+  have h1 : (v 0) 0 = c * (v 0) 1 := by
+    simpa [LADR.Section_5A.T_5_9] using congrFun hT0 1
+  have h2 : (1 + c ^ 2) * (v 0) 0 = 0 := by linear_combination h1 - c * h0
+  have h3 : (1 + c ^ 2) * (v 0) 1 = 0 := by linear_combination -h0 - c * h1
+  have hpos : (0 : ℝ) < 1 + c ^ 2 := by positivity
+  apply hv.1.ne_zero 0
+  funext i
+  fin_cases i
+  · exact (mul_eq_zero.mp h2).resolve_left (ne_of_gt hpos)
+  · exact (mul_eq_zero.mp h3).resolve_left (ne_of_gt hpos)
+
 
 /-- 5C.2 (a) -/
 theorem exercise_5C_2a {n : ℕ} (A B : Matrix (Fin n) (Fin n) F)
     (hA : IsUpperTriangular A) (hB : IsUpperTriangular B) :
     IsUpperTriangular (A + B) ∧ ∀ k, (A + B) k k = A k k + B k k := by
-  sorry
+  constructor
+  · intro i j h
+    rw [IsUpperTriangular] at hA hB
+    specialize hA i j h
+    specialize hB i j h
+    simp [hA, hB]
+  · intro k
+    rfl
 
 /-- 5C.2 (b) -/
 theorem exercise_5C_2b {n : ℕ} (A B : Matrix (Fin n) (Fin n) F)
     (hA : IsUpperTriangular A) (hB : IsUpperTriangular B) :
     IsUpperTriangular (A * B) ∧ ∀ k, (A * B) k k = A k k * B k k := by
-  sorry
+  constructor
+  · intro i j h
+    -- the entry is row i · column j, but row i is zero below i, and column j is zero above j
+    -- with h, that gives 0
+    rw [Matrix.mul_apply]
+    refine Finset.sum_eq_zero fun l _ => ?_
+    rcases lt_or_ge l i with hl | hl
+    · rw [hA i l hl, zero_mul]
+    · rw [hB l j (lt_of_lt_of_le h hl), mul_zero]
+  · intro k
+    -- row k · column k, but row k is zero below k, and col k is zero above k
+    -- so only k contributes to the dot product
+    rw [Matrix.mul_apply, Finset.sum_eq_single k]
+    · intro l _ hlk
+      rcases lt_or_gt_of_ne hlk with hl | hl
+      · rw [hA k l hl, zero_mul]
+      · rw [hB l k hl, mul_zero]
+    · exact fun hk => absurd (Finset.mem_univ k) hk
 
 /-- 5C.3 -/
 theorem exercise_5C_3 [Finite F V] {n : ℕ} {v : Fin n → V}
@@ -789,7 +846,77 @@ theorem exercise_5C_3 [Finite F V] {n : ℕ} {v : Fin n → V}
     (hA : IsUpperTriangular (matrixOf hv hv T)) :
     IsUpperTriangular (matrixOf hv hv hT.inv) ∧
       ∀ k, matrixOf hv hv hT.inv k k = (matrixOf hv hv T k k)⁻¹ := by
-  sorry
+  -- each diagonal entry is non-zero otherwise contra
+  -- by induction on j
+  -- base case - the first column of T is a, 0, 0,..., so, the first column
+  -- of the inverse has to be also 0, except for the first entry which is 1/a.
+  -- by induction, for each next column, since T j column is zero below j,
+  -- only first j entries contribute to the j-th column of the inverse.
+  -- but by induction we have proven that all entries below the diagonal in the previous cols are zero
+  -- so again the contribution is only zero
+
+  -- altertnative proof - translate to min poly split,
+  -- min poly of inverse is obtained by substituting X⁻¹ into the min poly of T.
+  -- which still splits - thus the inverse is also upper triangular. Then by 2 b)
+  -- diagonal entries have to be inverses.
+
+  -- {lit}`T` is injective, so no diagonal entry vanishes: by 5.41 a zero on
+  -- the diagonal would make {lit}`0` an eigenvalue of {lit}`T`.
+  have hTinj : Function.Injective T := by
+    intro x y hxy
+    have hx := LinearMap.congr_fun hT.inv_comp x
+    have hy := LinearMap.congr_fun hT.inv_comp y
+    simp only [LinearMap.comp_apply, LinearMap.id_apply] at hx hy
+    rw [← hx, ← hy, hxy]
+  have hne : ∀ k, matrixOf hv hv T k k ≠ 0 := by
+    intro k hk
+    obtain ⟨x, hx0, hTx⟩ := Module.End.hasEigenvalue_iff_exists.mp
+      ((isEigenvalue_iff_diag hv T hA 0).mpr ⟨k, hk⟩)
+    exact hx0 (hTinj (by simpa using hTx))
+  -- {lit}`ℳ(T⁻¹) ℳ(T) = ℳ(T⁻¹T) = I`.
+  have hid : matrixOf hv hv (LinearMap.id : V →ₗ[F] V) = 1 := by
+    simp [matrixOf]
+  have hCA : matrixOf hv hv hT.inv * matrixOf hv hv T = 1 := by
+    rw [← LADR.Section_3C.matrixOf_comp hv hv hv, hT.inv_comp, hid]
+  have hCupper : IsUpperTriangular (matrixOf hv hv hT.inv) := by
+    -- Induction on the column {lit}`j`, as sketched above.
+    have main : ∀ m : ℕ, ∀ j : Fin n, j.val = m → ∀ i : Fin n, j < i →
+        matrixOf hv hv hT.inv i j = 0 := by
+      intro m
+      induction m using Nat.strongRecOn with
+      | _ m ih =>
+        rintro j rfl i hji
+        -- Entry {lit}`(i, j)` of {lit}`ℳ(T⁻¹) ℳ(T) = I` is {lit}`0`, and only
+        -- {lit}`l = j` contributes to it: the terms with {lit}`l > j` have
+        -- {lit}`ℳ(T)_{l j} = 0`, and those with {lit}`l < j` have
+        -- {lit}`ℳ(T⁻¹)_{i l} = 0` by the induction hypothesis.
+        have hrow :
+            ∑ l, matrixOf hv hv hT.inv i l * matrixOf hv hv T l j = 0 := by
+          rw [← Matrix.mul_apply, hCA,
+            Matrix.one_apply_ne (Ne.symm (ne_of_lt hji))]
+        have hsingle :
+            ∑ l, matrixOf hv hv hT.inv i l * matrixOf hv hv T l j =
+              matrixOf hv hv hT.inv i j * matrixOf hv hv T j j := by
+          refine Finset.sum_eq_single j ?_ fun h => absurd (Finset.mem_univ j) h
+          intro l _ hlj
+          rcases lt_or_gt_of_ne hlj with hl | hl
+          · rw [ih l.val hl l rfl i (lt_trans hl hji), zero_mul]
+          · rw [hA l j hl, mul_zero]
+        rw [hsingle] at hrow
+        exact (mul_eq_zero.mp hrow).resolve_right (hne j)
+    exact fun i j hji => main j.val j rfl i hji
+  refine ⟨hCupper, fun k => ?_⟩
+  -- Both factors are upper triangular, so 5C.2(b) reads off the diagonal of
+  -- {lit}`ℳ(T⁻¹) ℳ(T) = I`: {lit}`(T⁻¹)ₖₖ Tₖₖ = 1`.
+  have hdiag := (exercise_5C_2b _ _ hCupper hA).2 k
+  rw [hCA, Matrix.one_apply_eq] at hdiag
+  exact eq_inv_of_mul_eq_one_left hdiag.symm
+
+/-- The swap {lit}`(x, y) ↦ (y, x)`, used for 5C.4. -/
+def T_5C_4 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
+  toFun x := ![x 1, x 0]
+  map_add' x y := by funext i; fin_cases i <;> simp
+  map_smul' c x := by funext i; fin_cases i <;> simp
 
 /-- 5C.4 -/
 theorem exercise_5C_4 :
@@ -797,7 +924,21 @@ theorem exercise_5C_4 :
       (T : V →ₗ[ℝ] V),
       (∃ (v : Fin (finrank ℝ V) → V) (hv : IsBasis ℝ v),
         ∀ k, matrixOf hv hv T k k = 0) ∧ IsInvertible T := by
-  sorry
+    -- use (0,1),(1,0), which is self-inverse
+    refine ⟨Fin 2 → ℝ, inferInstance, inferInstance, inferInstance, T_5C_4, ?_, ?_⟩
+    · have hrank : finrank ℝ (Fin 2 → ℝ) = 2 := by simp
+      rw [hrank]
+      refine ⟨_, isBasis_stdBasis 2, fun k => ?_⟩
+      rw [matrixOf_apply, isBasis_stdBasis_repr]
+      fin_cases k <;> simp [T_5C_4]
+    · exact ⟨T_5C_4, by ext x i; fin_cases i <;> simp [T_5C_4],
+        by ext x i; fin_cases i <;> simp [T_5C_4]⟩
+
+/-- The operator {lit}`(x, y) ↦ (x + y, x + y)`, used for 5C.5. -/
+def T_5C_5 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
+  toFun x := ![x 0 + x 1, x 0 + x 1]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' c x := by funext i; fin_cases i <;> simp <;> ring
 
 /-- 5C.5 -/
 theorem exercise_5C_5 :
@@ -805,14 +946,57 @@ theorem exercise_5C_5 :
       (T : V →ₗ[ℝ] V),
       (∃ (v : Fin (finrank ℝ V) → V) (hv : IsBasis ℝ v),
         ∀ k, matrixOf hv hv T k k ≠ 0) ∧ ¬ IsInvertible T := by
-  sorry
+  -- use ((1,1),(1,1)), which is not injective as it maps everything to (x,x)
+  refine ⟨Fin 2 → ℝ, inferInstance, inferInstance, inferInstance, T_5C_5, ?_, ?_⟩
+  · have hrank : finrank ℝ (Fin 2 → ℝ) = 2 := by simp
+    rw [hrank]
+    refine ⟨_, isBasis_stdBasis 2, fun k => ?_⟩
+    rw [matrixOf_apply, isBasis_stdBasis_repr]
+    fin_cases k <;> simp [T_5C_5]
+  · -- {lit}`T (1, −1) = 0`, so {lit}`T` is not injective.
+    rintro ⟨S, hS, -⟩
+    have h := LinearMap.congr_fun hS ![1, -1]
+    have hzero : T_5C_5 ![1, -1] = 0 := by
+      funext i; fin_cases i <;> simp [T_5C_5]
+    rw [LinearMap.comp_apply, hzero, map_zero, LinearMap.id_apply] at h
+    have := congrFun h 0
+    norm_num at this
 
 /-- 5C.6 For {lit}`F = ℂ`: invariant subspaces of every dimension
 {lit}`k ≤ dim V` exist. -/
 theorem exercise_5C_6 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) (k : ℕ) (hk : k ≤ finrank ℂ V) :
     ∃ U : Submodule ℂ V, InvariantUnder T U ∧ finrank ℂ U = k := by
-  sorry
+  -- use that under C, every matrix has an upper triangular form
+  -- with some basis, now take the first k vectors of that basis
+  -- by theorem above, upper triangular is equivalent with span of
+  -- the first k basis vectors forming an invariant subspace
+  obtain ⟨n, v, hv, hupper⟩ := exists_upperTriangular_complex T
+  have hn : n = finrank ℂ V := LADR.Section_2C.isBasis_card_eq_finrank v hv
+  have hkn : k ≤ n := by rw [hn]; exact hk
+  set w : Fin k → V := fun i => v (Fin.castLE hkn i) with hwdef
+  have hwli : LinearIndependent ℂ w := hv.1.comp _ (Fin.castLE_injective hkn)
+  refine ⟨Submodule.span ℂ (Set.range w), ?_, ?_⟩
+  · rw [LADR.Section_5A.invariantUnder_iff_map_le, Submodule.map_span_le]
+    rintro _ ⟨i, rfl⟩
+    -- {lit}`T wᵢ ∈ span(v₀, …, v_{castLE i})`, and all those vectors are
+    -- among {lit}`w₀, …, w_{k−1}`.
+    have h3 := (tfae_upperTriangular hv T).out 0 2
+    refine Submodule.span_mono ?_ (h3.mp hupper (Fin.castLE hkn i))
+    rintro _ ⟨j, hj, rfl⟩
+    exact ⟨⟨j.val, lt_of_le_of_lt (Fin.le_def.mp hj) i.isLt⟩, rfl⟩
+  · rw [finrank_span_eq_card hwli, Fintype.card_fin]
+
+/-- A nonzero polynomial that annihilates {lit}`v` can be rescaled to a monic
+one of the same degree. -/
+private lemma exists_monic_annihilator (T : V →ₗ[F] V) (v : V)
+    {s : Polynomial F} (hs : s ≠ 0) (hann : aeval T s v = 0) :
+    ∃ r : Polynomial F, r.Monic ∧ aeval T r v = 0 ∧ r.degree = s.degree := by
+  refine ⟨s * Polynomial.C s.leadingCoeff⁻¹,
+    Polynomial.monic_mul_leadingCoeff_inv hs, ?_,
+    Polynomial.degree_mul_leadingCoeff_inv s hs⟩
+  rw [mul_comm, aeval_mul_eq_comp]
+  simp [hann]
 
 /-- 5C.7 (a) For each {lit}`v ∈ V` there is a unique monic polynomial
 {lit}`p_v` of smallest degree with {lit}`p_v(T)v = 0`. -/
@@ -820,7 +1004,47 @@ theorem exercise_5C_7a [Finite F V] (T : V →ₗ[F] V) (v : V) :
     ∃! p : Polynomial F, p.Monic ∧ aeval T p v = 0 ∧
       ∀ q : Polynomial F, q.Monic → aeval T q v = 0 →
         p.degree ≤ q.degree := by
-  sorry
+  -- take v, Tv, T^2v, ... until you get a linearly dependent set
+  -- by construction, the degree is minimal and the coeff of highest
+  -- degree term is non-zero so we can normalize to 1.
+  -- for uniqueness, assume q is another, then p - q has smaller degree
+  -- and also annihilates v, leading to a contradiction.
+  classical
+  -- Monic annihilators of {lit}`v` exist — the minimal polynomial of
+  -- {lit}`T` is one — so there is one of least degree.
+  have hex : ∃ d : ℕ, ∃ p : Polynomial F, p.Monic ∧ aeval T p v = 0 ∧
+      p.natDegree = d := by
+    refine ⟨(minpoly F T).natDegree, minpoly F T,
+      minpoly.monic (Algebra.IsIntegral.isIntegral T), ?_, rfl⟩
+    rw [minpoly.aeval F T]
+    simp
+  obtain ⟨p, hpm, hpa, hpd⟩ := Nat.find_spec hex
+  have hmin : ∀ q : Polynomial F, q.Monic → aeval T q v = 0 →
+      Nat.find hex ≤ q.natDegree := by
+    intro q hqm hqa
+    by_contra hlt
+    exact Nat.find_min hex (not_le.mp hlt) ⟨q, hqm, hqa, rfl⟩
+  have hdeg : ∀ q : Polynomial F, q.Monic → aeval T q v = 0 →
+      p.degree ≤ q.degree := by
+    intro q hqm hqa
+    rw [Polynomial.degree_eq_natDegree hpm.ne_zero,
+      Polynomial.degree_eq_natDegree hqm.ne_zero, Nat.cast_le, hpd]
+    exact hmin q hqm hqa
+  refine ⟨p, ⟨hpm, hpa, hdeg⟩, ?_⟩
+  rintro q ⟨hqm, hqa, hqdeg⟩
+  by_contra hne
+  have hdegeq : q.degree = p.degree :=
+    le_antisymm (hqdeg p hpm hpa) (hdeg q hqm hqa)
+  have hlt : (q - p).degree < p.degree := by
+    rw [← hdegeq]
+    exact Polynomial.degree_sub_lt hdegeq hqm.ne_zero
+      (by rw [hqm.leadingCoeff, hpm.leadingCoeff])
+  have hann : aeval T (q - p) v = 0 := by
+    rw [map_sub]
+    simp [hqa, hpa]
+  obtain ⟨r, hrm, hra, hrd⟩ :=
+    exists_monic_annihilator T v (sub_ne_zero.mpr hne) hann
+  exact absurd (hdeg r hrm hra) (by rw [hrd]; exact not_le.mpr hlt)
 
 /-- The monic polynomial {lit}`p_v` of smallest degree with {lit}`p_v(T)v = 0`,
 chosen from the existence-and-uniqueness statement {name}`exercise_5C_7a`. -/
@@ -839,7 +1063,70 @@ theorem p_v_spec [Finite F V] (T : V →ₗ[F] V) (v : V) :
 {lit}`p_v` for each {lit}`v`. -/
 theorem exercise_5C_7b [Finite F V] (T : V →ₗ[F] V) (v : V) :
     p_v T v ∣ minpoly F T := by
-  sorry
+  -- by definition, deg minpoly > deg p_v, otherwise p_v would not be minimal.
+  -- then minpoly = q * p_v + r, by division algo
+  -- but r must be 0, otherwise it would contradict the minimality of p_v too.
+  obtain ⟨hpm, hpa, hpmin⟩ := p_v_spec T v
+  rw [← Polynomial.modByMonic_eq_zero_iff_dvd hpm]
+  by_contra hr
+  -- {lit}`minpoly = p_v · (minpoly /ₘ p_v) + r`, and both {lit}`minpoly` and
+  -- the product annihilate {lit}`v`, hence so does the remainder {lit}`r`.
+  have hrann : aeval T (minpoly F T %ₘ p_v T v) v = 0 := by
+    have hdecomp := Polynomial.modByMonic_add_div (minpoly F T) (p_v T v)
+    have hm : aeval T (minpoly F T) v = 0 := by rw [minpoly.aeval F T]; simp
+    have hprod : aeval T (p_v T v * (minpoly F T /ₘ p_v T v)) v = 0 := by
+      rw [mul_comm, aeval_mul_eq_comp]
+      simp [hpa]
+    have hsum := congrArg (fun q : Polynomial F => aeval T q v) hdecomp
+    simp only [map_add, LinearMap.add_apply] at hsum
+    rw [hprod, add_zero, hm] at hsum
+    exact hsum
+  -- rescaled to monic, {lit}`r` would beat {lit}`p_v` in degree.
+  obtain ⟨r, hrm, hra, hrd⟩ := exists_monic_annihilator T v hr hrann
+  exact absurd (hrd ▸ hpmin r hrm hra)
+    (not_le.mpr (Polynomial.degree_modByMonic_lt _ hpm))
+
+/-- The divisibility behind 5C.7(b), for an arbitrary polynomial annihilating
+{lit}`v`: the same division-algorithm argument. -/
+private lemma p_v_dvd [Finite F V] (T : V →ₗ[F] V) (v : V) {q : Polynomial F}
+    (hq : aeval T q v = 0) : p_v T v ∣ q := by
+  obtain ⟨hpm, hpa, hpmin⟩ := p_v_spec T v
+  rw [← Polynomial.modByMonic_eq_zero_iff_dvd hpm]
+  by_contra hr
+  have hrann : aeval T (q %ₘ p_v T v) v = 0 := by
+    have hdecomp := Polynomial.modByMonic_add_div q (p_v T v)
+    have hprod : aeval T (p_v T v * (q /ₘ p_v T v)) v = 0 := by
+      rw [mul_comm, aeval_mul_eq_comp]
+      simp [hpa]
+    have hsum := congrArg (fun s : Polynomial F => aeval T s v) hdecomp
+    simp only [map_add, LinearMap.add_apply] at hsum
+    rw [hprod, add_zero, hq] at hsum
+    exact hsum
+  obtain ⟨r, hrm, hra, hrd⟩ := exists_monic_annihilator T v hr hrann
+  exact absurd (hrd ▸ hpmin r hrm hra)
+    (not_le.mpr (Polynomial.degree_modByMonic_lt _ hpm))
+
+/-- The relation {lit}`T²v + 2Tv = −2v` of 5C.8 says that {lit}`X² + 2X + 2`
+annihilates {lit}`v`, so {lit}`p_v` is a nonconstant divisor of it. -/
+private lemma p_v_quadratic [Finite F V] (T : V →ₗ[F] V) (v : V) (hv : v ≠ 0)
+    (h : T (T v) + 2 • T v = -(2 • v)) :
+    p_v T v ∣ Polynomial.X ^ 2 + Polynomial.C 2 * Polynomial.X + Polynomial.C 2 ∧
+      (p_v T v).degree ≠ 0 := by
+  have hq : aeval T ((Polynomial.X ^ 2 + Polynomial.C 2 * Polynomial.X +
+      Polynomial.C 2 : Polynomial F)) v = 0 := by
+    have h0 : T (T v) + 2 • T v + 2 • v = 0 := by rw [h]; simp
+    simp only [map_add, map_mul, Polynomial.aeval_X, Polynomial.aeval_C,
+      LinearMap.add_apply, Module.End.mul_apply, Module.algebraMap_end_apply,
+      pow_two]
+    simpa [two_smul] using h0
+  refine ⟨p_v_dvd T v hq, fun hdeg => hv ?_⟩
+  -- a monic annihilator of degree {lit}`0` is {lit}`1`, which forces
+  -- {lit}`v = 0`.
+  have h1 : p_v T v = 1 :=
+    ((p_v_spec T v).1.degree_le_zero_iff_eq_one).mp (le_of_eq hdeg)
+  have h2 := (p_v_spec T v).2.1
+  rw [h1] at h2
+  simpa using h2
 
 /-- 5C.8 (a) If {lit}`F = ℝ` and {lit}`T²v + 2Tv = −2v` for some
 {lit}`v ≠ 0`, then {lit}`T` has no upper-triangular matrix with respect to
@@ -849,7 +1136,26 @@ theorem exercise_5C_8a {V : Type*} [AddCommGroup V] [Module ℝ V]
     (h : T (T v) + 2 • T v = -(2 • v)) :
     ¬ ∃ (n : ℕ) (w : Fin n → V) (hw : IsBasis ℝ w),
       IsUpperTriangular (matrixOf hw hw T) := by
-  sorry
+  -- p = T^2 + 2T + 2, b^ - 4 a c < 0, so no real roots.
+  -- hence it is p_v, since p_v will have to divide it, but it has no divisors.
+  -- then p | minpoly ot T, and again since it doesn't split minpoly doesn't split
+  -- so no upper-triangular matrix can exist for T.
+  intro hupper
+  obtain ⟨hdvd, hdeg⟩ := p_v_quadratic T v hv h
+  -- an upper-triangular matrix makes the minimal polynomial split (5.44), so
+  -- its divisor {lit}`p_v` splits too.
+  obtain ⟨m, γ, hfact⟩ := (exists_upperTriangular_iff_minpoly_eq_prod T).mp hupper
+  have hsplit : (minpoly ℝ T).Splits := by
+    rw [hfact]
+    exact Polynomial.Splits.prod fun i _ => Polynomial.Splits.X_sub_C _
+  have hpsplit : (p_v T v).Splits :=
+    hsplit.of_dvd (minpoly.ne_zero (Algebra.IsIntegral.isIntegral T))
+      (exercise_5C_7b T v)
+  -- so {lit}`p_v` has a real root, which is then a root of {lit}`X² + 2X + 2`.
+  obtain ⟨γ₀, hγ₀⟩ := hpsplit.exists_eval_eq_zero hdeg
+  have hroot := Polynomial.IsRoot.dvd hγ₀ hdvd
+  have hq : γ₀ ^ 2 + 2 * γ₀ + 2 = 0 := by simpa [Polynomial.IsRoot] using hroot
+  nlinarith [sq_nonneg (γ₀ + 1)]
 
 /-- 5C.8 (b) If {lit}`F = ℂ` and the same relation holds, then every
 upper-triangular matrix of {lit}`T` has {lit}`−1 + i` or {lit}`−1 − i` on
@@ -861,19 +1167,166 @@ theorem exercise_5C_8b {V : Type*} [AddCommGroup V] [Module ℂ V]
     (hA : IsUpperTriangular (matrixOf hw hw T)) :
     ∃ k, matrixOf hw hw T k k = -1 + Complex.I ∨
       matrixOf hw hw T k k = -1 - Complex.I := by
-  sorry
+  -- but over C p = (x + 1 - i) * (x + 1 + i) (can be checked)
+  -- p_v is either (x + 1 - i) or (x + 1 + i) or both
+  -- so p_v has a root which is either -1 + i or -1 - i.
+  -- but p_v | minpoly, so either of those is root of minpoly,
+  -- which is same as saying γ₀ is an eigenvalue of T.
+  -- same as saying γ₀ appears on the diagonal of any upper-triangular matrix of T.
+  obtain ⟨hdvd, hdeg⟩ := p_v_quadratic T v hv h
+  -- {lit}`ℂ` is algebraically closed, so {lit}`p_v` has a root {lit}`γ₀`;
+  -- it is a root of {lit}`X² + 2X + 2`, hence {lit}`−1 ± i`.
+  obtain ⟨γ₀, hγ₀⟩ := IsAlgClosed.exists_root (p_v T v) hdeg
+  have hroot := Polynomial.IsRoot.dvd hγ₀ hdvd
+  have hq : γ₀ ^ 2 + 2 * γ₀ + 2 = 0 := by simpa [Polynomial.IsRoot] using hroot
+  -- {lit}`γ₀` is also a root of the minimal polynomial, hence an eigenvalue,
+  -- hence a diagonal entry (5.41).
+  have hev : HasEigenvalue T γ₀ :=
+    (isEigenvalue_iff_isRoot T γ₀).mpr (Polynomial.IsRoot.dvd hγ₀ (exercise_5C_7b T v))
+  obtain ⟨k, hk⟩ := (isEigenvalue_iff_diag hw T hA γ₀).mp hev
+  refine ⟨k, ?_⟩
+  have hfac : (γ₀ - (-1 + Complex.I)) * (γ₀ - (-1 - Complex.I)) = 0 := by
+    linear_combination hq - Complex.I_sq
+  rcases mul_eq_zero.mp hfac with h1 | h1
+  · exact Or.inl (hk.trans (sub_eq_zero.mp h1))
+  · exact Or.inr (hk.trans (sub_eq_zero.mp h1))
 
 /-- 5C.9 Every square matrix with complex entries is similar to an
 upper-triangular matrix. -/
 theorem exercise_5C_9 {n : ℕ} (B : Matrix (Fin n) (Fin n) ℂ) :
     ∃ A : Matrix (Fin n) (Fin n) ℂ, IsUnit A ∧
       IsUpperTriangular (A⁻¹ * B * A) := by
-  sorry
+  -- there exists lin tr. T s.t. with respect to standard basis e its matrix is B.
+  -- then find another basis v, s.t. the matrix of T with respect to this new basis is upper-triangular.
+  -- now A is the matrix of the identity tr, w.r.t, e and v
+  -- and Ainv is the matrix of the identity tr, w.r.t, v and e
+  -- by definition A and Ainv are inverses of each other
+  -- by transfomation Ainv B A is the matrix for I T I = T with respect to the new basis v.
+  -- hence upper triangular.
+  classical
+  set b := (isBasis_stdBasis (F := ℂ) n).toModuleBasis with hb
+  set T := Matrix.toLin b b B with hT
+  obtain ⟨m, v, hv, hupper⟩ := exists_upperTriangular_complex T
+  have hm : m = n := by
+    have hcard := LADR.Section_2C.isBasis_card_eq_finrank v hv
+    simpa using hcard
+  subst hm
+  -- {lit}`A` is the matrix of the identity from the basis {lit}`v` to the
+  -- standard basis; its inverse is the matrix the other way round.
+  haveI : Invertible (b.toMatrix ⇑hv.toModuleBasis) :=
+    b.invertibleToMatrix hv.toModuleBasis
+  refine ⟨b.toMatrix ⇑hv.toModuleBasis, isUnit_of_invertible _, ?_⟩
+  have hinv : (b.toMatrix ⇑hv.toModuleBasis)⁻¹ = hv.toModuleBasis.toMatrix ⇑b :=
+    Matrix.inv_eq_left_inv (Module.Basis.toMatrix_mul_toMatrix_flip _ _)
+  have hB : LinearMap.toMatrix b b T = B := by rw [hT, LinearMap.toMatrix_toLin]
+  rw [hinv, ← hB, basis_toMatrix_mul_linearMap_toMatrix_mul_basis_toMatrix]
+  exact hupper
 
 /-- A square matrix is *lower triangular* if all entries above the diagonal
 are {lit}`0`. -/
 def IsLowerTriangular {n : ℕ} (A : Matrix (Fin n) (Fin n) F) : Prop :=
   ∀ j k, j < k → A j k = 0
+
+/-- The reversed list {lit}`vₙ, …, v₁` is again a basis. -/
+private lemma isBasis_rev {n : ℕ} {v : Fin n → V} (hv : IsBasis F v) :
+    IsBasis F (fun i => v i.rev) := by
+  refine ⟨hv.1.comp _ Fin.rev_involutive.injective, ?_⟩
+  have hrange : Set.range (fun i : Fin n => v i.rev) = Set.range v := by
+    ext y
+    constructor
+    · rintro ⟨i, rfl⟩
+      exact ⟨i.rev, rfl⟩
+    · rintro ⟨j, rfl⟩
+      exact ⟨j.rev, by simp⟩
+  show Submodule.span F (Set.range fun i : Fin n => v i.rev) = ⊤
+  rw [hrange]
+  exact hv.2
+
+/-- Reversing the basis reverses both indices of the matrix. -/
+private lemma matrixOf_rev {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
+    (T : V →ₗ[F] V) (j k : Fin n) :
+    matrixOf (isBasis_rev hv) (isBasis_rev hv) T j k =
+      matrixOf hv hv T j.rev k.rev := by
+  -- Both {lit}`∑ᵢ A'_{i,k} v_{rev i}` and {lit}`∑ᵢ A_{rev i, rev k} v_{rev i}`
+  -- equal {lit}`T v_{rev k}` (the second after reindexing by {lit}`rev`), so
+  -- linear independence identifies the coefficients.
+  have h1 := matrixOf_spec (isBasis_rev hv) (isBasis_rev hv) T k
+  have h2 := matrixOf_spec hv hv T k.rev
+  have h3 : ∑ i : Fin n, matrixOf hv hv T i.rev k.rev • v i.rev =
+      ∑ i, matrixOf hv hv T i k.rev • v i :=
+    Fintype.sum_equiv (Fin.revPerm) _ _ fun _ => rfl
+  have key : ∑ i : Fin n, matrixOf (isBasis_rev hv) (isBasis_rev hv) T i k • v i.rev =
+      ∑ i : Fin n, matrixOf hv hv T i.rev k.rev • v i.rev := by
+    rw [← h1, h2, ← h3]
+  have hzero : ∑ i : Fin n, (matrixOf (isBasis_rev hv) (isBasis_rev hv) T i k -
+      matrixOf hv hv T i.rev k.rev) • v i.rev = 0 := by
+    simp only [sub_smul]
+    rw [Finset.sum_sub_distrib, key, sub_self]
+  exact sub_eq_zero.mp
+    (Fintype.linearIndependent_iff.mp (isBasis_rev hv).1 _ hzero j)
+
+/-- Reversing the basis exchanges lower- and upper-triangular. -/
+private lemma isLowerTriangular_iff_rev {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
+    (T : V →ₗ[F] V) :
+    IsLowerTriangular (matrixOf hv hv T) ↔
+      IsUpperTriangular (matrixOf (isBasis_rev hv) (isBasis_rev hv) T) := by
+  constructor
+  · intro hA j k hkj
+    rw [matrixOf_rev]
+    refine hA _ _ ?_
+    have := j.isLt
+    have := k.isLt
+    simp only [Fin.lt_def, Fin.val_rev] at *
+    omega
+  · intro hA j k hjk
+    have hrev := hA j.rev k.rev ?_
+    · rw [matrixOf_rev] at hrev
+      simpa using hrev
+    · have := j.isLt
+      have := k.isLt
+      simp only [Fin.lt_def, Fin.val_rev] at *
+      omega
+
+/-- …and the other way round. -/
+private lemma isUpperTriangular_iff_rev {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
+    (T : V →ₗ[F] V) :
+    IsUpperTriangular (matrixOf hv hv T) ↔
+      IsLowerTriangular (matrixOf (isBasis_rev hv) (isBasis_rev hv) T) := by
+  constructor
+  · intro hA j k hjk
+    rw [matrixOf_rev]
+    refine hA _ _ ?_
+    have := j.isLt
+    have := k.isLt
+    simp only [Fin.lt_def, Fin.val_rev] at *
+    omega
+  · intro hA j k hkj
+    have hrev := hA j.rev k.rev ?_
+    · rw [matrixOf_rev] at hrev
+      simpa using hrev
+    · have := j.isLt
+      have := k.isLt
+      simp only [Fin.lt_def, Fin.val_rev] at *
+      omega
+
+/-- The image of an up-set under the reversed basis is the image of the
+matching down-set under the original one. -/
+private lemma image_rev {n : ℕ} {α : Type*} (v : Fin n → α) (k : Fin n) :
+    (fun i : Fin n => v i.rev) '' {i | i ≤ k} = v '' {i | k.rev ≤ i} := by
+  ext y
+  constructor
+  · rintro ⟨i, hi, rfl⟩
+    refine ⟨i.rev, ?_, rfl⟩
+    have := i.isLt
+    have := k.isLt
+    simp only [Set.mem_setOf_eq, Fin.le_def, Fin.val_rev] at *
+    omega
+  · rintro ⟨j, hj, rfl⟩
+    refine ⟨j.rev, ?_, by simp⟩
+    have := j.isLt
+    have := k.isLt
+    simp only [Set.mem_setOf_eq, Fin.le_def, Fin.val_rev] at *
+    omega
 
 /-- 5C.10 The lower-triangular analogue of 5.39. -/
 theorem exercise_5C_10 {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
@@ -881,7 +1334,38 @@ theorem exercise_5C_10 {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
     [IsLowerTriangular (matrixOf hv hv T),
       ∀ k : Fin n, InvariantUnder T (Submodule.span F (v '' {i | k ≤ i})),
       ∀ k : Fin n, T (v k) ∈ Submodule.span F (v '' {i | k ≤ i})].TFAE := by
-  sorry
+  -- create a reversed basis v', v' 0 = v (n - 1), v' 1 = v (n - 2), ..., v' (n - 1) = v 0
+  -- then each statement above translates to the corresponding upper-triangular statement
+  -- that we have proved already.
+  -- (a) {lit}`A` is lower triangular iff {lit}`A'` is upper triangular, since
+  -- {lit}`A'_{j,k} = A_{rev j, rev k}` and {lit}`rev` reverses the order.
+  have h1 := isLowerTriangular_iff_rev hv T
+  -- (b), (c) the sets {lit}`span(vₖ, …, vₙ)` are the sets
+  -- {lit}`span(v'₁, …, v'_{rev k})`.
+  have h2 : (∀ k : Fin n, InvariantUnder T (Submodule.span F (v '' {i | k ≤ i}))) ↔
+      ∀ k : Fin n, InvariantUnder T
+        (Submodule.span F ((fun i : Fin n => v i.rev) '' {i | i ≤ k})) := by
+    constructor
+    · intro h k
+      rw [image_rev]
+      exact h k.rev
+    · intro h k
+      have hk := h k.rev
+      rw [image_rev, Fin.rev_rev] at hk
+      exact hk
+  have h3 : (∀ k : Fin n, T (v k) ∈ Submodule.span F (v '' {i | k ≤ i})) ↔
+      ∀ k : Fin n, T ((fun i : Fin n => v i.rev) k) ∈
+        Submodule.span F ((fun i : Fin n => v i.rev) '' {i | i ≤ k}) := by
+    constructor
+    · intro h k
+      rw [image_rev]
+      exact h k.rev
+    · intro h k
+      have hk := h k.rev
+      rw [image_rev, Fin.rev_rev] at hk
+      simpa using hk
+  rw [h1, h2, h3]
+  exact tfae_upperTriangular (isBasis_rev hv) T
 
 /-- 5C.11 For {lit}`F = ℂ`: every operator has a lower-triangular matrix
 with respect to some basis. -/
@@ -889,7 +1373,38 @@ theorem exercise_5C_11 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) :
     ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis ℂ v),
       IsLowerTriangular (matrixOf hv hv T) := by
-  sorry
+  -- take the upper-triangular basis from the complex case and reverse it to get a lower-triangular basis
+  obtain ⟨n, v, hv, hupper⟩ := exists_upperTriangular_complex T
+  exact ⟨n, _, isBasis_rev hv, (isUpperTriangular_iff_rev hv T).mp hupper⟩
+
+/-- bonus proof exists upper triangular iff exists lower triangular -/
+theorem exists_upperTriangular_iff_exists_lowerTriangular [Finite F V] (T : V →ₗ[F] V) :
+    (∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
+      IsUpperTriangular (matrixOf hv hv T)) ↔
+    (∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
+      IsLowerTriangular (matrixOf hv hv T)) := by
+  -- use classification and reverse the order of the basis
+  -- (the reversal alone does it: {lit}`ℳ'(T)_{j,k} = ℳ(T)_{rev j, rev k}`)
+  constructor
+  · rintro ⟨n, v, hv, h⟩
+    exact ⟨n, _, isBasis_rev hv, (isUpperTriangular_iff_rev hv T).mp h⟩
+  · rintro ⟨n, v, hv, h⟩
+    exact ⟨n, _, isBasis_rev hv, (isLowerTriangular_iff_rev hv T).mp h⟩
+
+/-- 5.44 restated: an upper-triangular matrix exists exactly when the minimal
+polynomial splits. -/
+private lemma exists_upperTriangular_iff_splits [Finite F V] (T : V →ₗ[F] V) :
+    (∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
+      IsUpperTriangular (matrixOf hv hv T)) ↔ (minpoly F T).Splits := by
+  rw [exists_upperTriangular_iff_minpoly_eq_prod]
+  constructor
+  · rintro ⟨m, γ, hfact⟩
+    rw [hfact]
+    exact Polynomial.Splits.prod fun i _ => Polynomial.Splits.X_sub_C _
+  · intro hs
+    obtain ⟨m, γ, hfact, -⟩ :=
+      monic_splits_eq_prod_fin (minpoly.monic (Algebra.IsIntegral.isIntegral T)) hs
+    exact ⟨m, γ, hfact⟩
 
 /-- 5C.12 (a) If {lit}`T` has an upper-triangular matrix with respect to some
 basis of {lit}`V` and {lit}`U` is invariant, then {lit}`T|_U` has an
@@ -900,7 +1415,13 @@ theorem exercise_5C_12a [Finite F V] (T : V →ₗ[F] V)
     (U : Submodule F V) (hU : InvariantUnder T U) :
     ∃ (n : ℕ) (u : Fin n → U) (hu : IsBasis F u),
       IsUpperTriangular (matrixOf hu hu hU.restrict) := by
-  sorry
+  -- upper iff min poly splits
+  -- we proved that min poly of restriction | min poly
+  -- so the restriction also has an upper-triangular matrix.
+  refine (exists_upperTriangular_iff_splits hU.restrict).mpr ?_
+  exact ((exists_upperTriangular_iff_splits T).mp h).of_dvd
+    (minpoly.monic (Algebra.IsIntegral.isIntegral T)).ne_zero
+    (LADR.Section_5B.minpoly_restrict_dvd T U hU)
 
 /-- 5C.12 (b) Under the same hypotheses, the quotient operator {lit}`T/U`
 has an upper-triangular matrix with respect to some basis of {lit}`V/U`. -/
@@ -911,7 +1432,11 @@ theorem exercise_5C_12b [Finite F V] (T : V →ₗ[F] V)
     ∃ (n : ℕ) (w : Fin n → V ⧸ U) (hw : IsBasis F w),
       IsUpperTriangular (matrixOf hw hw
         (exercise_5A_38_quotient_op T U hU)) := by
-  sorry
+  -- same as a) for the quotient operator.
+  refine (exists_upperTriangular_iff_splits _).mpr ?_
+  exact ((exists_upperTriangular_iff_splits T).mp h).of_dvd
+    (minpoly.monic (Algebra.IsIntegral.isIntegral T)).ne_zero
+    (LADR.Section_5B.exercise_5B_25a T U hU)
 
 /-- 5C.13 Conversely: if {lit}`T|_U` and {lit}`T/U` both have
 upper-triangular matrices, then so does {lit}`T`. -/
@@ -924,7 +1449,31 @@ theorem exercise_5C_13 [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
         (exercise_5A_38_quotient_op T U hU))) :
     ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
       IsUpperTriangular (matrixOf hv hv T) := by
-  sorry
+  -- same as 12, we proved minpoly | minpoly restriction * minpoly quotient
+  -- so split carries over, so T also has an upper-triangular matrix.
+  have hs1 := (exists_upperTriangular_iff_splits hU.restrict).mp h1
+  have hs2 := (exists_upperTriangular_iff_splits _).mp h2
+  refine (exists_upperTriangular_iff_splits T).mpr ?_
+  refine (hs1.mul hs2).of_dvd ?_ (LADR.Section_5B.exercise_5B_25b T U hU)
+  exact mul_ne_zero (minpoly.monic (Algebra.IsIntegral.isIntegral _)).ne_zero
+    (minpoly.monic (Algebra.IsIntegral.isIntegral _)).ne_zero
+
+/-- Any upper-triangular basis has {lit}`dim V` vectors, so the two phrasings
+of "some basis" agree. -/
+private lemma exists_upperTriangular_iff_finrank [Finite F V] (T : V →ₗ[F] V)
+    {N : ℕ} (hN : N = finrank F V) :
+    (∃ (v : Fin N → V) (hv : IsBasis F v),
+      IsUpperTriangular (matrixOf hv hv T)) ↔
+    ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
+      IsUpperTriangular (matrixOf hv hv T) := by
+  subst hN
+  constructor
+  · rintro ⟨v, hv, h⟩
+    exact ⟨_, v, hv, h⟩
+  · rintro ⟨n, v, hv, h⟩
+    have hn : n = finrank F V := LADR.Section_2C.isBasis_card_eq_finrank v hv
+    subst hn
+    exact ⟨v, hv, h⟩
 
 /-- 5C.14 {lit}`T` has an upper-triangular matrix with respect to some basis
 of {lit}`V` iff the dual operator {lit}`T′` has an upper-triangular matrix
@@ -934,6 +1483,11 @@ theorem exercise_5C_14 [Finite F V] (T : V →ₗ[F] V) :
       IsUpperTriangular (matrixOf hv hv T)) ↔
     ∃ (φ : Fin (finrank F V) → Module.Dual F V) (hφ : IsBasis F φ),
       IsUpperTriangular (matrixOf hφ hφ T.dualMap) := by
-  sorry
+  -- upper-triangular iff minpoly splits
+  -- dual has same minimal poly (5B.28), so it also has upper-triangular to some basis.
+  rw [exists_upperTriangular_iff_finrank T rfl,
+    exists_upperTriangular_iff_finrank T.dualMap Subspace.dual_finrank_eq.symm,
+    exists_upperTriangular_iff_splits, exists_upperTriangular_iff_splits,
+    LADR.Section_5B.exercise_5B_28]
 
 end LADR.Section_5C
