@@ -1063,7 +1063,7 @@ theorem p_v_spec [Finite F V] (T : V →ₗ[F] V) (v : V) :
 {lit}`p_v` for each {lit}`v`. -/
 theorem exercise_5C_7b [Finite F V] (T : V →ₗ[F] V) (v : V) :
     p_v T v ∣ minpoly F T := by
-  -- by definition, deg minpoly > deg p_v, otherwise p_v would not be minimal.
+  -- by definition, deg minpoly ≥ deg p_v, otherwise p_v would not be minimal.
   -- then minpoly = q * p_v + r, by division algo
   -- but r must be 0, otherwise it would contradict the minimality of p_v too.
   obtain ⟨hpm, hpa, hpmin⟩ := p_v_spec T v
