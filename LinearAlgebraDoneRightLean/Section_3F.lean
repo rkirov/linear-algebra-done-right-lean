@@ -541,12 +541,12 @@ example : ∃ φ₁ φ₂ φ₃ : Module.Dual ℝ (↥(Set.Icc (0:ℝ) 1) → �
     φ₁ ≠ φ₂ ∧ φ₁ ≠ φ₃ ∧ φ₂ ≠ φ₃ := by sorry
 
 /-- 3F.3 -/
-theorem exercise_3F_3 [Finite F V] (v : V) (hv : v ≠ 0) :
+theorem exercise_3F_3 (v : V) (hv : v ≠ 0) :
     ∃ φ : Module.Dual F V, φ v = 1 := by
   sorry
 
 /-- 3F.4 -/
-theorem exercise_3F_4 [Finite F V] (U : Submodule F V) (hU : U ≠ ⊤) :
+theorem exercise_3F_4 (U : Submodule F V) (hU : U ≠ ⊤) :
     ∃ φ : Module.Dual F V, (∀ u ∈ U, φ u = 0) ∧ φ ≠ 0 := by
   sorry
 
@@ -679,7 +679,7 @@ theorem exercise_3F_18 [Finite F V] [Finite F W] :
   sorry
 
 /-- 3F.19 -/
-theorem exercise_3F_19 (U : Submodule F V) (φ : Module.Dual F V) :
+theorem exercise_3F_19 (U : Submodule F V) :
     U.dualAnnihilator = {φ : Module.Dual F V | (U : Set V) ⊆ LinearMap.ker φ} := by
   sorry
 
@@ -713,9 +713,8 @@ theorem exercise_3F_22b [Finite F V] (U W : Submodule F V) :
 
 /-- 3F.23  -/
 theorem exercise_3F_23 [Finite F V] {m : ℕ} (φ : Fin m → Module.Dual F V) :
-    (↑(Submodule.span F (Set.range φ)) : Set (Module.Dual F V)) =
-        ↑(⨅ i, LinearMap.ker (φ i)).dualAnnihilator ∧
-    (↑(⨅ i, LinearMap.ker (φ i)).dualAnnihilator : Set (Module.Dual F V)) =
+    Submodule.span F (Set.range φ) = (⨅ i, LinearMap.ker (φ i)).dualAnnihilator ∧
+    ((⨅ i, LinearMap.ker (φ i)).dualAnnihilator : Set (Module.Dual F V)) =
         {ψ | (⨅ i, LinearMap.ker (φ i)) ≤ LinearMap.ker ψ} := by
   sorry
 
@@ -750,7 +749,8 @@ theorem exercise_3F_27
     (φ : Module.Dual ℝ (Polynomial.degreeLT ℝ 6))
     (hφ : ∀ p, φ p = (p : Polynomial ℝ).eval 8)
     (hT : LinearMap.ker T.dualMap = Submodule.span ℝ {φ}) :
-    LinearMap.range T = LinearMap.ker φ := by
+    (LinearMap.range T : Set (Polynomial.degreeLT ℝ 6)) =
+      {p : Polynomial.degreeLT ℝ 6 | (p : Polynomial ℝ).eval 8 = 0} := by
   sorry
 
 /-- 3F.28 -/
