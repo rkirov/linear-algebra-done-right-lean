@@ -858,36 +858,7 @@ theorem exercise_2A_4a (v : V) : LinearIndependent F (![v] : Fin 1 → V) ↔ v 
 /-- 2A.4(b) -/
 theorem exercise_2A_4b (v w : V) : LinearIndependent F (![v, w] : Fin 2 → V) ↔
     (∀ a : F, w ≠ a • v) ∧ (∀ b : F, v ≠ b • w) := by
-  rw [Fintype.linearIndependent_iff]
-  constructor
-  · intro hLI
-    refine ⟨fun a hwa => ?_, fun b hvb => ?_⟩
-    · have hsum : ∑ i, ![a, -1] i • (![v, w] : Fin 2 → V) i = 0 := by
-        rw [Fin.sum_univ_two]; simp [hwa]
-      have := hLI _ hsum 1
-      simp at this
-    · have hsum : ∑ i, ![-1, b] i • (![v, w] : Fin 2 → V) i = 0 := by
-        rw [Fin.sum_univ_two]; simp [hvb]
-      have := hLI _ hsum 0
-      simp at this
-  · rintro ⟨hwv, hvw⟩ a hsum
-    rw [Fin.sum_univ_two] at hsum
-    simp at hsum
-    by_cases hb : a 1 = 0
-    · rw [hb, zero_smul, add_zero] at hsum
-      by_cases ha : a 0 = 0
-      · intro i; fin_cases i <;> assumption
-      · exfalso
-        apply hvw 0
-        have : v = (a 0)⁻¹ • (a 0 • v) := by
-          rw [smul_smul, inv_mul_cancel₀ ha, one_smul]
-        rw [this, hsum, smul_zero, zero_smul]
-    · exfalso
-      apply hwv (-(a 1)⁻¹ * a 0)
-      have hwexpr : a 1 • w = -(a 0 • v) := eq_neg_of_add_eq_zero_right hsum
-      have hw : w = (a 1)⁻¹ • (a 1 • w) := by
-        rw [smul_smul, inv_mul_cancel₀ hb, one_smul]
-      rw [hw, hwexpr, smul_neg, smul_smul, neg_mul, neg_smul]
+  sorry
 
 /-- 2A.5 Find {lit}`t ∈ ℝ` such that the list is *not* linearly independent. -/
 theorem exercise_2A_5 :
