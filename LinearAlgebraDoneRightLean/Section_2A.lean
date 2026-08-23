@@ -842,18 +842,7 @@ theorem exercise_2A_3 {m : ℕ} (v : Fin m → V) :
 
 /-- 2A.4(a) -/
 theorem exercise_2A_4a (v : V) : LinearIndependent F (![v] : Fin 1 → V) ↔ v ≠ 0 := by
-  rw [Fintype.linearIndependent_iff]
-  constructor
-  · intro h hv
-    have := h ![1] (by simp [hv]) 0
-    simp at this
-  · intro hv a ha i
-    fin_cases i
-    have h0 := ha
-    simp at h0
-    rcases h0 with h | h
-    · exact h
-    · exact absurd h hv
+  sorry
 
 /-- 2A.4(b) -/
 theorem exercise_2A_4b (v w : V) : LinearIndependent F (![v, w] : Fin 2 → V) ↔
