@@ -777,9 +777,10 @@ the length is bounded by the length of any spanning list of {lit}`V`, so the
 process terminates; maximality then forces the final list to span {lit}`U`.
 
 The translation uses {name}`linearIndependent_le_spanning` (our 2.22) for the
-bound and {lit}`exercise_2A_13` for the LI-extension step; the latter is
-currently {lit}`sorry`, so this proof has a {lit}`sorry` marked
-{lit}`-- needs 2.13`. -/
+bound; the LI-extension step — appending a vector outside the span of a linearly
+independent list keeps it linearly independent, which Axler gets from the linear
+dependence lemma {name}`linearDependence_lemma` (2.19) — is proved inline below,
+so this example depends on no exercise. -/
 
 example (U : Submodule F V) [Module.Finite F V] : Module.Finite F U := by
   classical
@@ -811,7 +812,30 @@ example (U : Submodule F V) [Module.Finite F V] : Module.Finite F U := by
     have hlt : Submodule.span F (Set.range u) < ⊤ := lt_top_iff_ne_top.mpr hne
     obtain ⟨y, _, hy_not⟩ := SetLike.exists_of_lt hlt
     have hsnoc_LI : LinearIndependent F (Fin.snoc u y : Fin (m + 1) → U) := by
-      sorry -- needs 2.13
+      -- In a relation on the extended list, the coefficient {lit}`A` of {lit}`y` must
+      -- vanish: otherwise {lit}`y = -A⁻¹ (∑ gᵢ uᵢ)` would lie in {lit}`span (range u)`.
+      -- With {lit}`A = 0` the relation is one among the {lit}`u`'s, so {lit}`hu` finishes.
+      rw [Fintype.linearIndependent_iff]
+      intro g hg
+      rw [Fin.sum_univ_castSucc] at hg
+      simp only [Fin.snoc_castSucc, Fin.snoc_last] at hg
+      set A := g (Fin.last m) with hA
+      have hlast : A = 0 := by
+        by_contra hA0
+        refine hy_not ?_
+        rw [Submodule.mem_span_range_iff_exists_fun]
+        refine ⟨fun i => -A⁻¹ * g i.castSucc, ?_⟩
+        have hneg : ∑ i, g i.castSucc • u i = -(A • y) := by
+          rw [eq_neg_iff_add_eq_zero]; exact hg
+        calc ∑ i, (-A⁻¹ * g i.castSucc) • u i
+            = (-A⁻¹) • ∑ i, g i.castSucc • u i := by
+              rw [Finset.smul_sum]
+              exact Finset.sum_congr rfl fun i _ => (smul_smul _ _ _).symm
+          _ = (-A⁻¹) • (-(A • y)) := by rw [hneg]
+          _ = y := by
+              rw [smul_neg, smul_smul, neg_mul, inv_mul_cancel₀ hA0, neg_one_smul, neg_neg]
+      rw [hlast, zero_smul, add_zero] at hg
+      exact Fin.lastCases hlast (Fintype.linearIndependent_iff.mp hu (fun i => g i.castSucc) hg)
     have : m + 1 ≤ m := hmax (m + 1) ⟨_, hsnoc_LI⟩
     omega
   -- {lit}`u : Fin m → U` spans {lit}`U`, so its finite image
@@ -829,9 +853,11 @@ theorem exercise_2A_1 :
       (Submodule.span F (Set.range v) : Set (Fin 3 → F)) = {x | x 0 + x 1 + x 2 = 0} := by
   sorry
 
-/-- 2A.2 -/
-theorem exercise_2A_2 (v : Fin 4 → V) : Submodule.span F (Set.range v) =
-    Submodule.span F (Set.range (![v 0 - v 1, v 1 - v 2, v 2 - v 3, v 3] : Fin 4 → V)) := by
+/-- 2A.2 *Prove or counterexample.* If {lit}`v₁, v₂, v₃, v₄` spans {lit}`V`, does
+{lit}`v₁ - v₂, v₂ - v₃, v₃ - v₄, v₄` span {lit}`V`? -/
+def exercise_2A_2 (v : Fin 4 → V) : Decidable (Spans F v →
+    Spans F (![v 0 - v 1, v 1 - v 2, v 2 - v 3, v 3] : Fin 4 → V)) := by
+  -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 2A.3 -/
@@ -855,8 +881,10 @@ theorem exercise_2A_5 :
       (![![3, 1, 4], ![2, -3, 5], ![5, 9, t]] : Fin 3 → Fin 3 → ℝ) := by
   sorry
 
-/-- 2A.6 -/
-theorem exercise_2A_6 (c : F) :
+/-- 2A.6 The field is assumed {name}`CharZero`: the {lit}`3 × 3` determinant is
+{lit}`-5 (c - 8)`, so in characteristic {lit}`5` the list is dependent for every
+{lit}`c` and the equivalence fails. -/
+theorem exercise_2A_6 [CharZero F] (c : F) :
     ¬ LinearIndependent F (![![2, 3, 1], ![1, -1, 2], ![7, 3, c]] : Fin 3 → Fin 3 → F) ↔
       c = 8 := by
   sorry
@@ -877,8 +905,10 @@ theorem exercise_2A_8 (v : Fin 4 → V) (h : LinearIndependent F v) :
     LinearIndependent F (![v 0 - v 1, v 1 - v 2, v 2 - v 3, v 3] : Fin 4 → V) := by
   sorry
 
-/-- 2A.9 -/
-def exercise_2A_9 :
+/-- 2A.9 The field is assumed {name}`CharZero`: in characteristic {lit}`5` one has
+{lit}`5 • v 0 - 4 • v 1 = v 1`, so for {lit}`m ≥ 1` the updated list repeats
+{lit}`v 1` and is dependent. -/
+def exercise_2A_9 [CharZero F] :
     Decidable (∀ {m : ℕ} (v : Fin (m + 1) → V) (_ : LinearIndependent F v),
       LinearIndependent F (Function.update v 0 ((5 : F) • v 0 - (4 : F) • v 1))) := by
   -- first line should be `apply isTrue` or `apply isFalse`
@@ -892,9 +922,12 @@ def exercise_2A_10 :
   sorry
 
 /-- 2A.11 *Prove or counterexample.* If {lit}`v₁, …, vₘ` and {lit}`w₁, …, wₘ`
-are linearly independent, is {lit}`v₁ + w₁, …, vₘ + wₘ` linearly independent? -/
+are linearly independent, is {lit}`v₁ + w₁, …, vₘ + wₘ` linearly independent?
+The ambient space is taken to be {lit}`F²`: over a *zero* vector space the claim
+would be vacuously true (a linearly independent list there must be empty), so a
+counterexample has to name a space. -/
 def exercise_2A_11 :
-    Decidable (∀ {m : ℕ} (v w : Fin m → V),
+    Decidable (∀ {m : ℕ} (v w : Fin m → (Fin 2 → F)),
       LinearIndependent F v → LinearIndependent F w →
       LinearIndependent F (fun i => v i + w i)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
@@ -902,8 +935,8 @@ def exercise_2A_11 :
 
 /-- 2A.12 -/
 theorem exercise_2A_12 {m : ℕ} (v : Fin m → V) (w : V)
-    (hv : LinearIndependent F v) :
-    ¬ LinearIndependent F (Fin.snoc v w : Fin (m + 1) → V) ↔
+    (hv : LinearIndependent F v)
+    (hvw : ¬ LinearIndependent F (fun i => v i + w)) :
     w ∈ Submodule.span F (Set.range v) := by
   sorry
 
