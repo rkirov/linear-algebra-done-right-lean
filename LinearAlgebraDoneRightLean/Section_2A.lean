@@ -4,6 +4,7 @@ import Mathlib.Algebra.Module.Submodule.Lattice
 import Mathlib.Algebra.Polynomial.Basic
 import Mathlib.Algebra.Polynomial.Degree.Defs
 import Mathlib.Algebra.Polynomial.Eval.Defs
+import Mathlib.Algebra.Polynomial.Roots
 import Mathlib.Data.Complex.Basic
 import Mathlib.LinearAlgebra.Complex.Module
 import Mathlib.Data.Real.Basic
@@ -205,6 +206,10 @@ example (p : Polynomial F) : WithBot ℕ := p.degree
 
 example : (0 : Polynomial F).degree = ⊥ := Polynomial.degree_zero
 
+/-! Two polynomials are equal if and only if all their coefficients are equal. -/
+example (p q : Polynomial F) : p = q ↔ ∀ n, p.coeff n = q.coeff n :=
+  Polynomial.ext_iff
+
 /-! Axler reads off {lit}`degree p = m` from the coefficients: the {lit}`m`-th
 coefficient is nonzero, and every higher coefficient vanishes. mathlib's
 {name}`Polynomial.coeff` (returning {lit}`p.coeff n : F`) is the same
@@ -327,7 +332,7 @@ example : LinearIndependent F
 
 /-! (b) {lit}`1, z, …, zᵐ` is linearly independent in {lit}`P(F)`. -/
 
-example (m : ℕ) [Infinite F] :
+example (m : ℕ) :
     LinearIndependent F (fun i : Fin (m + 1) => (Polynomial.X (R := F)) ^ (i : ℕ)) := by
   -- Suppose {lit}`a₀ • 1 + a₁ • X + ⋯ + aₘ • Xᵐ = 0`. Reading off the coefficient
   -- of {lit}`Xⁱ` on the left forces {lit}`aᵢ = 0`.
@@ -774,12 +779,7 @@ example (U : Submodule F V) [Module.Finite F V] : Module.Finite F U :=
 {lit}`U` greedily: at each step, if the current list does not span {lit}`U`,
 pick a vector in {lit}`U` outside its span, which by 2.13 extends LI. By 2.22,
 the length is bounded by the length of any spanning list of {lit}`V`, so the
-process terminates; maximality then forces the final list to span {lit}`U`.
-
-The translation uses {name}`linearIndependent_le_spanning` (our 2.22) for the
-bound and {lit}`exercise_2A_13` for the LI-extension step; the latter is
-currently {lit}`sorry`, so this proof has a {lit}`sorry` marked
-{lit}`-- needs 2.13`. -/
+process terminates; maximality then forces the final list to span {lit}`U`. -/
 
 example (U : Submodule F V) [Module.Finite F V] : Module.Finite F U := by
   classical
@@ -811,7 +811,30 @@ example (U : Submodule F V) [Module.Finite F V] : Module.Finite F U := by
     have hlt : Submodule.span F (Set.range u) < ⊤ := lt_top_iff_ne_top.mpr hne
     obtain ⟨y, _, hy_not⟩ := SetLike.exists_of_lt hlt
     have hsnoc_LI : LinearIndependent F (Fin.snoc u y : Fin (m + 1) → U) := by
-      sorry -- needs 2.13
+      -- In a relation on the extended list, the coefficient {lit}`A` of {lit}`y` must
+      -- vanish: otherwise {lit}`y = -A⁻¹ (∑ gᵢ uᵢ)` would lie in {lit}`span (range u)`.
+      -- With {lit}`A = 0` the relation is one among the {lit}`u`'s, so {lit}`hu` finishes.
+      rw [Fintype.linearIndependent_iff]
+      intro g hg
+      rw [Fin.sum_univ_castSucc] at hg
+      simp only [Fin.snoc_castSucc, Fin.snoc_last] at hg
+      set A := g (Fin.last m) with hA
+      have hlast : A = 0 := by
+        by_contra hA0
+        refine hy_not ?_
+        rw [Submodule.mem_span_range_iff_exists_fun]
+        refine ⟨fun i => -A⁻¹ * g i.castSucc, ?_⟩
+        have hneg : ∑ i, g i.castSucc • u i = -(A • y) := by
+          rw [eq_neg_iff_add_eq_zero]; exact hg
+        calc ∑ i, (-A⁻¹ * g i.castSucc) • u i
+            = (-A⁻¹) • ∑ i, g i.castSucc • u i := by
+              rw [Finset.smul_sum]
+              exact Finset.sum_congr rfl fun i _ => (smul_smul _ _ _).symm
+          _ = (-A⁻¹) • (-(A • y)) := by rw [hneg]
+          _ = y := by
+              rw [smul_neg, smul_smul, neg_mul, inv_mul_cancel₀ hA0, neg_one_smul, neg_neg]
+      rw [hlast, zero_smul, add_zero] at hg
+      exact Fin.lastCases hlast (Fintype.linearIndependent_iff.mp hu (fun i => g i.castSucc) hg)
     have : m + 1 ≤ m := hmax (m + 1) ⟨_, hsnoc_LI⟩
     omega
   -- {lit}`u : Fin m → U` spans {lit}`U`, so its finite image
@@ -827,21 +850,93 @@ theorem exercise_2A_1 :
     ∃ v : Fin 4 → (Fin 3 → F),
       Function.Injective v ∧
       (Submodule.span F (Set.range v) : Set (Fin 3 → F)) = {x | x 0 + x 1 + x 2 = 0} := by
-  sorry
+  -- (-1,1,0), (1,0,-1), (0,1,-1), (0,0,0) -- the dim is two, so first two are enough
+  -- (x,y,z) = (-z)(-1,1,0) + (x-z)(1,0,-1) + (-x)(0,1,-1) (when x+y+z=0)
+  refine ⟨![![-1, 1, 0], ![1, 0, -1], ![0, 1, -1], 0], ?_, ?_⟩
+  · intro i j hij
+    have h0 := congrFun hij 0
+    have h1 := congrFun hij 1
+    have h2 := congrFun hij 2
+    fin_cases i <;> fin_cases j <;> simp_all [funext_iff, Fin.forall_fin_succ]
+  · ext x
+    simp only [SetLike.mem_coe, Set.mem_setOf_eq]
+    constructor
+    · intro hx
+      induction hx using Submodule.span_induction with
+      | mem y hy =>
+        obtain ⟨i, rfl⟩ := hy
+        fin_cases i <;> simp
+      | zero => simp
+      | add a b _ _ ha hb => simpa using by linear_combination ha + hb
+      | smul c a _ ha => simpa [mul_add] using by linear_combination c * ha
+    · intro hx
+      -- {lit}`(x,y,z) = -z(-1,1,0) + (x-z)(1,0,-1) - x(0,1,-1)` when {lit}`x + y + z = 0`.
+      refine (Submodule.mem_span_range_iff_exists_fun F).mpr
+        ⟨![-(x 2), x 0 - x 2, -(x 0), 0], ?_⟩
+      funext i
+      fin_cases i
+      · simp [Fin.sum_univ_four]
+      · simp [Fin.sum_univ_four]; linear_combination -hx
+      · simp [Fin.sum_univ_four]
 
 /-- 2A.2 -/
-theorem exercise_2A_2 (v : Fin 4 → V) : Submodule.span F (Set.range v) =
-    Submodule.span F (Set.range (![v 0 - v 1, v 1 - v 2, v 2 - v 3, v 3] : Fin 4 → V)) := by
-  sorry
+def exercise_2A_2 (v : Fin 4 → V) : Decidable (Spans F v →
+    Spans F (![v 0 - v 1, v 1 - v 2, v 2 - v 3, v 3] : Fin 4 → V)) := by
+  apply isTrue
+  -- since v i spans w = a 0 v 0 + a 1 v 1 + a 2 v 2 + a 3 v 3
+  -- a rewrite shows w = a 0 (v 0 - v 1) + (a 0 + a 1) (v 1 - v 2) + (a 0 + a 1 + a 2) (v 2 - v 3) + (a 0 + a 1 + a 2 + a 3) v 3
+  intro h
+  set U := Submodule.span F (Set.range (![v 0 - v 1, v 1 - v 2, v 2 - v 3, v 3] : Fin 4 → V))
+    with hU
+  -- Each difference, and {lit}`v 3`, lies in {lit}`U`; telescoping recovers the {lit}`v i`.
+  have m0 : v 0 - v 1 ∈ U := Submodule.subset_span ⟨0, by simp⟩
+  have m1 : v 1 - v 2 ∈ U := Submodule.subset_span ⟨1, by simp⟩
+  have m2 : v 2 - v 3 ∈ U := Submodule.subset_span ⟨2, by simp⟩
+  have h3 : v 3 ∈ U := Submodule.subset_span ⟨3, by simp⟩
+  have h2 : v 2 ∈ U := by simpa using add_mem m2 h3
+  have h1 : v 1 ∈ U := by simpa using add_mem m1 h2
+  have h0 : v 0 ∈ U := by simpa using add_mem m0 h1
+  rw [Spans, eq_top_iff, ← h, Submodule.span_le, Set.range_subset_iff]
+  intro i
+  fin_cases i
+  · exact h0
+  · exact h1
+  · exact h2
+  · exact h3
 
 /-- 2A.3 -/
 theorem exercise_2A_3 {m : ℕ} (v : Fin m → V) :
     Submodule.span F (Set.range v) =
       Submodule.span F (Set.range (fun k : Fin m => ∑ i : Fin (k + 1), v ⟨i, by omega⟩)) := by
-  sorry
+  -- enough to show that each v k is in the span w i
+  -- and each w k is in the span v i
+  apply le_antisymm
+  · rw [Submodule.span_le, Set.range_subset_iff]
+    intro k
+    -- subtract w k - w (k-1) = v k is in the span of v i
+    have mem : ∀ (j : ℕ) (hj : j < m),
+        (∑ i : Fin (j + 1), v ⟨i, by omega⟩) ∈
+          Submodule.span F (Set.range (fun k : Fin m => ∑ i : Fin (k + 1), v ⟨i, by omega⟩)) :=
+      fun j hj => Submodule.subset_span ⟨⟨j, hj⟩, rfl⟩
+    obtain ⟨n, hn⟩ := k
+    cases n with
+    | zero => simpa using mem 0 hn
+    | succ n =>
+      have key : (∑ i : Fin (n + 1 + 1), v ⟨i, by omega⟩)
+          = (∑ i : Fin (n + 1), v ⟨i, by omega⟩) + v ⟨n + 1, hn⟩ :=
+        Fin.sum_univ_castSucc _
+      have hsub := sub_mem (mem (n + 1) hn) (mem n (by omega))
+      rw [key] at hsub
+      simpa using hsub
+  · rw [Submodule.span_le, Set.range_subset_iff]
+    intro k
+    -- w k = v 0 + … + v k is in the span of v i
+    exact sum_mem fun i _ => Submodule.subset_span ⟨_, rfl⟩
 
 /-- 2A.4(a) -/
 theorem exercise_2A_4a (v : V) : LinearIndependent F (![v] : Fin 1 → V) ↔ v ≠ 0 := by
+  -- ∑ i, a i • v = 0 is a 0 v 0 = 0, so if v = 0, then a 0 can be nonzero
+  -- and if v ≠ 0, then a 0 must be zero
   rw [Fintype.linearIndependent_iff]
   constructor
   · intro h hv
@@ -858,6 +953,13 @@ theorem exercise_2A_4a (v : V) : LinearIndependent F (![v] : Fin 1 → V) ↔ v 
 /-- 2A.4(b) -/
 theorem exercise_2A_4b (v w : V) : LinearIndependent F (![v, w] : Fin 2 → V) ↔
     (∀ a : F, w ≠ a • v) ∧ (∀ b : F, v ≠ b • w) := by
+  -- => a v + b w = 0 implies a = b = 0
+  -- if w = a v, then b = -1 implies sum = 0, but b ≠ 0, so not LI
+  -- if v = b w, then a = -1 implies sum = 0, but a ≠ 0, so not LI
+  -- <= assume a v + b w = 0, want to prove a = b = 0
+  -- if both v = w = 0 we have contra, so assume by symmetr v ≠ 0
+  -- if b = 0, then a v = 0, so a = 0, contra
+  -- so -a / b v = w, contra
   rw [Fintype.linearIndependent_iff]
   constructor
   · intro hLI
@@ -893,92 +995,494 @@ theorem exercise_2A_4b (v w : V) : LinearIndependent F (![v, w] : Fin 2 → V) �
 theorem exercise_2A_5 :
     ∃ t : ℝ, ¬ LinearIndependent ℝ
       (![![3, 1, 4], ![2, -3, 5], ![5, 9, t]] : Fin 3 → Fin 3 → ℝ) := by
-  sorry
+  -- 3 v 0 - 2 v 1 = v 2, so t = 3*4 - 2*5 = 2 would make the list linearly dependent
+  refine ⟨2, ?_⟩
+  rw [Fintype.linearIndependent_iff]; push Not
+  refine ⟨![3, -2, -1], ?_, 0, by norm_num⟩
+  funext i
+  fin_cases i <;> simp [Fin.sum_univ_three] <;> norm_num
 
-/-- 2A.6 -/
-theorem exercise_2A_6 (c : F) :
+/-- 2A.6 The field is assumed {name}`CharZero`: the {lit}`3 × 3` determinant is
+{lit}`-5 (c - 8)`, so in characteristic {lit}`5` the list is dependent for every
+{lit}`c` and the equivalence fails. -/
+theorem exercise_2A_6 [CharZero F] (c : F) :
     ¬ LinearIndependent F (![![2, 3, 1], ![1, -1, 2], ![7, 3, c]] : Fin 3 → Fin 3 → F) ↔
       c = 8 := by
-  sorry
+  -- if c = 8, then 2 v 0 + 3 v 1 - v 2 = 0, so the list is linearly dependent,
+  -- any other value still forces 2 and 3 to first two params, so c must be 8 to make the list linearly dependent
+  constructor
+  · rw [Fintype.linearIndependent_iff]; push Not
+    rintro ⟨a, ha, j, hj⟩
+    have h0 := congrFun ha 0
+    have h1 := congrFun ha 1
+    have h2 := congrFun ha 2
+    simp [Fin.sum_univ_three] at h0 h1 h2
+    -- the first two coordinates force {lit}`a 0 = -2 a 2` and {lit}`a 1 = -3 a 2`
+    have ha0 : a 0 = -(2 * a 2) := by linear_combination (1 / 5 : F) * h0 + (1 / 5) * h1
+    have ha1 : a 1 = -(3 * a 2) := by linear_combination (3 / 5 : F) * h0 - (2 / 5) * h1
+    -- and then the third gives {lit}`(c - 8) * a 2 = 0`
+    have hkey : (c - 8) * a 2 = 0 := by linear_combination h2 - ha0 - 2 * ha1
+    rcases mul_eq_zero.mp hkey with hc | h2zero
+    · linear_combination hc
+    · -- {lit}`a 2 = 0` would force {lit}`a 0 = a 1 = 0` too, contradicting {lit}`hj`
+      exfalso; apply hj
+      fin_cases j <;> simp_all
+  · rintro rfl
+    rw [Fintype.linearIndependent_iff]; push Not
+    refine ⟨![2, 3, -1], ?_, 0, by norm_num⟩
+    funext i; fin_cases i <;> simp [Fin.sum_univ_three] <;> ring
 
 /-- 2A.7(a) Over {lit}`ℝ`, the list {lit}`1+i, 1-i` is linearly independent in
 {lit}`ℂ` (viewed as an {lit}`ℝ`-vector space). -/
 theorem exercise_2A_7a :
     LinearIndependent ℝ (![(1 + Complex.I), (1 - Complex.I)] : Fin 2 → ℂ) := by
-  sorry
+  -- a (1 + i) + b (1 - i) = 0 over R, means a + b = 0 and a - b = 0, so a = b , 2 a = 0, so a = b = 0
+  rw [Fintype.linearIndependent_iff]
+  intro g hg i
+  rw [Fin.sum_univ_two] at hg
+  -- the {lit}`ℝ`-scalar action on {lit}`ℂ` is multiplication by the coercion
+  have hg' : (g 0 : ℂ) * (1 + Complex.I) + (g 1 : ℂ) * (1 - Complex.I) = 0 := hg
+  simp [Complex.ext_iff] at hg'
+  fin_cases i <;> simp <;> linarith [hg'.1, hg'.2]
 
 /-- 2A.7(b) Over {lit}`ℂ`, the same list is linearly dependent. -/
 theorem exercise_2A_7b :
     ¬ LinearIndependent ℂ (![(1 + Complex.I), (1 - Complex.I)] : Fin 2 → ℂ) := by
-  sorry
+  -- over C - i (1 + i) = i - i ^2 = i - 1 = -1 * (1 - i), so i (1 + i) + 1 (1 - i) = 0, so the list is linearly dependent
+  rw [Fintype.linearIndependent_iff]; push Not
+  refine ⟨![Complex.I, 1], ?_, 0, by simp⟩
+  rw [Fin.sum_univ_two]
+  simp [Complex.ext_iff]
 
 /-- 2A.8 -/
 theorem exercise_2A_8 (v : Fin 4 → V) (h : LinearIndependent F v) :
     LinearIndependent F (![v 0 - v 1, v 1 - v 2, v 2 - v 3, v 3] : Fin 4 → V) := by
-  sorry
+  -- assume a (v 0 - v 1) + b (v 1 - v 2) + c (v 2 - v 3) + d v 3 = 0, then
+  -- a v 0 + (b - a) v 1 + (c - b) v 2 + (d - c) v 3 = 0, so by LI, a = b - a = c - b = d - c = 0, so a = b = c = d = 0
+  -- replace one by one and get a = b = c = d = 0
+  rw [Fintype.linearIndependent_iff] at h ⊢
+  intro a ha
+  rw [Fin.sum_univ_four] at ha
+  simp only [Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.head_cons,
+    Matrix.cons_val_two, Matrix.tail_cons, Matrix.cons_val_three] at ha
+  have key : ∀ j, (![a 0, a 1 - a 0, a 2 - a 1, a 3 - a 2] : Fin 4 → F) j = 0 := by
+    refine h _ ?_
+    rw [Fin.sum_univ_four, ← ha]
+    simp only [Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.head_cons,
+      Matrix.cons_val_two, Matrix.tail_cons, Matrix.cons_val_three, sub_smul, smul_sub]
+    abel
+  have k0 := key 0
+  have k1 := key 1
+  have k2 := key 2
+  have k3 := key 3
+  simp only [Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.head_cons,
+    Matrix.cons_val_two, Matrix.tail_cons, Matrix.cons_val_three] at k0 k1 k2 k3
+  intro i
+  fin_cases i
+  · exact k0
+  · show a 1 = 0
+    linear_combination k1 + k0
+  · show a 2 = 0
+    linear_combination k2 + k1 + k0
+  · show a 3 = 0
+    linear_combination k3 + k2 + k1 + k0
 
-/-- 2A.9 -/
-def exercise_2A_9 :
+/-- 2A.9 The field is assumed {name}`CharZero`: in characteristic {lit}`5` one has
+{lit}`5 • v 0 - 4 • v 1 = v 1`, so for {lit}`m ≥ 1` the updated list repeats
+{lit}`v 1` and is dependent. -/
+def exercise_2A_9 [CharZero F] :
     Decidable (∀ {m : ℕ} (v : Fin (m + 1) → V) (_ : LinearIndependent F v),
       LinearIndependent F (Function.update v 0 ((5 : F) • v 0 - (4 : F) • v 1))) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isTrue
+  -- assume a (5 v 0 - 4 v 1) + b v 1 + ... = 0
+  -- then a 5 v 0 + (b - a 4) v 1 + ... = 0, so by LI, a = b - a 4 = ... = 0, so a = b = ... = 0
+  intro m v hv
+  cases m with
+  | zero =>
+    -- in {lit}`Fin 1` the index {lit}`1` *is* {lit}`0`, so the update is the identity
+    have h10 : (1 : Fin 1) = 0 := Subsingleton.elim _ _
+    have hupd : (5 : F) • v 0 - (4 : F) • v 1 = v 0 := by
+      rw [h10, ← sub_smul]; norm_num
+    rw [hupd, Function.update_eq_self]
+    exact hv
+  | succ n =>
+    -- updating at {lit}`0` is consing onto the tail
+    have hcons : Function.update v 0 ((5 : F) • v 0 - (4 : F) • v 1)
+        = Fin.cons ((5 : F) • v 0 - (4 : F) • v 1) (Fin.tail v) := by
+      funext i
+      refine Fin.cases ?_ (fun j => ?_) i <;> simp [Fin.tail]
+    have hv' : LinearIndependent F (Fin.cons (v 0) (Fin.tail v)) := by
+      rw [Fin.cons_self_tail]; exact hv
+    obtain ⟨htail, hnot⟩ := linearIndependent_finCons.mp hv'
+    rw [hcons, linearIndependent_finCons]
+    refine ⟨htail, fun hmem => hnot ?_⟩
+    -- {lit}`v 1` is in the tail's span, so {lit}`5 • v 0` would be too, hence {lit}`v 0`
+    have hv1 : v 1 ∈ Submodule.span F (Set.range (Fin.tail v)) :=
+      Submodule.subset_span ⟨0, by simp [Fin.tail]⟩
+    have h5 : ((5 : F) • v 0) ∈ Submodule.span F (Set.range (Fin.tail v)) := by
+      simpa using add_mem hmem (Submodule.smul_mem _ (4 : F) hv1)
+    have h5ne : (5 : F) ≠ 0 := by norm_num
+    have := Submodule.smul_mem _ ((5 : F)⁻¹) h5
+    rwa [smul_smul, inv_mul_cancel₀ h5ne, one_smul] at this
 
 /-- 2A.10 -/
 def exercise_2A_10 :
     Decidable (∀ {m : ℕ} (v : Fin m → V) (γ : F) (_ : γ ≠ 0)
       (_ : LinearIndependent F v), LinearIndependent F (fun i => γ • v i)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  -- assume λ v 0 + ... = 0, then γ (λ v 0 + ...) = 0, so
+  -- λ v 0 + ... = 0, so by LI, λ = ... = 0, so the new list is LI too
+  apply isTrue
+  intro m v γ hγ hv
+  rw [Fintype.linearIndependent_iff] at hv ⊢
+  intro a ha i
+  have hsum : ∑ j, (a j * γ) • v j = 0 := by simpa [smul_smul] using ha
+  exact (mul_eq_zero.mp (hv _ hsum i)).resolve_right hγ
 
 /-- 2A.11 *Prove or counterexample.* If {lit}`v₁, …, vₘ` and {lit}`w₁, …, wₘ`
-are linearly independent, is {lit}`v₁ + w₁, …, vₘ + wₘ` linearly independent? -/
+are linearly independent, is {lit}`v₁ + w₁, …, vₘ + wₘ` linearly independent?
+The ambient space is taken to be {lit}`F²`: over a *zero* vector space the claim
+would be vacuously true (a linearly independent list there must be empty), so a
+counterexample has to name a space. -/
 def exercise_2A_11 :
-    Decidable (∀ {m : ℕ} (v w : Fin m → V),
+    Decidable (∀ {m : ℕ} (v w : Fin m → (Fin 2 → F)),
       LinearIndependent F v → LinearIndependent F w →
       LinearIndependent F (fun i => v i + w i)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  -- use V = F^2 and take v1,v2 = e1,e2 and w1,w2 = e2,e1, then v1+w1 = e1+e2, v2+w2 = e1+e2
+  -- the list is clearly not LI, as 1 * (e1+e2) + -1 * (e1+e2) = 0, but the first two lists are LI
+  intro hcon
+  have hv : LinearIndependent F (![![1, 0], ![0, 1]] : Fin 2 → Fin 2 → F) := by
+    rw [Fintype.linearIndependent_iff]
+    intro g hg i
+    have h0 := congrFun hg 0
+    have h1 := congrFun hg 1
+    simp [Fin.sum_univ_two] at h0 h1
+    fin_cases i <;> simp_all
+  have hw : LinearIndependent F (![![0, 1], ![1, 0]] : Fin 2 → Fin 2 → F) := by
+    rw [Fintype.linearIndependent_iff]
+    intro g hg i
+    have h0 := congrFun hg 0
+    have h1 := congrFun hg 1
+    simp [Fin.sum_univ_two] at h0 h1
+    fin_cases i <;> simp_all
+  have hdep := hcon _ _ hv hw
+  rw [Fintype.linearIndependent_iff] at hdep
+  have hone := hdep ![1, -1] (by funext i; fin_cases i <;> simp [Fin.sum_univ_two]) 0
+  simp at hone
 
 /-- 2A.12 -/
 theorem exercise_2A_12 {m : ℕ} (v : Fin m → V) (w : V)
-    (hv : LinearIndependent F v) :
-    ¬ LinearIndependent F (Fin.snoc v w : Fin (m + 1) → V) ↔
+    (hv : LinearIndependent F v)
+    (hvw : ¬ LinearIndependent F (fun i => v i + w)) :
     w ∈ Submodule.span F (Set.range v) := by
-  sorry
+  -- assumed a(v0 + w) + b(v1 + w) + ... = 0, s.t. not all a, b, ... are zero, then
+  -- a v0 + b v1 + ... + (a + b + ...) w = 0, let (a + b + ...) = A,
+  -- w = -1/A (a v0 + b v1 + ...), so w is in the span of v i, unless A = 0,
+  -- but if A = 0, then a v0 + b v1 + ... = 0, so by LI, a = b = ... = 0, contradiction.
+  rw [Fintype.linearIndependent_iff] at hv hvw
+  push Not at hvw
+  obtain ⟨a, ha, j, hj⟩ := hvw
+  have hsplit : ∑ i, a i • v i + (∑ i, a i) • w = 0 := by
+    rw [← ha, Finset.sum_smul, ← Finset.sum_add_distrib]
+    exact Finset.sum_congr rfl fun i _ => (smul_add _ _ _).symm
+  set A := ∑ i, a i with hA
+  by_cases hA0 : A = 0
+  · -- `A = 0` would make `v` itself dependent
+    exact absurd (hv a (by rwa [hA0, zero_smul, add_zero] at hsplit) j) hj
+  · -- otherwise divide by `A`: `w = -A⁻¹ (a v₀ + b v₁ + ⋯)`
+    rw [Submodule.mem_span_range_iff_exists_fun]
+    refine ⟨fun i => -A⁻¹ * a i, ?_⟩
+    have hneg : ∑ i, a i • v i = -(A • w) := by
+      rw [eq_neg_iff_add_eq_zero]; exact hsplit
+    calc ∑ i, (-A⁻¹ * a i) • v i
+        = (-A⁻¹) • ∑ i, a i • v i := by
+          rw [Finset.smul_sum]
+          exact Finset.sum_congr rfl fun i _ => (smul_smul _ _ _).symm
+      _ = (-A⁻¹) • (-(A • w)) := by rw [hneg]
+      _ = w := by
+          rw [smul_neg, smul_smul, neg_mul, inv_mul_cancel₀ hA0, neg_one_smul, neg_neg]
 
 /-- 2A.13 -/
 theorem exercise_2A_13 {m : ℕ} (v : Fin m → V) (w : V) (hv : LinearIndependent F v) :
     LinearIndependent F (Fin.snoc v w : Fin (m + 1) → V) ↔
       w ∉ Submodule.span F (Set.range v) := by
-  sorry
+  -- => by contra assume w = a v0 + b v1 + ..., s.t. not all a, b, ... are zero, then
+  -- then a v0 +  ... -1 w = 0, without all zero, so list is dependent.
+  -- <= assume a v0 + b v1 + ... + z w = 0, then
+  -- a v0 + b v1 + ... = - z w,
+  -- since w is not in th span of v i, we must have z = 0, so a v0 + b v1 + ... = 0, so by LI, a = b = ... = 0, so the list is LI.
+  -- but then by v i independent, we must have a = b = ... = 0, so the list is LI.
+  constructor
+  · -- if `w = a v₀ + b v₁ + ⋯`, then `a v₀ + ⋯ + (-1) w = 0` is a nontrivial relation
+    intro hLI hmem
+    rw [Fintype.linearIndependent_iff] at hLI
+    rw [Submodule.mem_span_range_iff_exists_fun] at hmem
+    obtain ⟨c, hc⟩ := hmem
+    have hrel : ∑ i, (Fin.snoc c (-1 : F) : Fin (m + 1) → F) i •
+        (Fin.snoc v w : Fin (m + 1) → V) i = 0 := by
+      rw [Fin.sum_univ_castSucc]
+      simp only [Fin.snoc_castSucc, Fin.snoc_last]
+      rw [hc]
+      simp
+    have hlast := hLI _ hrel (Fin.last m)
+    rw [Fin.snoc_last] at hlast
+    norm_num at hlast
+  · -- conversely, in a relation `∑ g i • v i + A • w = 0` the coefficient `A` of `w`
+    -- must vanish (else `w = -A⁻¹ (∑ g i • v i)` lies in the span), and then `v` is
+    -- linearly independent, so all the other coefficients vanish too
+    intro hw
+    rw [Fintype.linearIndependent_iff]
+    intro g hg
+    rw [Fin.sum_univ_castSucc] at hg
+    simp only [Fin.snoc_castSucc, Fin.snoc_last] at hg
+    set A := g (Fin.last m) with hA
+    have hlast : A = 0 := by
+      by_contra hA0
+      refine hw ?_
+      rw [Submodule.mem_span_range_iff_exists_fun]
+      refine ⟨fun i => -A⁻¹ * g i.castSucc, ?_⟩
+      have hneg : ∑ i, g i.castSucc • v i = -(A • w) := by
+        rw [eq_neg_iff_add_eq_zero]; exact hg
+      calc ∑ i, (-A⁻¹ * g i.castSucc) • v i
+          = (-A⁻¹) • ∑ i, g i.castSucc • v i := by
+            rw [Finset.smul_sum]
+            exact Finset.sum_congr rfl fun i _ => (smul_smul _ _ _).symm
+        _ = (-A⁻¹) • (-(A • w)) := by rw [hneg]
+        _ = w := by
+            rw [smul_neg, smul_smul, neg_mul, inv_mul_cancel₀ hA0, neg_one_smul, neg_neg]
+    rw [hlast, zero_smul, add_zero] at hg
+    have hzero := (Fintype.linearIndependent_iff.mp hv) (fun i => g i.castSucc) hg
+    exact Fin.lastCases hlast hzero
 
 /-- 2A.14 -/
 theorem exercise_2A_14 {m : ℕ} (v : Fin m → V) :
     LinearIndependent F v ↔
       LinearIndependent F (fun k : Fin m => ∑ i : Fin (k + 1), v ⟨i, by omega⟩) := by
-  sorry
+  -- => assum a v0 + b (v0 + v1) + c (v0 + v1 + v2) + ... = 0, then
+  -- (a + b + c + ...) v0 + (b + c + ...) v1 + (c + ...) v2 + ... = 0, so by LI,
+  -- each is zero, working quickly down the list gives a = b = c = ... = 0, so the new list is LI.
+  -- <= conversely, assume a v0 + b v1 + c v2 + ... = 0, then
+  -- a v0 + (b - a) (v0 + v1) + (c - b) (v0 + v1 + v2) + ... = 0,
+  -- so by LI, a = b - a = c - b = ... = 0, so then a = b = c = ... = 0, so the original list is LI.
+  -- `w k` is the sum of the `v i` over all indices `i ≤ k`
+  have hw : ∀ k : Fin m, (∑ i : Fin (k + 1), v ⟨i, by omega⟩) = ∑ i ∈ Finset.Iic k, v i := by
+    intro k
+    refine Finset.sum_bij (fun (i : Fin (k + 1)) _ => (⟨i.1, by omega⟩ : Fin m)) ?_ ?_ ?_ ?_
+    · intro a _
+      simp only [Finset.mem_Iic, Fin.le_def]
+      omega
+    · intro a _ b _ hab
+      simpa [Fin.ext_iff] using hab
+    · intro c hc
+      rw [Finset.mem_Iic] at hc
+      have hc' : (c : ℕ) ≤ (k : ℕ) := hc
+      exact ⟨⟨c.1, by omega⟩, Finset.mem_univ _, by simp⟩
+    · intro a _
+      rfl
+  -- exchanging the order of summation turns `∑ a k • w k` into `∑ (a k + a (k+1) + ⋯) • v i`
+  have key : ∀ a : Fin m → F,
+      ∑ k, a k • (∑ i : Fin (k + 1), v ⟨i, by omega⟩)
+        = ∑ i, (∑ k ∈ Finset.Ici i, a k) • v i := by
+    intro a
+    simp_rw [hw, Finset.smul_sum, Finset.sum_smul]
+    exact Finset.sum_comm' (by intro x y; simp [Finset.mem_Iic, Finset.mem_Ici])
+  -- those suffix sums vanish only for the zero coefficients: read them off from the top down
+  have hker : ∀ a : Fin m → F, (∀ i, ∑ k ∈ Finset.Ici i, a k = 0) → ∀ k, a k = 0 := by
+    cases m with
+    | zero => exact fun a _ k => absurd k.2 (by omega)
+    | succ n =>
+      intro a h
+      refine Fin.lastCases ?_ ?_
+      · have hlast : Finset.Ici (Fin.last n) = {Fin.last n} := by
+          ext x
+          simp only [Finset.mem_Ici, Finset.mem_singleton, Fin.le_def, Fin.ext_iff, Fin.val_last]
+          omega
+        have hl := h (Fin.last n)
+        rwa [hlast, Finset.sum_singleton] at hl
+      · intro i
+        have hsplit : Finset.Ici i.castSucc = insert i.castSucc (Finset.Ici i.succ) := by
+          ext x
+          simp only [Finset.mem_Ici, Finset.mem_insert, Fin.le_def, Fin.ext_iff,
+            Fin.val_succ, Fin.val_castSucc]
+          omega
+        have hnotmem : i.castSucc ∉ Finset.Ici i.succ := by
+          simp only [Finset.mem_Ici, Fin.le_def, Fin.val_succ, Fin.val_castSucc]
+          omega
+        have h1 := h i.castSucc
+        rwa [hsplit, Finset.sum_insert hnotmem, h i.succ, add_zero] at h1
+  -- conversely every prescription of suffix sums is realized, by `a k = b k - b (k+1)`
+  have hsurj : ∀ b : Fin m → F, ∃ a : Fin m → F, ∀ i, ∑ k ∈ Finset.Ici i, a k = b i := by
+    cases m with
+    | zero => exact fun b => ⟨b, fun i => absurd i.2 (by omega)⟩
+    | succ n =>
+      intro b
+      refine ⟨fun k => b k - (if h : (k : ℕ) + 1 < n + 1 then b ⟨k + 1, h⟩ else 0), ?_⟩
+      refine Fin.reverseInduction ?_ ?_
+      · have hlast : Finset.Ici (Fin.last n) = {Fin.last n} := by
+          ext x
+          simp only [Finset.mem_Ici, Finset.mem_singleton, Fin.le_def, Fin.ext_iff, Fin.val_last]
+          omega
+        rw [hlast, Finset.sum_singleton]
+        simp [Fin.val_last]
+      · intro i hi
+        have hsplit : Finset.Ici i.castSucc = insert i.castSucc (Finset.Ici i.succ) := by
+          ext x
+          simp only [Finset.mem_Ici, Finset.mem_insert, Fin.le_def, Fin.ext_iff,
+            Fin.val_succ, Fin.val_castSucc]
+          omega
+        have hnotmem : i.castSucc ∉ Finset.Ici i.succ := by
+          simp only [Finset.mem_Ici, Fin.le_def, Fin.val_succ, Fin.val_castSucc]
+          omega
+        have hlt : (i.castSucc : ℕ) + 1 < n + 1 := by
+          simp only [Fin.val_castSucc]; omega
+        have hsucc : (⟨(i.castSucc : ℕ) + 1, hlt⟩ : Fin (n + 1)) = i.succ := by
+          simp [Fin.ext_iff, Fin.val_succ, Fin.val_castSucc]
+        rw [hsplit, Finset.sum_insert hnotmem, hi, dif_pos hlt, hsucc]
+        ring
+  constructor
+  · intro hv
+    rw [Fintype.linearIndependent_iff] at hv ⊢
+    intro a ha
+    rw [key a] at ha
+    exact hker a (hv _ ha)
+  · intro hwLI
+    rw [Fintype.linearIndependent_iff] at hwLI ⊢
+    intro b hb
+    obtain ⟨a, hab⟩ := hsurj b
+    have hzero : ∀ k, a k = 0 := by
+      refine hwLI a ?_
+      rw [key a]
+      simp_rw [hab]
+      exact hb
+    intro i
+    rw [← hab i]
+    exact Finset.sum_eq_zero fun k _ => hzero k
+
+/-! The list {lit}`1, z, …, z^(n-1)` in {lit}`degreeLT F n`, obtained by pulling the
+standard list {lit}`(1,0,…,0), …, (0,…,0,1)` of {lit}`Fⁿ` back along
+{name}`Polynomial.degreeLTEquiv` (a polynomial of degree {lit}`< n` corresponds to its
+coefficient vector). It is linearly independent and spans, which is all that 2A.15,
+2A.16 and 2A.20 need. -/
+
+noncomputable def degreeLT_monomials (n : ℕ) : Fin n → Polynomial.degreeLT F n :=
+  fun i => (Polynomial.degreeLTEquiv F n).symm (Pi.single i 1)
+
+theorem degreeLT_monomials_linearIndependent (n : ℕ) :
+    LinearIndependent F (degreeLT_monomials (F := F) n) := by
+  rw [Fintype.linearIndependent_iff]
+  intro a ha j
+  -- push the relation through the (injective) coefficient map
+  have h0 : (Polynomial.degreeLTEquiv F n).symm
+      (∑ i, a i • (Pi.single i 1 : Fin n → F)) = 0 := by
+    rw [map_sum]
+    simpa [degreeLT_monomials] using ha
+  have h1 : ∑ i, a i • (Pi.single i 1 : Fin n → F) = 0 := by
+    simpa using congrArg (Polynomial.degreeLTEquiv F n) h0
+  simpa [Finset.sum_apply, Pi.single_apply] using congrFun h1 j
+
+theorem degreeLT_monomials_spans (n : ℕ) : Spans F (degreeLT_monomials (F := F) n) := by
+  rw [Spans, eq_top_iff]
+  intro x _
+  rw [Submodule.mem_span_range_iff_exists_fun]
+  -- the coefficients of {lit}`x` are the scalars that rebuild it
+  refine ⟨fun i => (Polynomial.degreeLTEquiv F n) x i, ?_⟩
+  have hpi : ∑ i, ((Polynomial.degreeLTEquiv F n) x i) • (Pi.single i 1 : Fin n → F)
+      = (Polynomial.degreeLTEquiv F n) x := by
+    funext j
+    simp [Finset.sum_apply, Pi.single_apply]
+  calc ∑ i, ((Polynomial.degreeLTEquiv F n) x i) • degreeLT_monomials (F := F) n i
+      = (Polynomial.degreeLTEquiv F n).symm
+          (∑ i, ((Polynomial.degreeLTEquiv F n) x i) • (Pi.single i 1 : Fin n → F)) := by
+        rw [map_sum]
+        simp [degreeLT_monomials]
+    _ = x := by rw [hpi]; simp
 
 /-- 2A.15 -/
 theorem exercise_2A_15 :
     ¬ ∃ v : Fin 6 → Polynomial.degreeLT ℝ 5, LinearIndependent ℝ v := by
-  sorry
+  -- there is list of 5 poly that spans so any list of 6 poly is dependent
+  rintro ⟨v, hv⟩
+  exact absurd (linearIndependent_le_spanning _ _ hv (degreeLT_monomials_spans (F := ℝ) 5)) (by decide)
 
 /-- 2A.16 -/
 theorem exercise_2A_16 :
     ¬ ∃ v : Fin 4 → Polynomial.degreeLT ℝ 5,
       Spans ℝ v := by
-  sorry
+  -- 5 poly basis is LI, so any span has tp be 5 or more
+  rintro ⟨v, hv⟩
+  exact absurd (linearIndependent_le_spanning _ _ (degreeLT_monomials_linearIndependent (F := ℝ) 5) hv)
+    (by decide)
 
 /-- 2A.17 -/
 theorem exercise_2A_17 :
     ¬ Module.Finite F V ↔
       ∃ v : ℕ → V, ∀ m : ℕ, LinearIndependent F (fun i : Fin m => v i) := by
-  sorry
+  -- => assume v is not finite, take a vector v i
+  -- if it spans V, we contradict, so it does not span V,
+  -- this means there is at least one outside its space
+  -- add it to the list ,and thus the list is LI,
+  -- repeat this process to get an infinite list of LI vectors
+
+  -- <=, assume v is finite, so there is a list that spans V
+  -- take m bigger than the length of the list
+  -- then v i is LI of length bigger than span list, contradiction
+  constructor
+  · intro hfin
+    classical
+    -- no finite set spans, so from any finite list we can step outside its span
+    have key : ∀ t : Finset V, ∃ x : V, x ∉ Submodule.span F (t : Set V) := by
+      intro t
+      by_contra hcon
+      push Not at hcon
+      exact hfin ⟨t, eq_top_iff.mpr fun x _ => hcon x⟩
+    choose f hf using key
+    -- collect the chosen vectors: `T n = {v 0, …, v (n-1)}` and `v n = f (T n)`
+    set T : ℕ → Finset V := fun n => Nat.rec (∅ : Finset V) (fun _ t => insert (f t) t) n with hTdef
+    set v : ℕ → V := fun n => f (T n) with hvdef
+    have hTsucc : ∀ n, T (n + 1) = insert (v n) (T n) := fun _ => rfl
+    have hmemT : ∀ n, ∀ i < n, v i ∈ T n := by
+      intro n
+      induction n with
+      | zero => omega
+      | succ n ih =>
+        intro i hi
+        rw [hTsucc]
+        rcases Nat.lt_succ_iff_lt_or_eq.mp hi with h | h
+        · exact Finset.mem_insert_of_mem (ih i h)
+        · exact h ▸ Finset.mem_insert_self _ _
+    refine ⟨v, fun m => ?_⟩
+    induction m with
+    | zero => exact linearIndependent_empty_type
+    | succ n ih =>
+      have hsnoc : (fun i : Fin (n + 1) => v i) = Fin.snoc (fun i : Fin n => v i) (v n) := by
+        funext i
+        refine Fin.lastCases ?_ (fun j => ?_) i <;> simp
+      rw [hsnoc, exercise_2A_13 _ _ ih]
+      intro hmem
+      -- the span of `v 0, …, v (n-1)` sits inside the span of `T n`, which misses `v n`
+      refine hf (T n) (Submodule.span_mono ?_ hmem)
+      rintro _ ⟨i, rfl⟩
+      exact hmemT n i i.isLt
+  · rintro ⟨v, hv⟩ hfin
+    obtain ⟨n, w, hw⟩ := Module.Finite.exists_fin (R := F) (M := V)
+    have hle := linearIndependent_le_spanning _ w (hv (n + 1)) (hw : Spans F w)
+    omega
 
 /-- 2A.18 {lit}`F^∞` is infinite-dimensional. -/
 theorem exercise_2A_18 : ¬ Module.Finite F (ℕ → F) := by
-  sorry
+  -- take e i vectors,
+  -- show their finite subsets 0, ..., n are LI
+  -- if sum ai ei = 0, then each ai = 0, so the list is LI
+  -- by 2A.17, the space is infinite-dimensional
+  rw [exercise_2A_17]
+  refine ⟨fun n => Pi.single n 1, fun m => ?_⟩
+  rw [Fintype.linearIndependent_iff]
+  intro a ha j
+  simpa [Finset.sum_apply, Pi.single_apply, Fin.val_inj, Finset.sum_ite_eq]
+    using congrFun ha (j : ℕ)
 
 /-- 2A.19 The real vector space of all continuous real-valued functions on
 {lit}`[0, 1]` is infinite-dimensional. We follow the convention of 1.35(b)
@@ -986,12 +1490,45 @@ and use {lit}`C(ℝ, ℝ)` (continuous functions on all of {lit}`ℝ`); the same
 argument works on {lit}`C(Set.Icc 0 1, ℝ)`. -/
 theorem exercise_2A_19 :
     ¬ Module.Finite ℝ C(ℝ, ℝ) := by
-  sorry
+  -- take the functions f n (x) = x ^ n, show that any finite subset is LI
+  -- already proved for polynomials, so the list is LI
+  -- by 2A.17, the space is infinite-dimensional
+  rw [exercise_2A_17]
+  refine ⟨fun n => ⟨fun x => x ^ n, continuous_pow n⟩, fun m => ?_⟩
+  rw [Fintype.linearIndependent_iff]
+  intro a ha j
+  -- the polynomial `∑ a i Xⁱ` vanishes at every real, so it is the zero polynomial
+  have hp : (∑ i : Fin m, Polynomial.C (a i) * Polynomial.X ^ (i : ℕ)) = 0 := by
+    refine Polynomial.funext fun x => ?_
+    simpa [Polynomial.eval_finset_sum] using DFunLike.congr_fun ha x
+  simpa [Polynomial.finset_sum_coeff, Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+    Fin.val_inj, Finset.sum_ite_eq] using congrArg (fun p : Polynomial ℝ => p.coeff (j : ℕ)) hp
 
 /-- 2A.20 -/
 theorem exercise_2A_20 (m : ℕ) (p : Fin (m + 1) → Polynomial.degreeLT F (m + 1))
     (h : ∀ k, ((p k : Polynomial F).eval 2) = 0) :
     ¬ LinearIndependent F p := by
-  sorry
+  -- by contra, assume LI, then they have to span all of V, because
+  -- the list of 1, X, …, X^m span V and same length.
+  -- thus the constant 1 is a linear combination of the p k, so 1 = ∑ a k p k, but then
+  -- evaluating at 2 gives 1 = ∑ a k p k (2), but the right-hand side is zero, contradiction.
+  intro hp
+  -- "same length ⟹ spans": otherwise 2A.13 extends `p` to an LI list of length `m + 2`,
+  -- beating the spanning list of `m + 1` monomials, which 2.22 forbids
+  have hspan : Submodule.span F (Set.range p) = ⊤ := by
+    by_contra hne
+    obtain ⟨x, -, hx⟩ := SetLike.exists_of_lt (lt_top_iff_ne_top.mpr hne)
+    have hLI : LinearIndependent F (Fin.snoc p x) := (exercise_2A_13 _ _ hp).mpr hx
+    have hle := linearIndependent_le_spanning _ _ hLI (degreeLT_monomials_spans (F := F) (m + 1))
+    omega
+  have hone : (1 : Polynomial F) ∈ Polynomial.degreeLT F (m + 1) := by
+    rw [Polynomial.mem_degreeLT, Polynomial.degree_one]
+    exact_mod_cast Nat.succ_pos m
+  have hmem : (⟨1, hone⟩ : Polynomial.degreeLT F (m + 1)) ∈ Submodule.span F (Set.range p) := by
+    rw [hspan]; trivial
+  rw [Submodule.mem_span_range_iff_exists_fun] at hmem
+  obtain ⟨c, hc⟩ := hmem
+  have hval := congrArg (fun q : Polynomial.degreeLT F (m + 1) => ((q : Polynomial F).eval 2)) hc
+  simp [Polynomial.eval_finset_sum, Polynomial.smul_eq_C_mul, h] at hval
 
 end LADR.Section_2A
