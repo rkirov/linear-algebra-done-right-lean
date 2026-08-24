@@ -63,7 +63,7 @@ found. *Playtested* means someone (the author or someone else) has worked throug
 | 1A. ℝⁿ and ℂⁿ | ✓ | ✓ | ✓ |
 | 1B. Definition of vector space | ✓ | ✓ | ✓ |
 | 1C. Subspaces | ✓ | ✓ | ✓ |
-| 2A. Span and Linear Independence | ✓ | ✓ | — |
+| 2A. Span and Linear Independence | ✓ | ✓ | ✓ |
 | 2B. Bases | ✓ | ✓ | — |
 | 2C. Dimension | ✓ | ✓ | — |
 | 3A. Vector Space of Linear Maps | ✓ | ✓ | — |
