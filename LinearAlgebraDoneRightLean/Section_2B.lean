@@ -217,7 +217,7 @@ theorem isBasis_basisVec_27f : IsBasis F (basisVec_27f (F := F)) := by
 
 /-! (g) The list {lit}`1, z, …, zᵐ` is the *standard basis* of {lit}`Pₘ(F)`. -/
 
-example (m : ℕ) [Infinite F] : IsBasis F
+example (m : ℕ) : IsBasis F
     (fun i : Fin (m + 1) =>
       (⟨Polynomial.X ^ (i : ℕ), by
         rw [Polynomial.mem_degreeLT, Polynomial.degree_X_pow]
@@ -513,9 +513,17 @@ theorem exists_isCompl [Module.Finite F V] (U : Submodule F V) :
 
 /-! # Exercises -/
 
-/-- 2B.1 -/
-theorem exercise_2B_1 :
-    (∀ {n : ℕ} (v : Fin n → V), IsBasis F v → n = 0) ↔ Subsingleton V := by
+/-- 2B.1: "Find all vector spaces that have exactly one basis."
+
+A basis in the book's sense is a *list*, so "a basis of {lit}`V`" is a pair
+{lit}`⟨n, v : Fin n → V⟩` and "exactly one basis" is uniqueness of that pair.
+Quantifying instead over bases of a *fixed* length would be vacuously true for
+an infinite-dimensional {lit}`V`, which has no {lit}`Fin n`-indexed basis at
+all. The hypothesis {lit}`hF` — some scalar is neither {lit}`0` nor {lit}`1` —
+holds for Axler's {lit}`𝐅 = ℝ, ℂ` and is needed: over {lit}`𝔽₂` the space
+{lit}`𝔽₂` has {lit}`(1)` as its only basis. -/
+theorem exercise_2B_1 (hF : ∃ c : F, c ≠ 0 ∧ c ≠ 1) :
+    (∃! p : (n : ℕ) × (Fin n → V), IsBasis F p.2) ↔ Subsingleton V := by
   sorry
 
 /-! 2B.2: verify the assertions in Example 2.27 (stated as {lit}`example`s
@@ -536,21 +544,30 @@ def exercise_2B_3_U : Submodule ℝ (Fin 5 → ℝ) where
     · show a • v 0 = 3 * (a • v 1); simp only [smul_eq_mul]; rw [h1]; ring
     · show a • v 2 = 7 * (a • v 3); simp only [smul_eq_mul]; rw [h2]; ring
 
+/-- 2B.3(a) The student supplies a basis of {lit}`U` (replacing the
+{lit}`sorry`) and then proves that it is one. -/
+def exercise_2B_3a_v : Fin 3 → exercise_2B_3_U := sorry
+
 /-- 2B.3(a) -/
-theorem exercise_2B_3a :
-    ∃ (n : ℕ) (v : Fin n → exercise_2B_3_U), IsBasis ℝ v := by
+theorem exercise_2B_3a : IsBasis ℝ exercise_2B_3a_v := by
   sorry
+
+/-- 2B.3(b) The student supplies an extension of the basis from (a) to a
+basis of {lit}`ℝ⁵` (replacing the {lit}`sorry`). -/
+def exercise_2B_3b_v : Fin 5 → (Fin 5 → ℝ) := sorry
 
 /-- 2B.3(b) -/
-theorem exercise_2B_3b :
-    ∃ (n : ℕ) (v : Fin n → (Fin 5 → ℝ)), IsBasis ℝ v ∧
-      (Set.range (fun i : exercise_2B_3_U => (i : Fin 5 → ℝ))) ⊆
-        Submodule.span ℝ (Set.range v) := by
+theorem exercise_2B_3b : IsBasis ℝ exercise_2B_3b_v ∧
+    ∀ i : Fin 3, exercise_2B_3b_v (i.castLE (by norm_num)) =
+      (exercise_2B_3a_v i : Fin 5 → ℝ) := by
   sorry
 
+/-- 2B.3(c) The student supplies a complement {lit}`W` of {lit}`U` in
+{lit}`ℝ⁵` (replacing the {lit}`sorry`). -/
+def exercise_2B_3c_W : Submodule ℝ (Fin 5 → ℝ) := sorry
+
 /-- 2B.3(c) -/
-theorem exercise_2B_3c :
-    ∃ W : Submodule ℝ (Fin 5 → ℝ), IsCompl exercise_2B_3_U W := by
+theorem exercise_2B_3c : IsCompl exercise_2B_3_U exercise_2B_3c_W := by
   sorry
 
 /-- 2B.4 -/
@@ -580,21 +597,30 @@ def exercise_2B_4_U : Submodule ℂ (Fin 5 → ℂ) where
                  a * (v 2 + 2 * v 3 + 3 * v 4) := by ring
       rw [heq, h2, mul_zero]
 
+/-- 2B.4(a) The student supplies a basis of {lit}`U` (replacing the
+{lit}`sorry`) and then proves that it is one. -/
+def exercise_2B_4a_v : Fin 3 → exercise_2B_4_U := sorry
+
 /-- 2B.4(a) -/
-theorem exercise_2B_4a :
-    ∃ (n : ℕ) (v : Fin n → exercise_2B_4_U), IsBasis ℂ v := by
+theorem exercise_2B_4a : IsBasis ℂ exercise_2B_4a_v := by
   sorry
+
+/-- 2B.4(b) The student supplies an extension of the basis from (a) to a
+basis of {lit}`ℂ⁵` (replacing the {lit}`sorry`). -/
+def exercise_2B_4b_v : Fin 5 → (Fin 5 → ℂ) := sorry
 
 /-- 2B.4(b) -/
-theorem exercise_2B_4b :
-    ∃ (n : ℕ) (v : Fin n → (Fin 5 → ℂ)), IsBasis ℂ v ∧
-      (Set.range (fun i : exercise_2B_4_U => (i : Fin 5 → ℂ))) ⊆
-        Submodule.span ℂ (Set.range v) := by
+theorem exercise_2B_4b : IsBasis ℂ exercise_2B_4b_v ∧
+    ∀ i : Fin 3, exercise_2B_4b_v (i.castLE (by norm_num)) =
+      (exercise_2B_4a_v i : Fin 5 → ℂ) := by
   sorry
 
+/-- 2B.4(c) The student supplies a complement {lit}`W` of {lit}`U` in
+{lit}`ℂ⁵` (replacing the {lit}`sorry`). -/
+def exercise_2B_4c_W : Submodule ℂ (Fin 5 → ℂ) := sorry
+
 /-- 2B.4(c) -/
-theorem exercise_2B_4c :
-    ∃ W : Submodule ℂ (Fin 5 → ℂ), IsCompl exercise_2B_4_U W := by
+theorem exercise_2B_4c : IsCompl exercise_2B_4_U exercise_2B_4c_W := by
   sorry
 
 /-- 2B.5 -/
@@ -615,11 +641,15 @@ theorem exercise_2B_7 (v : Fin 4 → V) (hv : IsBasis F v) :
     IsBasis F (![v 0 + v 1, v 1 + v 2, v 2 + v 3, v 3] : Fin 4 → V) := by
   sorry
 
-/-- 2B.8 -/
-def exercise_2B_8 :
-    Decidable (∀ (v : Fin 4 → V) (U : Submodule F V) (_ : IsBasis F v)
+universe u in
+/-- 2B.8 — the space is quantified (with the section's fixed {lit}`V` the
+claim is vacuously true whenever {lit}`dim V ≠ 4`), and the field shares its
+universe so that a counterexample in {lit}`K⁴` can instantiate it. -/
+def exercise_2B_8 {K : Type u} [Field K] :
+    Decidable (∀ (W : Type u) [AddCommGroup W] [Module K W] (v : Fin 4 → W)
+      (U : Submodule K W) (_ : IsBasis K v)
       (h0 : v 0 ∈ U) (h1 : v 1 ∈ U) (_ : v 2 ∉ U) (_ : v 3 ∉ U),
-      IsBasis F (![⟨v 0, h0⟩, ⟨v 1, h1⟩] : Fin 2 → U)) := by
+      IsBasis K (![⟨v 0, h0⟩, ⟨v 1, h1⟩] : Fin 2 → U)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
