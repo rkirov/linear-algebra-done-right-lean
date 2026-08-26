@@ -1187,12 +1187,15 @@ theorem exercise_2B_8_not_isBasis
   rw [Fin.sum_univ_two] at h
   simp [exercise_2B_8_v] at h
 
-/-- 2B.8 -/
-def exercise_2B_8 :
-    Decidable (∀ (W : Type u_1) [AddCommGroup W] [Module F W] (v : Fin 4 → W)
-      (U : Submodule F W) (_ : IsBasis F v)
+universe u in
+/-- 2B.8 — the space is quantified (with the section's fixed {lit}`V` the
+claim is vacuously true whenever {lit}`dim V ≠ 4`), and the field shares its
+universe so that a counterexample in {lit}`K⁴` can instantiate it. -/
+def exercise_2B_8 {K : Type u} [Field K] :
+    Decidable (∀ (W : Type u) [AddCommGroup W] [Module K W] (v : Fin 4 → W)
+      (U : Submodule K W) (_ : IsBasis K v)
       (h0 : v 0 ∈ U) (h1 : v 1 ∈ U) (_ : v 2 ∉ U) (_ : v 3 ∉ U),
-      IsBasis F (![⟨v 0, h0⟩, ⟨v 1, h1⟩] : Fin 2 → U)) := by
+      IsBasis K (![⟨v 0, h0⟩, ⟨v 1, h1⟩] : Fin 2 → U)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   apply isFalse
   -- use 4 dim, U is `x 3 = 0` (spanned by e0, e1, e2)
@@ -1200,7 +1203,7 @@ def exercise_2B_8 :
   -- so v2 and v3 not in U, but v0, v1 don't span U, notably e2 not in it
   intro h
   exact exercise_2B_8_not_isBasis exercise_2B_8_mem₀ exercise_2B_8_mem₁
-    (h (Fin 4 → F) exercise_2B_8_v exercise_2B_8_U exercise_2B_8_isBasis
+    (h (Fin 4 → K) exercise_2B_8_v exercise_2B_8_U exercise_2B_8_isBasis
       exercise_2B_8_mem₀ exercise_2B_8_mem₁ exercise_2B_8_notMem₂
       exercise_2B_8_notMem₃)
 
