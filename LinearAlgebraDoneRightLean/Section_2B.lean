@@ -184,10 +184,28 @@ example : IsBasis F (![![1, 2], ![3, 5]] : Fin 2 → Fin 2 → F) := by
 {lit}`F³` but is *not* a basis: it fails to span. -/
 
 example [CharZero F] :
-    ¬ IsBasis F (![![1, 2, -4], ![7, -5, 6]] : Fin 2 → Fin 3 → F) := by
+    LinearIndependent F (![![1, 2, -4], ![7, -5, 6]] : Fin 2 → Fin 3 → F) := by
+  -- the first two coordinates already force both coefficients to vanish
+  rw [Fintype.linearIndependent_iff]
+  intro g hg i
+  have h0 := congrFun hg 0
+  have h1 := congrFun hg 1
+  simp [Fin.sum_univ_two] at h0 h1
+  have hg1 : (19 : F) * g 1 = 0 := by linear_combination 2 * h0 - h1
+  have hg1' : g 1 = 0 := by
+    rcases mul_eq_zero.1 hg1 with h | h
+    · exact absurd h (by norm_num)
+    · exact h
+  fin_cases i
+  · show g 0 = 0
+    linear_combination h0 - 7 * hg1'
+  · exact hg1'
+
+example [CharZero F] :
+    ¬ Spans F (![![1, 2, -4], ![7, -5, 6]] : Fin 2 → Fin 3 → F) := by
   -- the list misses `(1, 0, 0)`: the functional `x ↦ -8x₀ - 34x₁ - 19x₂`
   -- kills both vectors but not `(1, 0, 0)`
-  rintro ⟨-, hspan⟩
+  intro hspan
   have hx : (![1, 0, 0] : Fin 3 → F) ∈
       Submodule.span F (Set.range (![![1, 2, -4], ![7, -5, 6]] : Fin 2 → Fin 3 → F)) := by
     rw [hspan]; exact Submodule.mem_top
@@ -202,10 +220,22 @@ example [CharZero F] :
 
 /-! (d) The list {lit}`(1, 2), (3, 5), (4, 13)` spans {lit}`F²` but is not
 a basis: it is linearly dependent. -/
-example : ¬ IsBasis F
+
+example : Spans F (![![1, 2], ![3, 5], ![4, 13]] : Fin 3 → Fin 2 → F) := by
+  -- the first two vectors already span, so drop the third
+  rw [Spans, eq_top_iff]
+  intro x _
+  rw [Submodule.mem_span_range_iff_exists_fun]
+  refine ⟨![-5 * x 0 + 3 * x 1, 2 * x 0 - x 1, 0], ?_⟩
+  funext j
+  fin_cases j <;>
+    · simp [Fin.sum_univ_three]
+      ring
+
+example : ¬ LinearIndependent F
     (![![1, 2], ![3, 5], ![4, 13]] : Fin 3 → Fin 2 → F) := by
   --   19 * (1, 2) +  (-5) * (3, 5) - (4, 13) = 0
-  rintro ⟨hli, -⟩
+  intro hli
   rw [Fintype.linearIndependent_iff] at hli
   have h := hli ![19, -5, -1] ?_ 2
   · simp at h
