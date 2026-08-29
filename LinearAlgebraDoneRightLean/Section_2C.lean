@@ -2365,59 +2365,61 @@ private lemma span_inf_span_eq_bot {a b : V}
   have hcomb : s • a + (-t) • b = 0 := by rw [neg_smul, hs, ht]; abel
   rw [Submodule.mem_bot, ← hs, (h s (-t) hcomb).1, zero_smul]
 
-/-- 2C.19 The statement is false, so we state it over the concrete plane
-{lit}`F²`, where the three lines through {lit}`(1,0)`, {lit}`(0,1)` and
-{lit}`(1,1)` already refute it. -/
-def exercise_2C_19 :
-    Decidable (∀ (V₁ V₂ V₃ : Submodule F (Fin 2 → F)),
-      finrank F ↥(V₁ ⊔ V₂ ⊔ V₃) =
-        finrank F V₁ + finrank F V₂ + finrank F V₃ -
-        finrank F ↥(V₁ ⊓ V₂) - finrank F ↥(V₁ ⊓ V₃) - finrank F ↥(V₂ ⊓ V₃) +
-        finrank F ↥(V₁ ⊓ V₂ ⊓ V₃)) := by
+universe u in
+/-- 2C.19 — the space is quantified (with the section's fixed {lit}`V` the claim
+would hold vacuously whenever {lit}`V` is trivial), and the field shares its
+universe so that a counterexample in {lit}`K²` can instantiate it. -/
+def exercise_2C_19 {K : Type u} [Field K] :
+    Decidable (∀ (W : Type u) [AddCommGroup W] [Module K W] [Finite K W]
+      (V₁ V₂ V₃ : Submodule K W),
+      finrank K ↥(V₁ ⊔ V₂ ⊔ V₃) =
+        finrank K V₁ + finrank K V₂ + finrank K V₃ -
+        finrank K ↥(V₁ ⊓ V₂) - finrank K ↥(V₁ ⊓ V₃) - finrank K ↥(V₂ ⊓ V₃) +
+        finrank K ↥(V₁ ⊓ V₂ ⊓ V₃)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   apply isFalse
-  push Not
-  -- V1 = span {(1,0)}, V2 = span {(0,1)}, V3 = span {(1,1)}
+  -- in K², take V1 = span {(1,0)}, V2 = span {(0,1)}, V3 = span {(1,1)}:
   -- dim(V1 + V2 + V3) = 2 but the right-hand side is 1 + 1 + 1 = 3
-  refine ⟨F ∙ ![1, 0], F ∙ ![0, 1], F ∙ ![1, 1], ?_⟩
-  have hne1 : (![1, 0] : Fin 2 → F) ≠ 0 := by
-    intro h; have h0 := congrFun h 0; simp at h0
-  have hne2 : (![0, 1] : Fin 2 → F) ≠ 0 := by
-    intro h; have h1 := congrFun h 1; simp at h1
-  have hne3 : (![1, 1] : Fin 2 → F) ≠ 0 := by
-    intro h; have h0 := congrFun h 0; simp at h0
-  have h12 : (F ∙ (![1, 0] : Fin 2 → F)) ⊓ (F ∙ (![0, 1] : Fin 2 → F)) = ⊥ := by
+  intro h
+  have hne1 : (![1, 0] : Fin 2 → K) ≠ 0 := by
+    intro hz; have h0 := congrFun hz 0; simp at h0
+  have hne2 : (![0, 1] : Fin 2 → K) ≠ 0 := by
+    intro hz; have h1 := congrFun hz 1; simp at h1
+  have hne3 : (![1, 1] : Fin 2 → K) ≠ 0 := by
+    intro hz; have h0 := congrFun hz 0; simp at h0
+  have h12 : (K ∙ (![1, 0] : Fin 2 → K)) ⊓ (K ∙ (![0, 1] : Fin 2 → K)) = ⊥ := by
     refine span_inf_span_eq_bot fun s t hst => ?_
     have h0 := congrFun hst 0
     have h1 := congrFun hst 1
     simp at h0 h1
     exact ⟨h0, h1⟩
-  have h13 : (F ∙ (![1, 0] : Fin 2 → F)) ⊓ (F ∙ (![1, 1] : Fin 2 → F)) = ⊥ := by
+  have h13 : (K ∙ (![1, 0] : Fin 2 → K)) ⊓ (K ∙ (![1, 1] : Fin 2 → K)) = ⊥ := by
     refine span_inf_span_eq_bot fun s t hst => ?_
     have h0 := congrFun hst 0
     have h1 := congrFun hst 1
     simp at h0 h1
     exact ⟨by linear_combination h0 - h1, h1⟩
-  have h23 : (F ∙ (![0, 1] : Fin 2 → F)) ⊓ (F ∙ (![1, 1] : Fin 2 → F)) = ⊥ := by
+  have h23 : (K ∙ (![0, 1] : Fin 2 → K)) ⊓ (K ∙ (![1, 1] : Fin 2 → K)) = ⊥ := by
     refine span_inf_span_eq_bot fun s t hst => ?_
     have h0 := congrFun hst 0
     have h1 := congrFun hst 1
     simp at h0 h1
     exact ⟨by linear_combination h1 - h0, h0⟩
-  have hsup : (F ∙ (![1, 0] : Fin 2 → F)) ⊔ (F ∙ (![0, 1] : Fin 2 → F)) = ⊤ := by
+  have hsup : (K ∙ (![1, 0] : Fin 2 → K)) ⊔ (K ∙ (![0, 1] : Fin 2 → K)) = ⊤ := by
     refine le_antisymm le_top fun x _ => ?_
     have hx : x = x 0 • ![1, 0] + x 1 • ![0, 1] := by
       funext j; fin_cases j <;> simp
     rw [hx]
     exact Submodule.add_mem_sup (Submodule.mem_span_singleton.mpr ⟨x 0, rfl⟩)
       (Submodule.mem_span_singleton.mpr ⟨x 1, rfl⟩)
-  have hdimsup : finrank F ↥((F ∙ (![1, 0] : Fin 2 → F)) ⊔ (F ∙ (![0, 1] : Fin 2 → F))
-      ⊔ (F ∙ (![1, 1] : Fin 2 → F))) = 2 := by
+  have hdimsup : finrank K ↥((K ∙ (![1, 0] : Fin 2 → K)) ⊔ (K ∙ (![0, 1] : Fin 2 → K))
+      ⊔ (K ∙ (![1, 1] : Fin 2 → K))) = 2 := by
     rw [hsup, top_sup_eq, finrank_top]
     simp
+  have hEq := h (Fin 2 → K) (K ∙ ![1, 0]) (K ∙ ![0, 1]) (K ∙ ![1, 1])
   rw [hdimsup, finrank_span_singleton hne1, finrank_span_singleton hne2,
-    finrank_span_singleton hne3, h12, h13, h23, bot_inf_eq]
-  simp
+    finrank_span_singleton hne3, h12, h13, h23, bot_inf_eq] at hEq
+  simp at hEq
 
 /-- 2C.20 The {lit}`/3` makes this a rational identity in general; we encode it by
 clearing the denominator, i.e. multiplying both sides by 3 so we can stay in ℕ. -/
