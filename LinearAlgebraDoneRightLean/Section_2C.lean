@@ -1014,15 +1014,17 @@ theorem exercise_2C_18 [Finite F V] (hV : 1 ≤ finrank F V) :
       (∀ i, finrank F (W i) = 1) ∧ IsDirectSum W ∧ ⨆ i, W i = ⊤ := by
   sorry
 
-/-- 2C.19 The claim is stated over the concrete plane {lit}`F²`: quantified over
-an arbitrary {lit}`V` it would be undecidable here, since it holds vacuously when
-{lit}`V` is trivial. -/
-def exercise_2C_19 :
-    Decidable (∀ (V₁ V₂ V₃ : Submodule F (Fin 2 → F)),
-      finrank F ↥(V₁ ⊔ V₂ ⊔ V₃) =
-        finrank F V₁ + finrank F V₂ + finrank F V₃ -
-        finrank F ↥(V₁ ⊓ V₂) - finrank F ↥(V₁ ⊓ V₃) - finrank F ↥(V₂ ⊓ V₃) +
-        finrank F ↥(V₁ ⊓ V₂ ⊓ V₃)) := by
+universe u in
+/-- 2C.19 — the space is quantified (with the section's fixed {lit}`V` the claim
+would hold vacuously whenever {lit}`V` is trivial), and the field shares its
+universe so that a counterexample in {lit}`K²` can instantiate it. -/
+def exercise_2C_19 {K : Type u} [Field K] :
+    Decidable (∀ (W : Type u) [AddCommGroup W] [Module K W] [Finite K W]
+      (V₁ V₂ V₃ : Submodule K W),
+      finrank K ↥(V₁ ⊔ V₂ ⊔ V₃) =
+        finrank K V₁ + finrank K V₂ + finrank K V₃ -
+        finrank K ↥(V₁ ⊓ V₂) - finrank K ↥(V₁ ⊓ V₃) - finrank K ↥(V₂ ⊓ V₃) +
+        finrank K ↥(V₁ ⊓ V₂ ⊓ V₃)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
