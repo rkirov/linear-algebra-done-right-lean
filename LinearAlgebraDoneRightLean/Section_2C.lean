@@ -715,20 +715,20 @@ def U_2C_3 (F : Type*) [Field F] : Submodule F (Polynomial.degreeLT F 5) where
 
 /-- 2C.3 (a): find a list for a basis of {lit}`U_2C_3`. -/
 noncomputable def U_2C_3_basis (F : Type*) [Field F] : Fin sorry → U_2C_3 F := sorry
-theorem exercise_2C_3a [CharZero F] : IsBasis F (U_2C_3_basis F) := by
+theorem exercise_2C_3a : IsBasis F (U_2C_3_basis F) := by
   sorry
 
 /-- (b) Extension of the {lit}`U_2C_3` basis to a basis of {lit}`P₄(F)`. -/
 noncomputable def U_2C_3_extension (F : Type*) [Field F] :
     Fin sorry → Polynomial.degreeLT F 5 := sorry
-theorem exercise_2C_3b [CharZero F] :
+theorem exercise_2C_3b :
     IsBasis F (Fin.append (fun i => ((U_2C_3_basis F i : Polynomial.degreeLT F 5)))
       (U_2C_3_extension F)) := by
   sorry
 
 noncomputable def W_2C_3 (F : Type*) [Field F] :
     Submodule F (Polynomial.degreeLT F 5) := sorry
-theorem exercise_2C_3c [CharZero F] : IsCompl (U_2C_3 F) (W_2C_3 F) := by
+theorem exercise_2C_3c : IsCompl (U_2C_3 F) (W_2C_3 F) := by
   sorry
 
 /-! 2C.4 -/
@@ -797,7 +797,7 @@ noncomputable def U_2C_5_extension (F : Type*) [Field F] :
 
 /-- 2C.5 (b): appending the extension to the basis of {lit}`U_2C_5` gives a
 basis of {lit}`P₄(F)`. -/
-theorem exercise_2C_5b [CharZero F] :
+theorem exercise_2C_5b :
     IsBasis F (Fin.append (fun i => ((U_2C_5_basis F i : Polynomial.degreeLT F 5)))
       (U_2C_5_extension F)) := by
   sorry
@@ -1014,9 +1014,11 @@ theorem exercise_2C_18 [Finite F V] (hV : 1 ≤ finrank F V) :
       (∀ i, finrank F (W i) = 1) ∧ IsDirectSum W ∧ ⨆ i, W i = ⊤ := by
   sorry
 
-/-- 2C.19 -/
+/-- 2C.19 The claim is stated over the concrete plane {lit}`F²`: quantified over
+an arbitrary {lit}`V` it would be undecidable here, since it holds vacuously when
+{lit}`V` is trivial. -/
 def exercise_2C_19 :
-    Decidable (∀ (V₁ V₂ V₃ : Submodule F V) [Finite F V],
+    Decidable (∀ (V₁ V₂ V₃ : Submodule F (Fin 2 → F)),
       finrank F ↥(V₁ ⊔ V₂ ⊔ V₃) =
         finrank F V₁ + finrank F V₂ + finrank F V₃ -
         finrank F ↥(V₁ ⊓ V₂) - finrank F ↥(V₁ ⊓ V₃) - finrank F ↥(V₂ ⊓ V₃) +
@@ -1025,13 +1027,14 @@ def exercise_2C_19 :
   sorry
 
 /-- 2C.20 The {lit}`/3` makes this a rational identity in general; we encode it by
-clearing the denominator, i.e. multiplying both sides by 3. -/
-def exercise_2C_20 :
-    Decidable (∀ (V₁ V₂ V₃ : Submodule F V) [Finite F V],
+clearing the denominator, i.e. multiplying both sides by 3 so we can stay in ℕ. -/
+theorem exercise_2C_20 :
+    ∀ (V₁ V₂ V₃ : Submodule F V) [Finite F V],
       3 * finrank F ↥(V₁ ⊔ V₂ ⊔ V₃) =
-      3 * (finrank F V₁ + finrank F V₂ + finrank F V₃) - finrank F ↥((V₁ ⊔ V₂) ⊓ V₃) -
-        finrank F ↥((V₁ ⊔ V₃) ⊓ V₂) - finrank F ↥((V₂ ⊔ V₃) ⊓ V₁)) := by
-  -- first line should be `apply isTrue` or `apply isFalse`
+      3 * (finrank F V₁ + finrank F V₂ + finrank F V₃)
+        - (finrank F ↥(V₁ ⊓ V₂) + finrank F ↥(V₁ ⊓ V₃) + finrank F ↥(V₂ ⊓ V₃))
+        - (finrank F ↥((V₁ ⊔ V₂) ⊓ V₃) + finrank F ↥((V₁ ⊔ V₃) ⊓ V₂)
+          + finrank F ↥((V₂ ⊔ V₃) ⊓ V₁)) := by
   sorry
 
 end LADR.Section_2C
