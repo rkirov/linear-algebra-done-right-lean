@@ -66,7 +66,7 @@ found. *Playtested* means someone (the author or someone else) has worked throug
 | 2A. Span and Linear Independence | ✓ | ✓ | ✓ |
 | 2B. Bases | ✓ | ✓ | — |
 | 2C. Dimension | ✓ | ✓ | — |
-| 3A. Vector Space of Linear Maps | ✓ | ✓ | — |
+| 3A. Vector Space of Linear Maps | ✓ | ✓ | ✓ |
 | 3B. Null Spaces and Ranges | ✓ | ✓ | — |
 | 3C. Matrices | ✓ | ✓ | — |
 | 3D. Invertibility and Isomorphisms | ✓ | ✓ | — |
