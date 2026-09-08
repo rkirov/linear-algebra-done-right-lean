@@ -554,7 +554,7 @@ theorem exercise_3B_1 :
 /-- 3B.2 -/
 theorem exercise_3B_2 (S T : V →ₗ[F] V)
     (h : range S ≤ ker T) :
-    (T ∘ₗ S) ∘ₗ (T ∘ₗ S) = 0 := by
+    (S ∘ₗ T) ∘ₗ (S ∘ₗ T) = 0 := by
   sorry
 
 /-- 3B.3 The linear map {lit}`T(z₁, …, zₘ) = z₁ v₁ + ⋯ + zₘ vₘ`. -/
@@ -756,14 +756,17 @@ theorem exercise_3B_27 (P : V →ₗ[F] V) (hP : P ∘ₗ P = P) :
     IsCompl (ker P) (range P) := by
   sorry
 
-/-- 3B.28 — Axler's "nonconstant" condition is rephrased as
-{lit}`1 ≤ p.natDegree`, and {lit}`deg (D p) = deg p - 1` is rephrased on
-natural-number degrees. (We use {name}`Polynomial.natDegree` rather than
-{name}`Polynomial.degree` here because {lit}`WithBot ℕ` carries no
-subtraction instance — the {lit}`- 1` would not typecheck.) -/
+/-- 3B.28 — Axler's "nonconstant" condition is {lit}`0 < p.degree`, and
+{lit}`deg (D p) = deg p - 1` is written as {lit}`(D p).degree + 1 = p.degree`
+since {lit}`WithBot ℕ` has no subtraction. We use {name}`Polynomial.degree`
+(with {lit}`deg 0 = ⊥`, so {lit}`⊥ + 1 = ⊥`) rather than
+{name}`Polynomial.natDegree`: with {lit}`natDegree`, the hypothesis would allow
+{lit}`D p = 0` for {lit}`deg p = 1` (both sides {lit}`0`), and then
+{lit}`D 1 = D X = 0`, {lit}`D Xᵏ = Xᵏ⁻¹` for {lit}`k ≥ 2` satisfies it but
+misses the constants, so the statement would be false. -/
 theorem exercise_3B_28 (D : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ)
-    (hD : ∀ p : Polynomial ℝ, 1 ≤ p.natDegree →
-      (D p).natDegree = p.natDegree - 1) :
+    (hD : ∀ p : Polynomial ℝ, 0 < p.degree →
+      (D p).degree + 1 = p.degree) :
     Function.Surjective D := by
   sorry
 
@@ -774,14 +777,17 @@ theorem exercise_3B_29 (p : Polynomial ℝ) :
   sorry
 
 /-- 3B.30 -/
-theorem exercise_3B_30 (φ : V →ₗ[F] F) (hφ : φ ≠ 0) (u : V)
+theorem exercise_3B_30 (φ : V →ₗ[F] F) (_hφ : φ ≠ 0) (u : V)
     (hu : φ u ≠ 0) :
     IsCompl (ker φ)
       (Submodule.span F ({u} : Set V)) := by
   sorry
 
-/-- 3B.31 -/
-theorem exercise_3B_31 [Finite F V] (X : Submodule F V) (Y : Submodule F W) :
+/-- 3B.31 — the book assumes {lit}`Y` is a finite-dimensional subspace of
+{lit}`W`; without {lit}`[Finite F Y]` the statement is false (for {lit}`X = V`
+and {lit}`Y` infinite-dimensional, {lit}`finrank F Y = 0` makes the equation
+hold, but {lit}`ker T = V` forces {lit}`range T = 0 ≠ Y`). -/
+theorem exercise_3B_31 [Finite F V] (X : Submodule F V) (Y : Submodule F W) [Finite F Y] :
     (∃ T : V →ₗ[F] W,
       ker T = X ∧ range T = Y) ↔
     finrank F X + finrank F Y = finrank F V := by
