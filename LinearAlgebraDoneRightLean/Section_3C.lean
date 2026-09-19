@@ -677,7 +677,58 @@ theorem exercise_3C_1 [Finite F V] [Finite F W] {m n : ℕ}
     (T : V →ₗ[F] W) :
     finrank F (LinearMap.range T) ≤
       Nat.card {p : Fin m × Fin n // matrixOf hv hw T p.1 p.2 ≠ 0} := by
-  sorry
+  -- assume otherwise, then M has less than dim range T non-zero columns,
+  -- but T v is a linear combination of the columns of M
+  -- thus range is spanned by fewer than dim range T non-zero vectors, a contradiction.
+  classical
+  set A := matrixOf hv hw T with hA
+  -- {lit}`S` = the indices of the non-zero columns of {lit}`ℳ(T)`; there are at
+  -- most as many of them as there are non-zero entries.
+  set S : Finset (Fin n) := Finset.univ.filter (fun k => ∃ j, A j k ≠ 0) with hSdef
+  have hmem : ∀ k : Fin n, k ∈ S ↔ ∃ j, A j k ≠ 0 := by
+    intro k; simp [hSdef]
+  -- {lit}`T vₖ` is the linear combination of {lit}`w` read off column {lit}`k`,
+  -- so a zero column contributes nothing.
+  have hzero : ∀ k : Fin n, k ∉ S → T (v k) = 0 := by
+    intro k hk
+    have hcol : ∀ j, A j k = 0 := by
+      intro j
+      by_contra hj
+      exact hk ((hmem k).mpr ⟨j, hj⟩)
+    rw [matrixOf_spec hv hw T k, ← hA]
+    simp [hcol]
+  -- hence the range is spanned by the {lit}`T vₖ` with {lit}`k ∈ S`.
+  have hrange : LinearMap.range T
+      = Submodule.span F (Set.range (fun k : S => T (v k))) := by
+    have h1 : LinearMap.range T
+        = Submodule.span F (Set.range (fun k => T (v k))) := by
+      rw [LinearMap.range_eq_map, ← hv.2, Submodule.map_span, ← Set.range_comp]
+      rfl
+    rw [h1]
+    refine le_antisymm ?_ (Submodule.span_mono ?_)
+    · rw [Submodule.span_le]
+      rintro _ ⟨k, rfl⟩
+      by_cases hk : k ∈ S
+      · exact Submodule.subset_span ⟨⟨k, hk⟩, rfl⟩
+      · show T (v k) ∈ _
+        rw [hzero k hk]
+        exact Submodule.zero_mem _
+    · rintro _ ⟨k, rfl⟩
+      exact ⟨k.1, rfl⟩
+  -- dim range T ≤ #(non-zero columns) ≤ #(non-zero entries)
+  have h2 : finrank F (LinearMap.range T) ≤ S.card := by
+    rw [hrange]
+    have h := finrank_range_le_card (R := F) (fun k : S => T (v k))
+    simpa [Set.finrank, Fintype.card_coe] using h
+  have h3 : S.card ≤ Nat.card {p : Fin m × Fin n // A p.1 p.2 ≠ 0} := by
+    rw [Nat.card_eq_fintype_card, ← Fintype.card_coe S]
+    -- send a non-zero column to one of its non-zero entries
+    refine Fintype.card_le_of_injective
+      (fun k => ⟨(((hmem k.1).mp k.2).choose, k.1), ((hmem k.1).mp k.2).choose_spec⟩) ?_
+    intro k1 k2 hk
+    exact Subtype.ext
+      (congrArg (fun p : {p : Fin m × Fin n // A p.1 p.2 ≠ 0} => p.1.2) hk)
+  omega
 
 /-- 3C.2 -/
 theorem exercise_3C_2 [Finite F V] [Finite F W]
@@ -686,21 +737,263 @@ theorem exercise_3C_2 [Finite F V] [Finite F W]
       ∃ (m n : ℕ) (v : Fin n → V) (w : Fin m → W)
         (hv : IsBasis F v) (hw : IsBasis F w),
         ∀ j k, matrixOf hv hw T j k = 1 := by
-  sorry
+  -- => range T has dimension 1, so it is spanned by a single vector w
+  -- pick x with T x = w, (at least one x exists T x = a_i w for ai ≠ 0, use x / ai)
+  -- take a basis u_1, …, u_p of ker T, and take
+  --  v' = x, u_1 + x, …, u_p + x, which likewise has T v' i = w for all i)
+  -- one can easily show v' is a basis of ker T, and
+  -- with x added it becomes a basis of V.
+  --
+  -- extend w to a basis of W, so w0 = w
+  -- however this just gives a matrix with a single row of 1s and the rest 0s.
+  -- to get all ones, construct a new basis of W as follows.
+  -- w' 0 = w0 - w1 - ... - wm for the rest of the basis vectors of W
+  -- and w' i = wi for i > 0
+  -- now T v' i = w 0 = w'0 + w'1 + ... + w'm
+  -- one can easily show w' is still a basis
+  -- <= T vi = ∑ w k = w' for all i, thus T ∑ ai vi = (∑ ai) w',
+  -- so image is spanned by a single vector w', thus dim range T = 1.
+  classical
+  constructor
+  · intro hrank
+    -- {lit}`T ≠ 0`, so pick {lit}`x` with {lit}`w0 = T x ≠ 0`; as
+    -- {lit}`dim range T = 1`, the range is exactly {lit}`span {w0}`.
+    obtain ⟨x, hx⟩ : ∃ x : V, T x ≠ 0 := by
+      by_contra hcon
+      have h : ∀ y : V, T y = 0 := fun y => not_not.mp fun hy => hcon ⟨y, hy⟩
+      have hbot : LinearMap.range T = ⊥ := by
+        rw [LinearMap.range_eq_bot]
+        ext y
+        simp [h y]
+      rw [hbot] at hrank
+      simp at hrank
+    set w0 := T x with hw0def
+    have hw0 : w0 ≠ 0 := hx
+    have hspan : Submodule.span F {w0} = LinearMap.range T := by
+      refine Submodule.eq_of_le_of_finrank_eq ?_ ?_
+      · rw [Submodule.span_le]
+        rintro _ rfl
+        exact ⟨x, rfl⟩
+      · rw [finrank_span_singleton hw0, hrank]
+    -- a basis u of ker T (2.31), viewed as vectors of V; dim ker T = dim V - 1
+    obtain ⟨p, u, hu⟩ := LADR.Section_2B.exists_basis (F := F) (V := (LinearMap.ker T))
+    have hup : p = finrank F (LinearMap.ker T) :=
+      LADR.Section_2C.isBasis_card_eq_finrank u hu
+    have hdim : p + 1 = finrank F V := by
+      have h := LADR.Section_3B.finrank_ker_add_finrank_range T
+      omega
+    have huV : LinearIndependent F (fun i => ((u i : V))) :=
+      hu.1.map' (LinearMap.ker T).subtype
+        (LinearMap.ker_eq_bot_of_injective Subtype.val_injective)
+    -- v' = x, u_1 + x, …, u_p + x, so that T v'ₖ = w0 for every k
+    set vv : Fin (p + 1) → V := Fin.cons x (fun i => (u i : V) + x) with hvv
+    have hTvv : ∀ k, T (vv k) = w0 := by
+      intro k
+      refine Fin.cases ?_ ?_ k
+      · simp [hvv, hw0def]
+      · intro i
+        have hui : T (u i : V) = 0 := LinearMap.mem_ker.mp (u i).2
+        simp [hvv, hui, hw0def]
+    -- v' is linearly independent: applying T to a relation ∑ cₖ v'ₖ = 0 gives
+    -- (∑ cₖ) w0 = 0, hence ∑ cₖ = 0; the x-terms then cancel and the relation
+    -- becomes a relation on the basis u of ker T.
+    have hvvLI : LinearIndependent F vv := by
+      rw [Fintype.linearIndependent_iff]
+      intro c hc
+      have hT : (∑ k, c k) • w0 = 0 := by
+        have h := congrArg T hc
+        rw [map_sum] at h
+        simpa [hTvv, ← Finset.sum_smul] using h
+      have hsum0 : (∑ k, c k) = 0 := by
+        rcases smul_eq_zero.mp hT with h | h
+        · exact h
+        · exact absurd h hw0
+      have hexp : ∑ k, c k • vv k
+          = (∑ k, c k) • x + ∑ i : Fin p, c i.succ • (u i : V) := by
+        rw [Fin.sum_univ_succ (fun k => c k • vv k), Fin.sum_univ_succ c, add_smul,
+          Finset.sum_smul]
+        simp only [hvv, Fin.cons_zero, Fin.cons_succ, smul_add]
+        rw [Finset.sum_add_distrib]
+        abel
+      rw [hexp, hsum0, zero_smul, zero_add] at hc
+      have hcs : ∀ i : Fin p, c i.succ = 0 :=
+        Fintype.linearIndependent_iff.mp huV _ hc
+      intro k
+      refine Fin.cases ?_ ?_ k
+      · have hz : ∑ k, c k = c 0 + ∑ i : Fin p, c i.succ := Fin.sum_univ_succ c
+        rw [hsum0] at hz
+        simp [hcs] at hz
+        exact hz.symm
+      · exact hcs
+    -- a linearly independent list of length dim V is a basis (2.38)
+    have hvvBasis : IsBasis F vv :=
+      LADR.Section_2C.isBasis_of_linearIndependent_of_card_eq vv hvvLI hdim
+    -- extend w0 to a basis b of W (2.32), with b 0 = w0
+    have hli1 : LinearIndependent F ![w0] := by
+      rw [Fintype.linearIndependent_iff]
+      intro g hg i
+      fin_cases i
+      have hg0 : g 0 • w0 = 0 := by simpa using hg
+      rcases smul_eq_zero.mp hg0 with h | h
+      · exact h
+      · exact absurd h hw0
+    obtain ⟨q, b, hq1, hb, hb0⟩ :=
+      LADR.Section_2B.exists_basis_extending (F := F) ![w0] hli1
+    obtain ⟨r, rfl⟩ : ∃ r, q = r + 1 := ⟨q - 1, by omega⟩
+    have hb0' : b 0 = w0 := by simpa using hb0 0
+    have hbcard : r + 1 = finrank F W := LADR.Section_2C.isBasis_card_eq_finrank b hb
+    -- w' 0 = b 0 - b 1 - … - b r and w' i = b i otherwise, so that ∑ⱼ w'ⱼ = w0
+    set ww : Fin (r + 1) → W :=
+      Fin.cons (w0 - ∑ i : Fin r, b i.succ) (fun i => b i.succ) with hww
+    have hwsum : ∑ j, ww j = w0 := by
+      rw [Fin.sum_univ_succ]
+      simp [hww]
+    -- w' spans W, since b 0 = ∑ⱼ w'ⱼ and b i = w' i for i > 0
+    have hwwSpans : Spans F ww := by
+      have hb_mem : ∀ k : Fin (r + 1), b k ∈ Submodule.span F (Set.range ww) := by
+        intro k
+        refine Fin.cases ?_ ?_ k
+        · rw [hb0', ← hwsum]
+          exact Submodule.sum_mem _ fun j _ => Submodule.subset_span ⟨j, rfl⟩
+        · intro i
+          have hbi : b i.succ = ww i.succ := by simp [hww]
+          rw [hbi]
+          exact Submodule.subset_span ⟨i.succ, rfl⟩
+      show Submodule.span F (Set.range ww) = ⊤
+      rw [eq_top_iff, ← hb.2, Submodule.span_le]
+      rintro _ ⟨k, rfl⟩
+      exact hb_mem k
+    -- a spanning list of length dim W is a basis (2.42)
+    have hwwBasis : IsBasis F ww :=
+      LADR.Section_2C.isBasis_of_spans_of_card_eq ww hwwSpans hbcard
+    refine ⟨r + 1, p + 1, vv, ww, hvvBasis, hwwBasis, ?_⟩
+    -- every column of ℳ(T) is the coordinate vector of w0 = ∑ⱼ w'ⱼ, i.e. all 1s
+    intro j k
+    rw [matrixOf_apply, hTvv k]
+    have hrepr : hwwBasis.toModuleBasis.repr w0
+        = ∑ j' : Fin (r + 1), Finsupp.single j' (1 : F) := by
+      rw [← hwsum, map_sum]
+      refine Finset.sum_congr rfl fun j' _ => ?_
+      rw [← IsBasis.toModuleBasis_apply hwwBasis j', Module.Basis.repr_self]
+    rw [hrepr]
+    simp
+  · rintro ⟨m, n, v, w, hv, hw, hall⟩
+    -- the bases have the lengths of the dimensions, so both are positive
+    have hn : n = finrank F V := LADR.Section_2C.isBasis_card_eq_finrank v hv
+    have hm : m = finrank F W := LADR.Section_2C.isBasis_card_eq_finrank w hw
+    -- every T vₖ is the same vector s = ∑ⱼ wⱼ, which is non-zero as w is a basis
+    have hTv : ∀ k, T (v k) = ∑ j, w j := by
+      intro k
+      rw [matrixOf_spec hv hw T k]
+      simp [hall]
+    have hs : (∑ j, w j) ≠ 0 := by
+      intro h
+      have hg := Fintype.linearIndependent_iff.mp hw.1 (fun _ => 1) (by simpa using h)
+      exact one_ne_zero (hg ⟨0, by omega⟩)
+    -- so range T = span {s}, of dimension 1
+    have hrange : LinearMap.range T = Submodule.span F {∑ j, w j} := by
+      have h1 : LinearMap.range T
+          = Submodule.span F (Set.range (fun k => T (v k))) := by
+        rw [LinearMap.range_eq_map, ← hv.2, Submodule.map_span, ← Set.range_comp]
+        rfl
+      have hset : (Set.range (fun k => T (v k))) = {∑ j, w j} := by
+        ext y
+        simp only [Set.mem_range, Set.mem_singleton_iff]
+        constructor
+        · rintro ⟨k, rfl⟩
+          exact hTv k
+        · rintro rfl
+          exact ⟨⟨0, by omega⟩, hTv _⟩
+      rw [h1, hset]
+    rw [hrange]
+    exact finrank_span_singleton hs
 
 /-- 3C.3 (a) {lit}`ℳ(S + T) = ℳ(S) + ℳ(T)`. Verifies 3.35. -/
 theorem exercise_3C_3a {m n : ℕ}
     {v : Fin n → V} {w : Fin m → W} (hv : IsBasis F v) (hw : IsBasis F w)
     (S T : V →ₗ[F] W) :
     matrixOf hv hw (S + T) = matrixOf hv hw S + matrixOf hv hw T := by
-  sorry
+  -- Column {lit}`k` of {lit}`ℳ(S + T)` is *the* coefficient list of
+  -- {lit}`(S + T) vₖ` in the basis {lit}`w` (3.31), and by 2.28 such a list is
+  -- unique; so it suffices to check that column {lit}`k` of
+  -- {lit}`ℳ(S) + ℳ(T)` satisfies the same defining equation.
+  ext j k
+  have huniq := (LADR.Section_2B.isBasis_iff_unique_combo w).mp hw ((S + T) (v k))
+  have h1 : ∑ j, matrixOf hv hw (S + T) j k • w j = (S + T) (v k) :=
+    (matrixOf_spec hv hw (S + T) k).symm
+  have h2 : ∑ j, (matrixOf hv hw S + matrixOf hv hw T) j k • w j = (S + T) (v k) := by
+    -- {lit}`∑ⱼ (A + B)_{j,k} wⱼ = ∑ⱼ A_{j,k} wⱼ + ∑ⱼ B_{j,k} wⱼ = S vₖ + T vₖ`
+    have hS := matrixOf_spec hv hw S k
+    have hT := matrixOf_spec hv hw T k
+    simp only [Matrix.add_apply, add_smul]
+    rw [Finset.sum_add_distrib, ← hS, ← hT, LinearMap.add_apply]
+  exact congrFun (huniq.unique h1 h2) j
 
 /-- 3C.3 (b) {lit}`ℳ(λT) = λ ℳ(T)`. Verifies 3.38. -/
 theorem exercise_3C_3b {m n : ℕ}
     {v : Fin n → V} {w : Fin m → W} (hv : IsBasis F v) (hw : IsBasis F w)
     (lam : F) (T : V →ₗ[F] W) :
     matrixOf hv hw (lam • T) = lam • matrixOf hv hw T := by
-  sorry
+  -- Same argument: {lit}`λ ℳ(T)` satisfies the equation (3.31) that defines
+  -- {lit}`ℳ(λT)` column by column, and 2.28 makes those coefficients unique.
+  ext j k
+  have huniq := (LADR.Section_2B.isBasis_iff_unique_combo w).mp hw ((lam • T) (v k))
+  have h1 : ∑ j, matrixOf hv hw (lam • T) j k • w j = (lam • T) (v k) :=
+    (matrixOf_spec hv hw (lam • T) k).symm
+  have h2 : ∑ j, (lam • matrixOf hv hw T) j k • w j = (lam • T) (v k) := by
+    -- {lit}`∑ⱼ (λ A)_{j,k} wⱼ = λ ∑ⱼ A_{j,k} wⱼ = λ (T vₖ)`
+    have hT := matrixOf_spec hv hw T k
+    simp only [Matrix.smul_apply, smul_eq_mul, mul_smul]
+    rw [← Finset.smul_sum, ← hT, LinearMap.smul_apply]
+  exact congrFun (huniq.unique h1 h2) j
+
+/-- The basis {lit}`x, x², x³, 1` of {lit}`𝒫₃(ℝ)` used in exercise 3C.4. -/
+noncomputable def exercise_3C_4_v : Fin 4 → Polynomial.degreeLT ℝ 4 :=
+  ![Polynomial.degreeLT.basis ℝ 4 1, Polynomial.degreeLT.basis ℝ 4 2,
+    Polynomial.degreeLT.basis ℝ 4 3, Polynomial.degreeLT.basis ℝ 4 0]
+
+/-- The basis {lit}`1, 2x, 3x²` of {lit}`𝒫₂(ℝ)` used in exercise 3C.4. -/
+noncomputable def exercise_3C_4_w : Fin 3 → Polynomial.degreeLT ℝ 3 :=
+  ![Polynomial.degreeLT.basis ℝ 3 0, (2 : ℝ) • Polynomial.degreeLT.basis ℝ 3 1,
+    (3 : ℝ) • Polynomial.degreeLT.basis ℝ 3 2]
+
+/-- A permutation of the monomial basis is again a basis: it spans and has the
+right length (2.42). -/
+theorem exercise_3C_4_isBasis_v : IsBasis ℝ exercise_3C_4_v := by
+  refine LADR.Section_2C.isBasis_of_spans_of_card_eq _ ?_
+    (LADR.Section_2C.isBasis_card_eq_finrank _ (isBasis_polyMono 4))
+  show Submodule.span ℝ (Set.range exercise_3C_4_v) = ⊤
+  rw [eq_top_iff, ← (isBasis_polyMono (F := ℝ) 4).2, Submodule.span_le]
+  rintro _ ⟨i, rfl⟩
+  fin_cases i
+  · exact Submodule.subset_span ⟨3, rfl⟩
+  · exact Submodule.subset_span ⟨0, rfl⟩
+  · exact Submodule.subset_span ⟨1, rfl⟩
+  · exact Submodule.subset_span ⟨2, rfl⟩
+
+/-- Rescaling the monomial basis by non-zero scalars again gives a basis. -/
+theorem exercise_3C_4_isBasis_w : IsBasis ℝ exercise_3C_4_w := by
+  have hm1 : Polynomial.degreeLT.basis ℝ 3 1 ∈
+      Submodule.span ℝ (Set.range exercise_3C_4_w) := by
+    have h : Polynomial.degreeLT.basis ℝ 3 1 = (2⁻¹ : ℝ) • exercise_3C_4_w 1 := by
+      simp [exercise_3C_4_w, smul_smul]
+    rw [h]
+    exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨1, rfl⟩)
+  have hm2 : Polynomial.degreeLT.basis ℝ 3 2 ∈
+      Submodule.span ℝ (Set.range exercise_3C_4_w) := by
+    have h : Polynomial.degreeLT.basis ℝ 3 2 = (3⁻¹ : ℝ) • exercise_3C_4_w 2 := by
+      simp [exercise_3C_4_w, smul_smul]
+    rw [h]
+    exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨2, rfl⟩)
+  refine LADR.Section_2C.isBasis_of_spans_of_card_eq _ ?_
+    (LADR.Section_2C.isBasis_card_eq_finrank _ (isBasis_polyMono 3))
+  show Submodule.span ℝ (Set.range exercise_3C_4_w) = ⊤
+  rw [eq_top_iff, ← (isBasis_polyMono (F := ℝ) 3).2, Submodule.span_le]
+  rintro _ ⟨i, rfl⟩
+  fin_cases i
+  · exact Submodule.subset_span ⟨0, rfl⟩
+  · exact hm1
+  · exact hm2
 
 /-- 3C.4 Find bases of {lit}`𝒫₃(ℝ)` and {lit}`𝒫₂(ℝ)` for which the matrix of
 the differentiation map is {lit}`[[1,0,0,0],[0,1,0,0],[0,0,1,0]]`. -/
@@ -710,7 +1003,55 @@ theorem exercise_3C_4 :
       ∃ (D : Polynomial.degreeLT ℝ 4 →ₗ[ℝ] Polynomial.degreeLT ℝ 3),
         (∀ p, (D p : Polynomial ℝ) = (p : Polynomial ℝ).derivative) ∧
         matrixOf hv hw D = !![1, 0, 0, 0; 0, 1, 0, 0; 0, 0, 1, 0] := by
-  sorry
+  -- the basis vectors of the input have to match the basis of the output after diff.
+  -- except the last one going to 0
+  -- X -> 1
+  -- X^2 -> 2X
+  -- X^3 -> 3X^2
+  -- 1 -> 0
+  -- thus a suitable basis for 𝒫₃(ℝ) is {X, X^2, X^3, 1}
+  -- and a suitable basis for 𝒫₂(ℝ) is {1, 2X, 3X^2}
+  refine ⟨exercise_3C_4_v, exercise_3C_4_w, exercise_3C_4_isBasis_v,
+    exercise_3C_4_isBasis_w, D_3_33, fun p => rfl, ?_⟩
+  -- the four derivatives, as claimed in the sketch
+  have hD0 : D_3_33 (exercise_3C_4_v 0) = exercise_3C_4_w 0 := by
+    apply Subtype.ext
+    show Polynomial.derivative (exercise_3C_4_v 0 : Polynomial ℝ)
+      = (exercise_3C_4_w 0 : Polynomial ℝ)
+    simp [exercise_3C_4_v, exercise_3C_4_w, Polynomial.degreeLT.basis_val]
+  have hD1 : D_3_33 (exercise_3C_4_v 1) = exercise_3C_4_w 1 := by
+    apply Subtype.ext
+    show Polynomial.derivative (exercise_3C_4_v 1 : Polynomial ℝ)
+      = (exercise_3C_4_w 1 : Polynomial ℝ)
+    simp [exercise_3C_4_v, exercise_3C_4_w, Polynomial.degreeLT.basis_val,
+      Polynomial.smul_eq_C_mul, map_ofNat]
+    norm_num
+  have hD2 : D_3_33 (exercise_3C_4_v 2) = exercise_3C_4_w 2 := by
+    apply Subtype.ext
+    show Polynomial.derivative (exercise_3C_4_v 2 : Polynomial ℝ)
+      = (exercise_3C_4_w 2 : Polynomial ℝ)
+    simp [exercise_3C_4_v, exercise_3C_4_w, Polynomial.degreeLT.basis_val,
+      Polynomial.smul_eq_C_mul, map_ofNat]
+    norm_num
+  have hD3 : D_3_33 (exercise_3C_4_v 3) = 0 := by
+    apply Subtype.ext
+    show Polynomial.derivative (exercise_3C_4_v 3 : Polynomial ℝ) = 0
+    simp [exercise_3C_4_v, Polynomial.degreeLT.basis_val]
+  -- as in 3C.3, compare with the defining equation of ℳ(D) column by column
+  ext j k
+  have huniq := (LADR.Section_2B.isBasis_iff_unique_combo exercise_3C_4_w).mp
+    exercise_3C_4_isBasis_w (D_3_33 (exercise_3C_4_v k))
+  have h1 : ∑ j, matrixOf exercise_3C_4_isBasis_v exercise_3C_4_isBasis_w D_3_33 j k
+      • exercise_3C_4_w j = D_3_33 (exercise_3C_4_v k) :=
+    (matrixOf_spec exercise_3C_4_isBasis_v exercise_3C_4_isBasis_w D_3_33 k).symm
+  have h2 : ∑ j, (!![1, 0, 0, 0; 0, 1, 0, 0; 0, 0, 1, 0] : Matrix (Fin 3) (Fin 4) ℝ) j k
+      • exercise_3C_4_w j = D_3_33 (exercise_3C_4_v k) := by
+    fin_cases k
+    · simp [Fin.sum_univ_three, hD0]
+    · simp [Fin.sum_univ_three, hD1]
+    · simp [Fin.sum_univ_three, hD2]
+    · simp [Fin.sum_univ_three, hD3]
+  exact congrFun (huniq.unique h1 h2) j
 
 /-- 3C.5 -/
 theorem exercise_3C_5 [Finite F V] [Finite F W] (T : V →ₗ[F] W) :
@@ -718,7 +1059,89 @@ theorem exercise_3C_5 [Finite F V] [Finite F W] (T : V →ₗ[F] W) :
       (hv : IsBasis F v) (hw : IsBasis F w),
       ∀ j k, matrixOf hv hw T j k =
         if (j : ℕ) = (k : ℕ) ∧ j < finrank F (LinearMap.range T) then 1 else 0 := by
-  sorry
+  -- take a basis for the ragnge of T - w_i
+  -- extend it to a basis of W
+  -- for each w_i of the range find a preimage under T - vi
+  -- by 3A.4 those vi are linearly independent too
+  -- extend those to a basis of V adding a basis of ker T, by rank-nulity this is full basis.
+  classical
+  -- basis of range T (2.31), viewed as vectors of W, extended to a basis w of W
+  obtain ⟨r, wr, hwr⟩ := LADR.Section_2B.exists_basis (F := F) (V := (LinearMap.range T))
+  have hr : r = finrank F (LinearMap.range T) :=
+    LADR.Section_2C.isBasis_card_eq_finrank wr hwr
+  have hwrV : LinearIndependent F (fun i => ((wr i : W))) :=
+    hwr.1.map' (LinearMap.range T).subtype
+      (LinearMap.ker_eq_bot_of_injective Subtype.val_injective)
+  obtain ⟨m, w, hrm, hw, hwpre⟩ :=
+    LADR.Section_2B.exists_basis_extending (F := F) (fun i => ((wr i : W))) hwrV
+  -- a preimage xᵢ of each wrᵢ
+  have hpre : ∀ i : Fin r, ∃ y : V, T y = (wr i : W) :=
+    fun i => LinearMap.mem_range.mp (wr i).2
+  choose xp hxp using hpre
+  -- a basis of ker T, which supplies the extension
+  obtain ⟨s, u, hu⟩ := LADR.Section_2B.exists_basis (F := F) (V := (LinearMap.ker T))
+  have hs : s = finrank F (LinearMap.ker T) :=
+    LADR.Section_2C.isBasis_card_eq_finrank u hu
+  have hdim : r + s = finrank F V := by
+    have h := LADR.Section_3B.finrank_ker_add_finrank_range T
+    omega
+  have huV : LinearIndependent F (fun i => ((u i : V))) :=
+    hu.1.map' (LinearMap.ker T).subtype
+      (LinearMap.ker_eq_bot_of_injective Subtype.val_injective)
+  have hu0 : ∀ i : Fin s, T (u i : V) = 0 := fun i => LinearMap.mem_ker.mp (u i).2
+  set vv : Fin (r + s) → V := Fin.append xp (fun i => (u i : V)) with hvv
+  -- v = x₁, …, x_r, u₁, …, u_s is linearly independent: applying T to a relation
+  -- kills the u-part and leaves a relation on the basis wr, so the x-coefficients
+  -- vanish; what is left is a relation on the basis u.
+  have hvvLI : LinearIndependent F vv := by
+    rw [Fintype.linearIndependent_iff]
+    intro c hc
+    rw [Fin.sum_univ_add] at hc
+    simp only [hvv, Fin.append_left, Fin.append_right] at hc
+    have hT := congrArg T hc
+    rw [map_add, map_sum, map_sum] at hT
+    simp only [map_smul, hxp, hu0, smul_zero, Finset.sum_const_zero, add_zero,
+      map_zero] at hT
+    have hc1 : ∀ i : Fin r, c (Fin.castAdd s i) = 0 :=
+      Fintype.linearIndependent_iff.mp hwrV _ hT
+    simp only [hc1, zero_smul, Finset.sum_const_zero, zero_add] at hc
+    have hc2 : ∀ i : Fin s, c (Fin.natAdd r i) = 0 :=
+      Fintype.linearIndependent_iff.mp huV _ hc
+    intro k
+    refine Fin.addCases ?_ ?_ k
+    · exact hc1
+    · exact hc2
+  -- it has length dim V = dim range T + dim ker T (3.21), so it is a basis (2.38)
+  have hvvBasis : IsBasis F vv :=
+    LADR.Section_2C.isBasis_of_linearIndependent_of_card_eq vv hvvLI hdim
+  refine ⟨m, r + s, vv, w, hvvBasis, hw, ?_⟩
+  intro j k
+  rw [matrixOf_apply, ← hr]
+  refine Fin.addCases ?_ ?_ k
+  · -- the first r columns: T xᵢ = wrᵢ = wᵢ, so the column is the i-th unit vector
+    intro i
+    have h1 : T (vv (Fin.castAdd s i)) = w (Fin.castLE hrm i) := by
+      rw [hvv]
+      simp only [Fin.append_left, hxp, hwpre i]
+    rw [h1, ← IsBasis.toModuleBasis_apply hw (Fin.castLE hrm i),
+      Module.Basis.repr_self, Finsupp.single_apply]
+    have hiff : (Fin.castLE hrm i = j) ↔
+        ((j : ℕ) = ((Fin.castAdd s i : Fin (r + s)) : ℕ) ∧ (j : ℕ) < r) := by
+      constructor
+      · rintro rfl
+        exact ⟨rfl, i.isLt⟩
+      · rintro ⟨h2, -⟩
+        exact (Fin.ext h2.symm)
+    simp only [hiff]
+  · -- the remaining columns come from ker T, so they are zero
+    intro i
+    have h1 : T (vv (Fin.natAdd r i)) = 0 := by
+      rw [hvv]
+      simp only [Fin.append_right, hu0]
+    rw [h1, map_zero, Finsupp.coe_zero, Pi.zero_apply, eq_comm, if_neg]
+    rintro ⟨h2, h3⟩
+    have h4 : ((Fin.natAdd r i : Fin (r + s)) : ℕ) = r + (i : ℕ) := rfl
+    omega
 
 /-- 3C.6 — The first column of {lit}`ℳ(T)` can be made either the zero column
 or the column {lit}`(1, 0, …, 0)`. -/
@@ -728,7 +1151,41 @@ theorem exercise_3C_6 [Finite F W] {m : ℕ} (hm : 1 ≤ m)
       column (matrixOf hv hw T) ⟨0, hm⟩ = 0 ∨
       column (matrixOf hv hw T) ⟨0, hm⟩ =
         fun (j : Fin n) (_ : Fin 1) => if (j : ℕ) = 0 then (1 : F) else 0 := by
-  sorry
+  -- if T v0 = 0, then take any basis W, and the first column will be zero
+  -- if T v0 ≠ 0, then extend T v0 to a basis of W
+  -- since T v0 = w0 is a unique representation in that basis, the first column will be (1, 0, …, 0)
+  classical
+  by_cases h0 : T (v ⟨0, hm⟩) = 0
+  · -- any basis of W does: the first column is the coordinate list of 0
+    obtain ⟨n, w, hw⟩ := LADR.Section_2B.exists_basis (F := F) (V := W)
+    refine ⟨n, w, hw, Or.inl ?_⟩
+    ext j i
+    show matrixOf hv hw T j ⟨0, hm⟩ = 0
+    rw [matrixOf_apply, h0]
+    simp
+  · -- extend T v₀ to a basis of W (2.32), with w₀ = T v₀
+    have hli1 : LinearIndependent F ![T (v ⟨0, hm⟩)] := by
+      rw [Fintype.linearIndependent_iff]
+      intro g hg i
+      fin_cases i
+      have hg0 : g 0 • T (v ⟨0, hm⟩) = 0 := by simpa using hg
+      rcases smul_eq_zero.mp hg0 with h | h
+      · exact h
+      · exact absurd h h0
+    obtain ⟨n, w, hn1, hw, hw0⟩ :=
+      LADR.Section_2B.exists_basis_extending (F := F) ![T (v ⟨0, hm⟩)] hli1
+    obtain ⟨r, rfl⟩ : ∃ r, n = r + 1 := ⟨n - 1, by omega⟩
+    have hw0' : w 0 = T (v ⟨0, hm⟩) := by simpa using hw0 0
+    refine ⟨r + 1, w, hw, Or.inr ?_⟩
+    ext j i
+    show matrixOf hv hw T j ⟨0, hm⟩ = if (j : ℕ) = 0 then (1 : F) else 0
+    rw [matrixOf_apply, ← hw0', ← IsBasis.toModuleBasis_apply hw 0,
+      Module.Basis.repr_self, Finsupp.single_apply]
+    have hiff : ((0 : Fin (r + 1)) = j) ↔ (j : ℕ) = 0 := by
+      constructor
+      · intro h; rw [← h]; rfl
+      · intro h; exact Fin.ext h.symm
+    simp only [hiff]
 
 /-- 3C.7 — The first row of {lit}`ℳ(T)` can be made either the zero row or
 the row {lit}`(1, 0, …, 0)`. -/
@@ -738,39 +1195,141 @@ theorem exercise_3C_7 [Finite F V] {n : ℕ} (hn : 1 ≤ n)
       row (matrixOf hv hw T) ⟨0, hn⟩ = 0 ∨
       row (matrixOf hv hw T) ⟨0, hn⟩ =
         fun (_ : Fin 1) (k : Fin m) => if (k : ℕ) = 0 then (1 : F) else 0 := by
-  sorry
+  -- look for a vector v s.t. T v = ∑ c_i w_i, where c0 ≠ 0,
+  -- if not such v exists, then take any basis of V, and by contra,
+  -- for each vi, T vi will have zero w0 in it's 0 coordinate
+  -- else, take that vector v, extend v0 = v / c0 to a basis of V,
+  -- it will have 1 in the first row.
+  -- elsewhere if T vi has a nonzero w0 component = ci,
+  -- modify the basis v' i = v i - ci v0
+  -- one can easily show that this is still a basis
+  classical
+  -- start from any basis and record the w₀-coordinate cₖ of each T vₖ
+  obtain ⟨m, v, hv⟩ := LADR.Section_2B.exists_basis (F := F) (V := V)
+  by_cases hzero : ∀ k, hw.toModuleBasis.repr (T (v k)) ⟨0, hn⟩ = 0
+  · -- no such vector: this basis already has a zero first row
+    refine ⟨m, v, hv, Or.inl ?_⟩
+    ext i k
+    show matrixOf hv hw T ⟨0, hn⟩ k = 0
+    rw [matrixOf_apply]
+    exact hzero k
+  · push Not at hzero
+    obtain ⟨k0, hk0⟩ := hzero
+    obtain ⟨p, rfl⟩ : ∃ p, m = p + 1 := ⟨m - 1, by have := k0.isLt; omega⟩
+    -- swap that vector into position 0; a reindexed basis is still a basis
+    set σ : Fin (p + 1) ≃ Fin (p + 1) := Equiv.swap 0 k0 with hσ
+    set v1 : Fin (p + 1) → V := v ∘ σ with hv1def
+    have hv1 : IsBasis F v1 := by
+      refine ⟨hv.1.comp (⇑σ) σ.injective, ?_⟩
+      show Submodule.span F (Set.range v1) = ⊤
+      have hrange : Set.range v1 = Set.range v := by
+        rw [hv1def, Set.range_comp, σ.range_eq_univ, Set.image_univ]
+      rw [hrange]
+      exact hv.2
+    set c : Fin (p + 1) → F := fun k => hw.toModuleBasis.repr (T (v1 k)) ⟨0, hn⟩
+      with hcdef
+    have hc : ∀ k, hw.toModuleBasis.repr (T (v1 k)) ⟨0, hn⟩ = c k := fun _ => rfl
+    have hc0 : c 0 ≠ 0 := by
+      have h : v1 0 = v k0 := by simp [hv1def, hσ]
+      show hw.toModuleBasis.repr (T (v1 0)) ⟨0, hn⟩ ≠ 0
+      rw [h]
+      exact hk0
+    set a : F := (c 0)⁻¹ with ha
+    have hac : a * c 0 = 1 := inv_mul_cancel₀ hc0
+    -- v'₀ = v₀ / c₀, and v'ᵢ = vᵢ - cᵢ v'₀ for i > 0
+    set v2 : Fin (p + 1) → V :=
+      Fin.cons (a • v1 0) (fun i => v1 i.succ - (c i.succ * a) • v1 0) with hv2def
+    have hv10 : v1 0 = c 0 • v2 0 := by
+      rw [hv2def, Fin.cons_zero, smul_smul, mul_comm, hac, one_smul]
+    -- v' spans (each vₖ is recovered from it) and has length dim V, so it is a
+    -- basis by 2.42
+    have hspan : Spans F v2 := by
+      have hmem : ∀ k, v1 k ∈ Submodule.span F (Set.range v2) := by
+        intro k
+        refine Fin.cases ?_ ?_ k
+        · rw [hv10]
+          exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨0, rfl⟩)
+        · intro i
+          have h : v1 i.succ = v2 i.succ + c i.succ • v2 0 := by
+            have h1 : v2 i.succ = v1 i.succ - (c i.succ * a) • v1 0 := by
+              rw [hv2def, Fin.cons_succ]
+            rw [h1, hv10, smul_smul, mul_assoc, hac, mul_one]
+            abel
+          rw [h]
+          exact Submodule.add_mem _ (Submodule.subset_span ⟨i.succ, rfl⟩)
+            (Submodule.smul_mem _ _ (Submodule.subset_span ⟨0, rfl⟩))
+      show Submodule.span F (Set.range v2) = ⊤
+      rw [eq_top_iff, ← hv1.2, Submodule.span_le]
+      rintro _ ⟨k, rfl⟩
+      exact hmem k
+    have hcard : p + 1 = finrank F V := LADR.Section_2C.isBasis_card_eq_finrank v1 hv1
+    have hv2basis : IsBasis F v2 :=
+      LADR.Section_2C.isBasis_of_spans_of_card_eq v2 hspan hcard
+    refine ⟨p + 1, v2, hv2basis, Or.inr ?_⟩
+    ext i k
+    show matrixOf hv2basis hw T ⟨0, hn⟩ k = if (k : ℕ) = 0 then (1 : F) else 0
+    rw [matrixOf_apply]
+    refine Fin.cases ?_ ?_ k
+    · -- the first entry is c₀ / c₀ = 1
+      have h0 : v2 0 = a • v1 0 := by rw [hv2def, Fin.cons_zero]
+      rw [h0]
+      simp only [map_smul, Finsupp.smul_apply, smul_eq_mul, hc]
+      simpa using hac
+    · -- the others are cᵢ - cᵢ (c₀ / c₀) = 0
+      intro i
+      have h1 : v2 i.succ = v1 i.succ - (c i.succ * a) • v1 0 := by
+        rw [hv2def, Fin.cons_succ]
+      rw [h1]
+      simp only [map_sub, map_smul, Finsupp.sub_apply, Finsupp.smul_apply,
+        smul_eq_mul, hc]
+      rw [mul_assoc, hac, mul_one, sub_self]
+      simp
 
 /-- 3C.8 Row version of 3.48: {lit}`(AB)_{j,·} = A_{j,·} B`. -/
 theorem exercise_3C_8 {m n p : ℕ}
     (A : Matrix (Fin m) (Fin n) F) (B : Matrix (Fin n) (Fin p) F) (j : Fin m) :
-    row (A * B) j = row A j * B := by
-  sorry
+    row (A * B) j = row A j * B := by rfl
 
 /-- 3C.9 Row version of 3.50: a row times a matrix is a linear combination of
 the rows of the matrix. -/
 theorem exercise_3C_9 {n p : ℕ}
     (a : Matrix (Fin 1) (Fin n) F) (B : Matrix (Fin n) (Fin p) F) :
     a * B = ∑ r, a 0 r • row B r := by
-  sorry
+  ext i j
+  -- expand definitions
+  obtain rfl : i = 0 := Subsingleton.elim _ _
+  simp only [Matrix.mul_apply, Matrix.sum_apply, Matrix.smul_apply, smul_eq_mul, row]
 
 /-- 3C.10 -/
 theorem exercise_3C_10 :
     ∃ A B : Matrix (Fin 2) (Fin 2) ℝ, A * B ≠ B * A := by
-  sorry
+  -- use [0 1, 0 0] and [1 1, 1 0]
+  refine ⟨!![0, 1; 0, 0], !![1, 1; 1, 0], ?_⟩
+  intro h
+  have h00 := congrFun (congrFun h 0) 0
+  simp [Matrix.mul_apply, Fin.sum_univ_two] at h00
 
 /-- 3C.11 (a) Left distributivity. -/
 @[avoiding Matrix.mul_add]
 theorem exercise_3C_11a {m n p : ℕ} (A : Matrix (Fin m) (Fin n) F)
     (B C : Matrix (Fin n) (Fin p) F) :
     A * (B + C) = A * B + A * C := by
-  sorry
+  -- translate into linear transformation statement
+  -- ((A * (B + C)) x = A ((B + C) x) = A (B x + C x) = A (B x) + A (C x) = (A * B + A * C) x
+  apply Matrix.toLin'.injective
+  rw [Matrix.toLin'_mul, map_add, map_add, Matrix.toLin'_mul, Matrix.toLin'_mul,
+    LinearMap.comp_add]
 
 /-- 3C.11 (b) Right distributivity. -/
 @[avoiding Matrix.add_mul]
 theorem exercise_3C_11b {m n p : ℕ} (D E : Matrix (Fin m) (Fin n) F)
     (F' : Matrix (Fin n) (Fin p) F) :
     (D + E) * F' = D * F' + E * F' := by
-  sorry
+  -- translate into linear transformation statement
+  -- ((D + E) F') x = (D + E) (F' x) = D (F' x) + E (F' x) = (D F' + E F') x
+  apply Matrix.toLin'.injective
+  rw [Matrix.toLin'_mul, map_add, map_add, Matrix.toLin'_mul, Matrix.toLin'_mul,
+    LinearMap.add_comp]
 
 /-- 3C.12 Associativity. -/
 @[avoiding Matrix.mul_assoc]
@@ -778,31 +1337,109 @@ theorem exercise_3C_12 {m n p q : ℕ}
     (A : Matrix (Fin m) (Fin n) F) (B : Matrix (Fin n) (Fin p) F)
     (C : Matrix (Fin p) (Fin q) F) :
     (A * B) * C = A * (B * C) := by
-  sorry
+  -- translate into linear transformation statement
+  -- composition of functions is associative
+  apply Matrix.toLin'.injective
+  rw [Matrix.toLin'_mul, Matrix.toLin'_mul, Matrix.toLin'_mul, Matrix.toLin'_mul,
+    LinearMap.comp_assoc]
 
 /-- 3C.13 Entry of {lit}`A³` -/
 theorem exercise_3C_13 {n : ℕ} (A : Matrix (Fin n) (Fin n) F) (j k : Fin n) :
     (A * A * A) j k = ∑ p, ∑ r, A j p * A p r * A r k := by
-  sorry
+  repeat simp only [Matrix.mul_apply]
+  -- expand the summations
+  simp_rw [Finset.sum_mul]
+  exact Finset.sum_comm
 
 /-- 3C.14 Transposition is a linear map. -/
 def exercise_3C_14 (m n : ℕ) :
     Matrix (Fin m) (Fin n) F →ₗ[F] Matrix (Fin n) (Fin m) F where
   toFun A := A.transpose
-  map_add' := by sorry
-  map_smul' := by sorry
+  map_add' := by
+    intro x y
+    ext i j
+    simp only [Matrix.transpose_apply, Matrix.add_apply]
+  map_smul' := by
+    intro c x
+    ext i j
+    simp only [Matrix.transpose_apply, Matrix.smul_apply, smul_eq_mul, RingHom.id_apply]
 
 /-- 3C.15 {lit}`(A * C)ᵀ = Cᵀ * Aᵀ` -/
 theorem exercise_3C_15 {m n p : ℕ}
     (A : Matrix (Fin m) (Fin n) F) (C : Matrix (Fin n) (Fin p) F) :
     (A * C).transpose = C.transpose * A.transpose := by
-  sorry
+  ext i j
+  simp only [Matrix.transpose_apply, Matrix.mul_apply]
+  simp [mul_comm]
 
 /-- 3C.16 -/
 theorem exercise_3C_16 {m n : ℕ} (A : Matrix (Fin m) (Fin n) F) (hA : A ≠ 0) :
     A.rank = 1 ↔
       ∃ (c : Fin m → F) (d : Fin n → F), ∀ j k, A j k = c j * d k := by
-  sorry
+  -- (<=) each column i is d_i multiple of the c vector
+  -- so the span of all the columns is also just the span of the c vector
+  -- so rank is 1 (since A ≠ 0)
+  -- (=>) if rank is 1, the span of columns is 1-dimensional span by {c} for
+  -- some nonzero c
+  -- then each column is a multiple of c, giving each desired d_i
+  classical
+  rw [matrix_rank_eq_columnRank]
+  constructor
+  · intro h1
+    -- some column is non-zero, and being 1-dimensional the column space is its span
+    have hex : ∃ k0, column A k0 ≠ 0 := by
+      by_contra hcon
+      push Not at hcon
+      exact hA (by ext j k; exact congrFun (congrFun (hcon k) j) 0)
+    obtain ⟨k0, hk0⟩ := hex
+    haveI : Module.Finite F (Submodule.span F (Set.range (column A))) :=
+      Module.Finite.of_injective (Submodule.span F (Set.range (column A))).subtype
+        Subtype.val_injective
+    have heq : Submodule.span F {column A k0}
+        = Submodule.span F (Set.range (column A)) := by
+      refine Submodule.eq_of_le_of_finrank_eq ?_ ?_
+      · rw [Submodule.span_le]
+        rintro _ rfl
+        exact Submodule.subset_span ⟨k0, rfl⟩
+      · rw [finrank_span_singleton hk0]
+        exact h1.symm
+    -- so every column is a multiple of column k0, which supplies the dₖ
+    have hmul : ∀ k, ∃ t : F, t • column A k0 = column A k := by
+      intro k
+      have hmem : column A k ∈ Submodule.span F {column A k0} := by
+        rw [heq]
+        exact Submodule.subset_span ⟨k, rfl⟩
+      rwa [Submodule.mem_span_singleton] at hmem
+    choose d hd using hmul
+    refine ⟨fun j => A j k0, d, ?_⟩
+    intro j k
+    have h := congrFun (congrFun (hd k) j) 0
+    simpa [column, mul_comm] using h.symm
+  · rintro ⟨c, d, hcd⟩
+    -- each column is dₖ times the single column c, so the column rank is at most 1
+    set g : Matrix (Fin m) (Fin 1) F := fun j _ => c j with hg
+    have hcolg : ∀ k, column A k = d k • g := by
+      intro k
+      ext j i
+      obtain rfl : i = 0 := Subsingleton.elim _ _
+      simp [column, hg, hcd j k, mul_comm]
+    have hsub : Submodule.span F (Set.range (column A)) ≤ Submodule.span F {g} := by
+      rw [Submodule.span_le]
+      rintro _ ⟨k, rfl⟩
+      rw [hcolg k]
+      exact Submodule.smul_mem _ _ (Submodule.subset_span rfl)
+    have hle1 : finrank F (Submodule.span F {g}) ≤ 1 := by
+      have hrange : ({g} : Set (Matrix (Fin m) (Fin 1) F))
+          = Set.range (fun _ : Fin 1 => g) := by
+        ext x
+        simp
+      rw [hrange]
+      have h := finrank_range_le_card (R := F) (fun _ : Fin 1 => g)
+      simpa [Set.finrank] using h
+    have hle : columnRank A ≤ 1 := le_trans (Submodule.finrank_mono hsub) hle1
+    -- and it is not 0, since A ≠ 0
+    have hne : columnRank A ≠ 0 := fun h => hA ((columnRank_zero_iff_eq_zero A).mp h)
+    omega
 
 /-- 3C.17 -/
 theorem exercise_3C_17 {n : ℕ} (T : V →ₗ[F] V)
@@ -812,6 +1449,111 @@ theorem exercise_3C_17 {n : ℕ} (T : V →ₗ[F] V)
        Spans F (column (matrixOf hu hv T) ·),
        Spans F (row (matrixOf hu hv T) ·),
        LinearIndependent F (row (matrixOf hu hv T) ·)].TFAE := by
-  sorry
+  -- 1 => 2, assume otherwise, then exists ∑ c_i * column_i = 0, with some c_i ≠ 0
+  -- using c_i one can make a vector c ≠ 0, s.t. T(c) = 0, contradicting injectivity.
+  -- 2 => 3, dim V vectors in V are linearly independent, so they span V
+  -- 3 => 4, col rank = row rank, so rows also span V
+  -- 4 => 5, dim V vectors span V, so they must be linearly independent
+  -- 5 => 1, by contra, assume we can have ∑ c_i * row_i = 0 with some c_i ≠ 0
+  -- then we can construct a non-zero vector s.t. T(c) = 0, using ex 9. contradicting injectivity.
+  classical
+  have hdimc : finrank F (Matrix (Fin n) (Fin 1) F) = n := by
+    rw [finrank_matrix]; ring
+  have hdimr : finrank F (Matrix (Fin 1) (Fin n) F) = n := by
+    rw [finrank_matrix]; ring
+  -- T applied to a combination of the basis u, expanded in the basis v
+  have hTsum : ∀ c : Fin n → F,
+      T (∑ k, c k • u k) = ∑ j, (∑ k, c k * matrixOf hu hv T j k) • v j := by
+    intro c
+    rw [map_sum]
+    simp only [map_smul, matrixOf_spec hu hv T, Finset.smul_sum, smul_smul]
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl fun j _ => ?_
+    rw [Finset.sum_smul]
+  -- T (∑ cₖ uₖ) = 0 exactly when c is a linear relation among the columns
+  have hkey : ∀ c : Fin n → F,
+      T (∑ k, c k • u k) = 0 ↔ ∑ k, c k • column (matrixOf hu hv T) k = 0 := by
+    intro c
+    rw [hTsum]
+    constructor
+    · intro h
+      have hz := Fintype.linearIndependent_iff.mp hv.1 _ h
+      ext j i
+      obtain rfl : i = 0 := Subsingleton.elim _ _
+      simpa [Matrix.sum_apply, column] using hz j
+    · intro h
+      have hz : ∀ j, ∑ k, c k * matrixOf hu hv T j k = 0 := by
+        intro j
+        have hj := congrFun (congrFun h j) 0
+        simpa [Matrix.sum_apply, column] using hj
+      simp [hz]
+  -- 1 ↔ 2: a relation among the columns is exactly a vector killed by T
+  have hinj_col : Function.Injective T ↔
+      LinearIndependent F (column (matrixOf hu hv T) ·) := by
+    constructor
+    · intro hT
+      rw [Fintype.linearIndependent_iff]
+      intro c hc
+      have h0 : T (∑ k, c k • u k) = 0 := (hkey c).mpr hc
+      have hx : ∑ k, c k • u k = 0 := by
+        have h1 : T (∑ k, c k • u k) = T 0 := by rw [h0, map_zero]
+        exact hT h1
+      exact Fintype.linearIndependent_iff.mp hu.1 _ hx
+    · intro hcol
+      have hker : ∀ z, T z = 0 → z = 0 := by
+        intro z hz
+        obtain ⟨c, hc, -⟩ := (LADR.Section_2B.isBasis_iff_unique_combo u).mp hu z
+        have h0 : T (∑ k, c k • u k) = 0 := by rw [hc]; exact hz
+        have hc0 : ∀ k, c k = 0 :=
+          Fintype.linearIndependent_iff.mp hcol _ ((hkey c).mp h0)
+        rw [← hc]
+        simp [hc0]
+      intro x y hxy
+      have h : T (x - y) = 0 := by rw [map_sub, hxy, sub_self]
+      exact sub_eq_zero.mp (hker _ h)
+  -- spanning is the same as full rank, for the columns and for the rows
+  have hcs : Spans F (column (matrixOf hu hv T) ·) →
+      columnRank (matrixOf hu hv T) = n := by
+    intro h
+    show finrank F (Submodule.span F (Set.range (column (matrixOf hu hv T)))) = n
+    rw [show Submodule.span F (Set.range (column (matrixOf hu hv T))) = ⊤ from h,
+      finrank_top]
+    exact hdimc
+  have hsc : columnRank (matrixOf hu hv T) = n →
+      Spans F (column (matrixOf hu hv T) ·) := by
+    intro h
+    show Submodule.span F (Set.range (column (matrixOf hu hv T))) = ⊤
+    exact LADR.Section_2C.subspace_eq_top_of_finrank_eq _ (by rw [hdimc]; exact h)
+  have hrs : Spans F (row (matrixOf hu hv T) ·) → rowRank (matrixOf hu hv T) = n := by
+    intro h
+    show finrank F (Submodule.span F (Set.range (row (matrixOf hu hv T)))) = n
+    rw [show Submodule.span F (Set.range (row (matrixOf hu hv T))) = ⊤ from h,
+      finrank_top]
+    exact hdimr
+  have hsr : rowRank (matrixOf hu hv T) = n → Spans F (row (matrixOf hu hv T) ·) := by
+    intro h
+    show Submodule.span F (Set.range (row (matrixOf hu hv T))) = ⊤
+    exact LADR.Section_2C.subspace_eq_top_of_finrank_eq _ (by rw [hdimr]; exact h)
+  tfae_have 1 → 2 := hinj_col.mp
+  -- n linearly independent vectors in an n-dimensional space span it (2.38)
+  tfae_have 2 → 3 := fun h =>
+    (LADR.Section_2C.isBasis_of_linearIndependent_of_card_eq _ h hdimc.symm).2
+  -- column rank = row rank (3.57)
+  tfae_have 3 → 4 := by
+    intro h
+    apply hsr
+    rw [← columnRank_eq_rowRank]
+    exact hcs h
+  -- n spanning vectors in an n-dimensional space are independent (2.42)
+  tfae_have 4 → 5 := fun h =>
+    (LADR.Section_2C.isBasis_of_spans_of_card_eq _ h hdimr.symm).1
+  tfae_have 5 → 1 := by
+    intro h
+    apply hinj_col.mpr
+    refine (LADR.Section_2C.isBasis_of_spans_of_card_eq _ ?_ hdimc.symm).1
+    apply hsc
+    rw [columnRank_eq_rowRank]
+    exact hrs ((LADR.Section_2C.isBasis_of_linearIndependent_of_card_eq _ h hdimr.symm).2)
+  tfae_finish
 
 end LADR.Section_3C
