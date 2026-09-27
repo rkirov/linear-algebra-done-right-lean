@@ -846,10 +846,11 @@ column of {lit}`ℳ(I, u, v)` lists the coordinates of {lit}`u_k` in {lit}`v`:
 {lit}`ℳ(I, u, v) = [[4,5],[2,3]]`. By 3.82 its inverse is
 {lit}`ℳ(I, v, u) = [[3/2, -5/2],[-1, 2]]`. -/
 
-/-- The list {lit}`(4,2), (5,3)` is a basis of {lit}`ℝ²` (a {lit}`2B.2`-style
-fact, left as {lit}`sorry`). -/
+/-- The list {lit}`(4,2), (5,3)` is a basis of {lit}`ℝ²`: the determinant
+{lit}`4·3 - 2·5 = 2` is nonzero, so the {lit}`2B.2` criterion applies. -/
 theorem isBasis_4253 :
-    IsBasis ℝ (![![4, 2], ![5, 3]] : Fin 2 → Fin 2 → ℝ) := by sorry
+    IsBasis ℝ (![![4, 2], ![5, 3]] : Fin 2 → Fin 2 → ℝ) :=
+  LADR.Section_2B.isBasis_pair (by norm_num)
 
 /-- {lit}`ℳ(I, u, v) = [[4,5],[2,3]]`: the {lit}`k`th column lists {lit}`u_k`'s
 coordinates in the standard basis. -/
@@ -914,121 +915,708 @@ theorem change_of_basis {n : ℕ}
 
 /-! 3.86 {lit}`ℳ(T⁻¹) = ℳ(T)⁻¹`: the matrix of the inverse is the inverse of
 the matrix (with respect to a single basis). Axler leaves the proof as an
-exercise, so we state it and leave it as {lit}`sorry`. -/
+exercise: by 3.43, {lit}`ℳ(T⁻¹) ℳ(T) = ℳ(T⁻¹ T) = ℳ(I) = 1`, so {lit}`ℳ(T⁻¹)`
+is the (unique) inverse of {lit}`ℳ(T)`. -/
 
 theorem matrixOf_inv {n : ℕ}
     {v : Fin n → V} (hv : IsBasis F v) (T : V →ₗ[F] V)
     (hT : IsInvertible T) :
     matrixOf hv hv hT.inv = (matrixOf hv hv T)⁻¹ := by
-  sorry
+  refine (Matrix.inv_eq_left_inv ?_).symm
+  rw [← matrixOf_comp, hT.inv_comp, matrixOf_id_self]
 
 /-! # Exercises -/
 
 /-- 3D.1 {lit}`(T⁻¹)⁻¹ = T` -/
 theorem exercise_3D_1 (T : V →ₗ[F] W) (hT : IsInvertible T) :
     ∃ hT' : IsInvertible hT.inv, hT'.inv = T := by
-  sorry
+  -- use T
+  refine ⟨⟨T, hT.comp_inv, hT.inv_comp⟩, ?_⟩
+  -- both `(T⁻¹)⁻¹` and `T` are two-sided inverses of `T⁻¹`, so 3.60 applies
+  exact inv_unique hT.inv
+    ⟨IsInvertible.inv_comp _, IsInvertible.comp_inv _⟩ ⟨hT.comp_inv, hT.inv_comp⟩
 
 /-- 3D.2 {lit}`S ∘ T` is invertible and {lit}`(ST)⁻¹ = T⁻¹ S⁻¹`. -/
 theorem exercise_3D_2 (T : U →ₗ[F] V) (S : V →ₗ[F] W)
     (hT : IsInvertible T) (hS : IsInvertible S) :
     ∃ h : IsInvertible (S ∘ₗ T), h.inv = hT.inv ∘ₗ hS.inv := by
-  sorry
+  -- use the fact that (S ∘ T) ∘ (T⁻¹ ∘ S⁻¹) = id and (T⁻¹ ∘ S⁻¹) ∘ (S ∘ T) = id
+  have h1 : (hT.inv ∘ₗ hS.inv) ∘ₗ (S ∘ₗ T) = LinearMap.id := by
+    ext u
+    have hs := LinearMap.congr_fun hS.inv_comp (T u)
+    have ht := LinearMap.congr_fun hT.inv_comp u
+    simp only [LinearMap.comp_apply, LinearMap.id_apply] at hs ht ⊢
+    rw [hs, ht]
+  have h2 : (S ∘ₗ T) ∘ₗ (hT.inv ∘ₗ hS.inv) = LinearMap.id := by
+    ext w
+    have ht := LinearMap.congr_fun hT.comp_inv (hS.inv w)
+    have hs := LinearMap.congr_fun hS.comp_inv w
+    simp only [LinearMap.comp_apply, LinearMap.id_apply] at hs ht ⊢
+    rw [ht, hs]
+  refine ⟨⟨hT.inv ∘ₗ hS.inv, h1, h2⟩, ?_⟩
+  exact inv_unique (S ∘ₗ T)
+    ⟨IsInvertible.inv_comp _, IsInvertible.comp_inv _⟩ ⟨h1, h2⟩
 
 /-- 3D.3 The following are equivalent: {lit}`T` is invertible; {lit}`T` maps
 every basis of {lit}`V` to a basis; {lit}`T` maps some basis to a basis. -/
 theorem exercise_3D_3 [Finite F V] (T : V →ₗ[F] V) :
     [IsInvertible T,
-     ∀ {n : ℕ} (v : Fin n → V) (h : IsBasis F v), IsBasis F (fun k => T (v k)),
-     ∃ (n : ℕ) (v : Fin n → V) (h : IsBasis F v), IsBasis F (fun k => T (v k))].TFAE := by
-  sorry
+     ∀ {n : ℕ} (v : Fin n → V) (_ : IsBasis F v), IsBasis F (fun k => T (v k)),
+     ∃ (n : ℕ) (v : Fin n → V) (_ : IsBasis F v), IsBasis F (fun k => T (v k))].TFAE := by
+  -- 1 => 2, by fin.dim, enough to show LI fot Tvi, assume by contra ∑ a_i Tvi = 0,
+  -- by lin, T (∑ ai vi) = 0, so contradiction with injectivity of T
+  -- 2 => 3 is trivial, since exist at least one basis.
+  -- 3 => 1, construct the inverse S, mapping Tvi back to vi.
+  tfae_have 1 → 2 := by
+    intro hT n v hv
+    obtain ⟨hinj, hsurj⟩ := (isInvertible_iff_bijective T).mp hT
+    obtain ⟨hli, hspan⟩ := hv
+    constructor
+    · -- a vanishing combination of the {lit}`T vᵢ` gives {lit}`T (∑ aᵢ vᵢ) = 0`
+      rw [Fintype.linearIndependent_iff]
+      intro g hg i
+      have hsum : T (∑ j, g j • v j) = T 0 := by
+        rw [map_sum, map_zero]
+        simpa only [map_smul] using hg
+      exact (Fintype.linearIndependent_iff.mp hli) g (hinj hsum) i
+    · -- {lit}`T` is onto, so the image of a spanning list still spans
+      have hrange : (Set.range fun k => T (v k)) = ⇑T '' Set.range v :=
+        Set.range_comp ⇑T v
+      show Submodule.span F (Set.range fun k => T (v k)) = ⊤
+      rw [hrange, Submodule.span_image,
+        show Submodule.span F (Set.range v) = ⊤ from hspan, Submodule.map_top,
+        LinearMap.range_eq_top.mpr hsurj]
+  tfae_have 2 → 3 := by
+    intro h
+    obtain ⟨n, v, hv⟩ := LADR.Section_2B.exists_basis (F := F) (V := V)
+    exact ⟨n, v, hv, h v hv⟩
+  tfae_have 3 → 1 := by
+    rintro ⟨n, v, hv, hTv⟩
+    -- 3.4 gives the map {lit}`S` sending the basis {lit}`T vᵢ` back to {lit}`vᵢ`
+    obtain ⟨S, hS, -⟩ := LADR.Section_3A.linearMap_lemma' _ hTv v
+    refine ⟨S, ?_, ?_⟩
+    · -- {lit}`S ∘ T = I`: both sides agree on the basis {lit}`v`
+      refine hv.toModuleBasis.ext (fun k => ?_)
+      simp only [IsBasis.toModuleBasis_apply, LinearMap.comp_apply,
+        LinearMap.id_apply]
+      exact hS k
+    · -- {lit}`T ∘ S = I`: both sides agree on the basis {lit}`T v`
+      refine hTv.toModuleBasis.ext (fun k => ?_)
+      simp only [IsBasis.toModuleBasis_apply, LinearMap.comp_apply,
+        LinearMap.id_apply]
+      rw [hS k]
+  tfae_finish
 
 /-- 3D.4 -/
 theorem exercise_3D_4 [Finite F V] (hV : 1 < finrank F V) :
     ¬ ∃ (U : Submodule F (V →ₗ[F] V)),
       ∀ T : V →ₗ[F] V, T ∈ U ↔ ¬ IsInvertible T := by
-  sorry
+  -- take a basis vi,
+  -- consider S v0 = v0, and S vi = 0 for i > 0, S is not invertable, because not inj.
+  -- also T v i = vi for i > 0, T v0 = 0, T is not invertible, because not inj.
+  -- but S + T = id, which is invertible.
+  classical
+  rintro ⟨U, hU⟩
+  let b := Module.finBasis F V
+  let i₀ : Fin (finrank F V) := ⟨0, Nat.zero_lt_of_lt hV⟩
+  let i₁ : Fin (finrank F V) := ⟨1, hV⟩
+  have hne : i₁ ≠ i₀ := by
+    intro hi
+    have := congrArg Fin.val hi
+    norm_num [i₀, i₁] at this
+  let S : V →ₗ[F] V := b.constr F (Pi.single i₀ (b i₀))
+  let T : V →ₗ[F] V := b.constr F (fun k => if k = i₀ then 0 else b k)
+  have hSapp : ∀ k, S (b k) =
+      (Pi.single i₀ (b i₀) : Fin (finrank F V) → V) k := by
+    intro k; simp only [S, Module.Basis.constr_basis]
+  have hTapp : ∀ k, T (b k) = if k = i₀ then 0 else b k := by
+    intro k; simp only [T, Module.Basis.constr_basis]
+  have hS₀ : S (b i₁) = 0 := by rw [hSapp, Pi.single_eq_of_ne hne]
+  have hT₀ : T (b i₀) = 0 := by rw [hTapp, if_pos rfl]
+  have hSni : ¬ IsInvertible S := fun hSi =>
+    b.ne_zero i₁ (((isInvertible_iff_bijective S).mp hSi).1
+      (by rw [hS₀, map_zero]))
+  have hTni : ¬ IsInvertible T := fun hTi =>
+    b.ne_zero i₀ (((isInvertible_iff_bijective T).mp hTi).1
+      (by rw [hT₀, map_zero]))
+  -- but {lit}`S + T = I`, and {lit}`U` is closed under addition
+  have hsum : S + T = LinearMap.id := by
+    refine b.ext (fun k => ?_)
+    rw [LinearMap.add_apply, hSapp, hTapp, LinearMap.id_apply, Pi.single_apply]
+    by_cases hk : k = i₀
+    · subst hk; simp
+    · simp [hk]
+  have hmem : S + T ∈ U := U.add_mem ((hU S).mpr hSni) ((hU T).mpr hTni)
+  refine ((hU (S + T)).mp hmem) ?_
+  rw [hsum]
+  exact ⟨LinearMap.id, by ext; rfl, by ext; rfl⟩
 
 /-- 3D.5 -/
 theorem exercise_3D_5 [Finite F V] (U : Submodule F V) (S : U →ₗ[F] V) :
     (∃ T : V →ₗ[F] V, IsInvertible T ∧ ∀ u : U, T (u : V) = S u) ↔
       Function.Injective S := by
-  sorry
+  -- => assume S u = 0 for some u in U, then T u = S u = 0, but T is invertible,
+  -- so u = 0, proving that S is injective.
+  -- <= take basis for U, and extend it to basis for V
+  -- since V is finite-dimensional and S injective,
+  -- S vi, for vi in U, forms a linearly independent set.
+  -- extend this set to a another basis for V - wi,
+  -- define T vi = S vi for vi in U, and T vi = wi for rest.
+  -- by definition, T maps to a basis so it is invertible (use 3d.3)
+  -- and by construction T agrees with S on U.
+  constructor
+  · rintro ⟨T, hT, hTU⟩ u₁ u₂ h₁₂
+    have hinj := ((isInvertible_iff_bijective T).mp hT).1
+    exact Subtype.ext (hinj (by rw [hTU u₁, hTU u₂, h₁₂]))
+  · intro hSinj
+    obtain ⟨m, u, hu⟩ := LADR.Section_2B.exists_basis (F := F) (V := U)
+    -- the basis of {lit}`U`, viewed in {lit}`V`, is linearly independent …
+    have huV : LinearIndependent F (fun k => (u k : V)) := by
+      rw [Fintype.linearIndependent_iff]
+      intro g hg k
+      have hz : (∑ i, g i • u i : U) = 0 := by
+        have hcoe : ((∑ i, g i • u i : U) : V) = ∑ i, g i • (u i : V) := by
+          simp
+        exact Submodule.coe_eq_zero.mp (by rw [hcoe]; exact hg)
+      exact (Fintype.linearIndependent_iff.mp hu.1) g hz k
+    -- … and so is its image under the injective {lit}`S`
+    have hSu : LinearIndependent F (fun k => S (u k)) := by
+      rw [Fintype.linearIndependent_iff]
+      intro g hg k
+      have hz : (∑ i, g i • u i : U) = 0 := by
+        refine hSinj ?_
+        rw [map_sum, map_zero]
+        simpa only [map_smul] using hg
+      exact (Fintype.linearIndependent_iff.mp hu.1) g hz k
+    -- extend both lists to bases of {lit}`V`; by 2.35 they have the same length
+    obtain ⟨n, v, hmn, hvb, hvpre⟩ := LADR.Section_2B.exists_basis_extending _ huV
+    obtain ⟨n', w, hmn', hwb, hwpre⟩ := LADR.Section_2B.exists_basis_extending _ hSu
+    have hn : n = finrank F V := LADR.Section_2C.isBasis_card_eq_finrank v hvb
+    have hn' : n' = finrank F V := LADR.Section_2C.isBasis_card_eq_finrank w hwb
+    have hnn : n' = n := by omega
+    subst hnn
+    have hwpre' : ∀ i : Fin m, w (Fin.castLE hmn i) = S (u i) := hwpre
+    -- 3.4: send the basis {lit}`v` to the basis {lit}`w`
+    obtain ⟨T, hT, -⟩ := LADR.Section_3A.linearMap_lemma' v hvb w
+    have hTbasis : IsBasis F (fun k => T (v k)) := by
+      rw [show (fun k => T (v k)) = w from funext hT]
+      exact hwb
+    have hwitness : ∃ (n : ℕ) (v : Fin n → V) (_ : IsBasis F v),
+        IsBasis F (fun k => T (v k)) := ⟨_, v, hvb, hTbasis⟩
+    refine ⟨T, ((exercise_3D_3 T).out 2 0).mp hwitness, ?_⟩
+    -- {lit}`T` and {lit}`S` agree on a basis of {lit}`U`, hence on all of {lit}`U`
+    have hext : T ∘ₗ U.subtype = S := by
+      refine hu.toModuleBasis.ext (fun i => ?_)
+      simp only [IsBasis.toModuleBasis_apply, LinearMap.comp_apply,
+        Submodule.subtype_apply]
+      rw [← hvpre i, hT (Fin.castLE hmn i), hwpre' i]
+    exact fun x => LinearMap.congr_fun hext x
 
 /-- 3D.6 -/
 theorem exercise_3D_6 [Finite F W] (S T : V →ₗ[F] W) :
     LinearMap.ker S = LinearMap.ker T ↔
       ∃ E : W →ₗ[F] W, IsInvertible E ∧ S = E ∘ₗ T := by
-  sorry
+  -- => apply 3B.25 both ways: S = E₂ T and T = E₁ S.
+  -- on range T these are mutually inverse: E₁ (E₂ (T v)) = E₁ (S v) = T v,
+  -- and likewise on range S, so E₂ cuts down to an isomorphism
+  -- e : range T → range S. (this replaces "send the basis of range T to the
+  -- corresponding basis of range S".)
+  -- a complement P of range T and a complement Q of range S have equal
+  -- dimension, so pick any isomorphism f : P → Q (3.70) -- that is the
+  -- "arbitrary permutation of the rest".
+  -- E = e ⊕ f on W = range T ⊕ P = range S ⊕ Q is invertible, being a sum
+  -- of isomorphisms, and E (T v) = e (T v) = E₂ (T v) = S v.
+  -- <= if S v = 0, then E T v = 0, but E inv, so T v = 0,
+  -- if T v = 0, S v = E T v = 0, so ker T = ker S.
+  classical
+  constructor
+  · intro hker
+    -- 3B.25 both ways: {lit}`S = E₂ T` and {lit}`T = E₁ S`.
+    obtain ⟨E₂, hE₂⟩ := (LADR.Section_3B.exercise_3B_25 T S).mp hker.ge
+    obtain ⟨E₁, hE₁⟩ := (LADR.Section_3B.exercise_3B_25 S T).mp hker.le
+    have hS : ∀ v, E₂ (T v) = S v := fun v => by rw [hE₂]; rfl
+    have hT : ∀ v, E₁ (S v) = T v := fun v => by rw [hE₁]; rfl
+    -- On the ranges the two are mutually inverse, so they cut down to an
+    -- isomorphism {lit}`range T ≃ range S`.
+    have hmap₂ : ∀ x ∈ LinearMap.range T, E₂ x ∈ LinearMap.range S := by
+      rintro _ ⟨v, rfl⟩; exact ⟨v, (hS v).symm⟩
+    have hmap₁ : ∀ x ∈ LinearMap.range S, E₁ x ∈ LinearMap.range T := by
+      rintro _ ⟨v, rfl⟩; exact ⟨v, (hT v).symm⟩
+    let e : LinearMap.range T ≃ₗ[F] LinearMap.range S :=
+      LinearEquiv.ofLinear (E₂.restrict hmap₂) (E₁.restrict hmap₁)
+        (by
+          refine LinearMap.ext fun y => Subtype.ext ?_
+          obtain ⟨v, hv⟩ := y.2
+          show E₂ (E₁ (y : W)) = (y : W)
+          rw [← hv, hT v, hS v])
+        (by
+          refine LinearMap.ext fun x => Subtype.ext ?_
+          obtain ⟨v, hv⟩ := x.2
+          show E₁ (E₂ (x : W)) = (x : W)
+          rw [← hv, hS v, hT v])
+    -- Complements of the two ranges then have equal dimension, so {lit}`e`
+    -- extends to an isomorphism of all of {lit}`W` (3.70 on the complements).
+    obtain ⟨P, hP⟩ := (LinearMap.range T).exists_isCompl
+    obtain ⟨Q, hQ⟩ := (LinearMap.range S).exists_isCompl
+    have hPQ : finrank F P = finrank F Q := by
+      have h1 := Submodule.finrank_add_eq_of_isCompl hP
+      have h2 := Submodule.finrank_add_eq_of_isCompl hQ
+      have h3 := e.finrank_eq
+      omega
+    let f : P ≃ₗ[F] Q := (isomorphic_iff_finrank_eq.mpr hPQ).some
+    let E : W ≃ₗ[F] W :=
+      (Submodule.prodEquivOfIsCompl _ _ hP).symm ≪≫ₗ e.prodCongr f ≪≫ₗ
+        Submodule.prodEquivOfIsCompl _ _ hQ
+    have hE : ∀ x : LinearMap.range T, E (x : W) = (e x : W) := by
+      intro x
+      show Submodule.prodEquivOfIsCompl _ _ hQ (e.prodCongr f
+        ((Submodule.prodEquivOfIsCompl _ _ hP).symm (x : W))) = _
+      rw [Submodule.prodEquivOfIsCompl_symm_apply_left]
+      simp [Submodule.coe_prodEquivOfIsCompl']
+    refine ⟨(E : W →ₗ[F] W), LinearEquiv.isInvertible E, ?_⟩
+    ext v
+    calc S v = E₂ (T v) := (hS v).symm
+      _ = ((e ⟨T v, ⟨v, rfl⟩⟩ : LinearMap.range S) : W) := rfl
+      _ = E (T v) := (hE ⟨T v, ⟨v, rfl⟩⟩).symm
+  · rintro ⟨E, hE, rfl⟩
+    have hinj := ((isInvertible_iff_bijective E).mp hE).1
+    ext v
+    simp only [LinearMap.mem_ker, LinearMap.comp_apply]
+    exact ⟨fun h => hinj (by rw [h, map_zero]), fun h => by rw [h, map_zero]⟩
 
 /-- 3D.7 -/
 theorem exercise_3D_7 [Finite F V] (S T : V →ₗ[F] W) :
     LinearMap.range S = LinearMap.range T ↔
       ∃ E : V →ₗ[F] V, IsInvertible E ∧ S = T ∘ₗ E := by
-  sorry
+  -- => apply 3B.26: S = T E₂, so E₂ already picks, for each v, a
+  -- T-preimage of S v (this replaces "for each wi take a preimage").
+  -- take CS a complement of ker S and let CT = E₂ CS.
+  -- CT is a complement of ker T: if E₂ y ∈ ker T with y ∈ CS then
+  -- S y = T (E₂ y) = 0, so y ∈ ker S ∩ CS = 0; and for any v,
+  -- T v ∈ range T = range S equals S y for some y ∈ CS, so v - E₂ y ∈ ker T.
+  -- the same argument makes E₂ : CS → CT bijective, call it g.
+  -- dim ker S = dim ker T by 3.21, so pick any k : ker S → ker T (3.70).
+  -- E = k ⊕ g on V = ker S ⊕ CS = ker T ⊕ CT is the change-of-basis map:
+  -- it is invertible, and S (x + y) = S y = T (E₂ y) = T (E (x + y)).
+  -- <= if w = S v for some v, w = T E v, then w is in the range of T
+  -- if w = T v for some v, w = S E⁻¹ v, then w is in the range of S.
+  -- so ranges equal.
+  classical
+  constructor
+  · intro hr
+    -- 3B.26 gives {lit}`E₂` with {lit}`S = T E₂`: it already picks the
+    -- {lit}`T`-preimages of the {lit}`S`-values.
+    obtain ⟨E₂, hE₂⟩ := (LADR.Section_3B.exercise_3B_26 S T).mp hr.le
+    have hTE : ∀ v, T (E₂ v) = S v := fun v => by rw [hE₂]; rfl
+    obtain ⟨CS, hCS⟩ := (LinearMap.ker S).exists_isCompl
+    -- the image of {lit}`CS` under {lit}`E₂` is a complement of {lit}`null T`
+    let CT : Submodule F V := Submodule.map E₂ CS
+    have hCT : IsCompl (LinearMap.ker T) CT := by
+      constructor
+      · rw [Submodule.disjoint_def]
+        intro x hxk hxm
+        obtain ⟨y, hy, rfl⟩ := Submodule.mem_map.mp hxm
+        have hSy : S y = 0 := by rw [← hTE y]; exact LinearMap.mem_ker.mp hxk
+        rw [Submodule.disjoint_def.mp hCS.disjoint y (LinearMap.mem_ker.mpr hSy) hy,
+          map_zero]
+      · rw [codisjoint_iff, eq_top_iff]
+        intro v _
+        -- {lit}`T v ∈ range T = range S`, so {lit}`T v = S y` with {lit}`y ∈ CS`
+        obtain ⟨u, hu⟩ : T v ∈ LinearMap.range S := by rw [hr]; exact ⟨v, rfl⟩
+        obtain ⟨n, hn, y, hy, rfl⟩ := Submodule.mem_sup.mp
+          (show u ∈ LinearMap.ker S ⊔ CS by rw [hCS.codisjoint.eq_top]; trivial)
+        have hTy : T (E₂ y) = T v := by
+          rw [hTE, ← hu, map_add, LinearMap.mem_ker.mp hn, zero_add]
+        refine Submodule.mem_sup.mpr ⟨v - E₂ y, ?_, E₂ y, ⟨y, hy, rfl⟩, by abel⟩
+        rw [LinearMap.mem_ker, map_sub, hTy, sub_self]
+    -- {lit}`E₂` matches {lit}`CS` with {lit}`CT` bijectively
+    have hmapCT : ∀ y ∈ CS, E₂ y ∈ CT := fun y hy => ⟨y, hy, rfl⟩
+    let g₀ : CS →ₗ[F] CT := E₂.restrict hmapCT
+    have hg₀ : Function.Bijective g₀ := by
+      constructor
+      · intro y y' hyy'
+        have hSy : S (y : V) = S (y' : V) := by
+          rw [← hTE (y : V), ← hTE (y' : V)]
+          exact congrArg (fun z : CT => T (z : V)) hyy'
+        have h0 : (y : V) - (y' : V) = 0 :=
+          Submodule.disjoint_def.mp hCS.disjoint _
+            (LinearMap.mem_ker.mpr (by rw [map_sub, hSy, sub_self]))
+            (CS.sub_mem y.2 y'.2)
+        exact Subtype.ext (sub_eq_zero.mp h0)
+      · rintro ⟨z, hz⟩
+        obtain ⟨y, hy, rfl⟩ := Submodule.mem_map.mp hz
+        exact ⟨⟨y, hy⟩, rfl⟩
+    let g : CS ≃ₗ[F] CT := LinearEquiv.ofBijective g₀ hg₀
+    have hg : ∀ y : CS, T ((g y : V)) = S (y : V) := fun y => hTE (y : V)
+    -- The kernels have equal dimension by the fundamental theorem (3.21),
+    -- so they are isomorphic (3.70).
+    have hkr : finrank F (LinearMap.ker S) = finrank F (LinearMap.ker T) := by
+      have h1 := LADR.Section_3B.finrank_ker_add_finrank_range S
+      have h2 := LADR.Section_3B.finrank_ker_add_finrank_range T
+      rw [hr] at h1
+      omega
+    let k : LinearMap.ker S ≃ₗ[F] LinearMap.ker T :=
+      (isomorphic_iff_finrank_eq.mpr hkr).some
+    let E : V ≃ₗ[F] V :=
+      (Submodule.prodEquivOfIsCompl _ _ hCS).symm ≪≫ₗ k.prodCongr g ≪≫ₗ
+        Submodule.prodEquivOfIsCompl _ _ hCT
+    have hEapp : ∀ (x : LinearMap.ker S) (y : CS),
+        E ((x : V) + (y : V)) = ((k x : V) + (g y : V)) := by
+      intro x y
+      show Submodule.prodEquivOfIsCompl _ _ hCT (k.prodCongr g
+        ((Submodule.prodEquivOfIsCompl _ _ hCS).symm ((x : V) + (y : V)))) = _
+      rw [show ((x : V) + (y : V))
+            = Submodule.prodEquivOfIsCompl _ _ hCS (x, y) from rfl,
+        LinearEquiv.symm_apply_apply]
+      rfl
+    refine ⟨(E : V →ₗ[F] V), LinearEquiv.isInvertible E, ?_⟩
+    ext v
+    obtain ⟨⟨x, y⟩, rfl⟩ := (Submodule.prodEquivOfIsCompl _ _ hCS).surjective v
+    show S ((x : V) + (y : V)) = T (E ((x : V) + (y : V)))
+    rw [hEapp, map_add, map_add, hg y, LinearMap.mem_ker.mp x.2,
+      LinearMap.mem_ker.mp (k x).2, zero_add]
+  · rintro ⟨E, hE, rfl⟩
+    have hsurj := ((isInvertible_iff_bijective E).mp hE).2
+    rw [LinearMap.range_comp, LinearMap.range_eq_top.mpr hsurj, Submodule.map_top]
 
 /-- 3D.8 -/
 theorem exercise_3D_8 [Finite F V] [Finite F W] (S T : V →ₗ[F] W) :
     (∃ (E₁ : V →ₗ[F] V) (E₂ : W →ₗ[F] W), IsInvertible E₁ ∧ IsInvertible E₂ ∧
       S = E₂ ∘ₗ T ∘ₗ E₁) ↔
       finrank F (LinearMap.ker S) = finrank F (LinearMap.ker T) := by
-  sorry
+  -- => S v = 0 <-> E2 T E1 v = 0 -> T (E1 v) = 0 -> E1 v ∈ ker T -> v ∈ E1⁻¹(ker T)
+  -- ker S = E1⁻¹(ker T), so same rank
+  -- <= same dim so exist iso between ker S and ker T
+  -- then extend this iso to an invertible E1 on V
+  -- (pair it with an iso between complements of the two kernels, which have
+  -- equal dimension too, so E1 maps ker S onto ker T)
+  -- then ker (T E1) = ker S, and 3D.6 supplies the invertible E2 on W
+  -- with S = E2 (T E1).
+  classical
+  constructor
+  · rintro ⟨E₁, E₂, hE₁, hE₂, rfl⟩
+    obtain ⟨hinj₁, hsurj₁⟩ := (isInvertible_iff_bijective E₁).mp hE₁
+    have hinj₂ := ((isInvertible_iff_bijective E₂).mp hE₂).1
+    -- {lit}`E₁` carries {lit}`null (E₂ T E₁)` isomorphically onto {lit}`null T`
+    have hmapK : ∀ v ∈ LinearMap.ker (E₂ ∘ₗ T ∘ₗ E₁), E₁ v ∈ LinearMap.ker T := by
+      intro v hv
+      have h0 : E₂ (T (E₁ v)) = 0 := hv
+      exact LinearMap.mem_ker.mpr (hinj₂ (by rw [h0, map_zero]))
+    have hbij : Function.Bijective (E₁.restrict hmapK) := by
+      constructor
+      · intro a b hab
+        exact Subtype.ext (hinj₁ (congrArg Subtype.val hab))
+      · rintro ⟨w, hw⟩
+        obtain ⟨v, rfl⟩ := hsurj₁ w
+        refine ⟨⟨v, ?_⟩, rfl⟩
+        show E₂ (T (E₁ v)) = 0
+        rw [LinearMap.mem_ker.mp hw, map_zero]
+    exact isomorphic_iff_finrank_eq.mp ⟨LinearEquiv.ofBijective _ hbij⟩
+  · intro hk
+    -- complements of the two kernels also have equal dimension
+    obtain ⟨CS, hCS⟩ := (LinearMap.ker S).exists_isCompl
+    obtain ⟨CT, hCT⟩ := (LinearMap.ker T).exists_isCompl
+    have hC : finrank F CS = finrank F CT := by
+      have h1 := Submodule.finrank_add_eq_of_isCompl hCS
+      have h2 := Submodule.finrank_add_eq_of_isCompl hCT
+      omega
+    let k : LinearMap.ker S ≃ₗ[F] LinearMap.ker T :=
+      (isomorphic_iff_finrank_eq.mpr hk).some
+    let g : CS ≃ₗ[F] CT := (isomorphic_iff_finrank_eq.mpr hC).some
+    let E₁ : V ≃ₗ[F] V :=
+      (Submodule.prodEquivOfIsCompl _ _ hCS).symm ≪≫ₗ k.prodCongr g ≪≫ₗ
+        Submodule.prodEquivOfIsCompl _ _ hCT
+    have hEapp : ∀ (x : LinearMap.ker S) (y : CS),
+        E₁ ((x : V) + (y : V)) = ((k x : V) + (g y : V)) := by
+      intro x y
+      show Submodule.prodEquivOfIsCompl _ _ hCT (k.prodCongr g
+        ((Submodule.prodEquivOfIsCompl _ _ hCS).symm ((x : V) + (y : V)))) = _
+      rw [show ((x : V) + (y : V))
+            = Submodule.prodEquivOfIsCompl _ _ hCS (x, y) from rfl,
+        LinearEquiv.symm_apply_apply]
+      rfl
+    -- so {lit}`T E₁` has the same null space as {lit}`S`
+    have hkerEq : LinearMap.ker S = LinearMap.ker (T ∘ₗ (E₁ : V →ₗ[F] V)) := by
+      ext v
+      obtain ⟨⟨x, y⟩, rfl⟩ := (Submodule.prodEquivOfIsCompl _ _ hCS).surjective v
+      show S ((x : V) + (y : V)) = 0 ↔ T (E₁ ((x : V) + (y : V))) = 0
+      rw [hEapp, map_add, map_add, LinearMap.mem_ker.mp x.2,
+        LinearMap.mem_ker.mp (k x).2, zero_add, zero_add]
+      constructor
+      · intro h
+        have hy : (y : V) = 0 :=
+          Submodule.disjoint_def.mp hCS.disjoint _ (LinearMap.mem_ker.mpr h) y.2
+        rw [show y = 0 from Subtype.ext hy]
+        simp
+      · intro h
+        have hgy : (g y : V) = 0 :=
+          Submodule.disjoint_def.mp hCT.disjoint _ (LinearMap.mem_ker.mpr h) (g y).2
+        have hy : y = 0 := by
+          have : g y = 0 := Subtype.ext hgy
+          simpa using congrArg g.symm this
+        rw [hy]
+        simp
+    -- 3D.6 now supplies the invertible {lit}`E₂` on {lit}`W`
+    obtain ⟨E₂, hE₂inv, hE₂⟩ := (exercise_3D_6 S (T ∘ₗ (E₁ : V →ₗ[F] V))).mp hkerEq
+    exact ⟨(E₁ : V →ₗ[F] V), E₂, LinearEquiv.isInvertible E₁, hE₂inv, hE₂⟩
 
 /-- 3D.9 -/
 theorem exercise_3D_9 [Finite F V] (T : V →ₗ[F] W) (hT : Function.Surjective T) :
     ∃ U : Submodule F V,
       ∃ E : U ≃ₗ[F] W, ∀ u : U, E u = T (u : V) := by
-  sorry
+  -- take a basis of W and pull by one preimage to vectors in V
+  -- possible since T is surjective
+  -- now vi are LI, and their span is submodule U of eq dim as W
+  -- T on U is surj thus iso.
+  classical
+  haveI : Finite F W := Module.Finite.of_surjective T hT
+  obtain ⟨n, w, hw⟩ := LADR.Section_2B.exists_basis (F := F) (V := W)
+  -- one preimage {lit}`v i` of each basis vector {lit}`w i`
+  choose v hv using fun i => hT (w i)
+  let U : Submodule F V := Submodule.span F (Set.range v)
+  have hvU : ∀ i, v i ∈ U := fun i => Submodule.subset_span ⟨i, rfl⟩
+  have hinj : Function.Injective (T.domRestrict U) := by
+    rw [← LinearMap.ker_eq_bot]
+    refine LinearMap.ker_eq_bot'.mpr ?_
+    rintro ⟨x, hx⟩ h0
+    obtain ⟨a, rfl⟩ := (Submodule.mem_span_range_iff_exists_fun F).mp hx
+    -- {lit}`∑ a i • w i = 0`, so all {lit}`a i = 0` by independence of {lit}`w`
+    have hsum : ∑ i, a i • w i = 0 := by
+      have : T (∑ i, a i • v i) = 0 := h0
+      rw [map_sum] at this
+      simpa only [map_smul, hv] using this
+    have ha : ∀ i, a i = 0 :=
+      fun i => (Fintype.linearIndependent_iff.mp hw.1) a hsum i
+    exact Subtype.ext (by simp [ha])
+  have hsurj : Function.Surjective (T.domRestrict U) := by
+    intro y
+    have hy : y ∈ Submodule.span F (Set.range w) := by
+      rw [show Submodule.span F (Set.range w) = ⊤ from hw.2]; trivial
+    obtain ⟨a, rfl⟩ := (Submodule.mem_span_range_iff_exists_fun F).mp hy
+    refine ⟨⟨∑ i, a i • v i,
+      Submodule.sum_mem _ fun i _ => Submodule.smul_mem _ _ (hvU i)⟩, ?_⟩
+    show T (∑ i, a i • v i) = ∑ i, a i • w i
+    rw [map_sum]
+    exact Finset.sum_congr rfl fun i _ => by rw [map_smul, hv i]
+  exact ⟨U, LinearEquiv.ofBijective (T.domRestrict U) ⟨hinj, hsurj⟩, fun _ => rfl⟩
 
 /-- 3D.10 part (a) -/
 def exercise_3D_10_E (U : Submodule F V) : Submodule F (V →ₗ[F] W) where
   carrier := {T | (U : Set V) ⊆ LinearMap.ker T}
-  zero_mem' := by sorry
-  add_mem' := by sorry
-  smul_mem' := by sorry
+  zero_mem' := by
+    simp only [SetLike.coe_subset_coe, Set.mem_setOf_eq, LinearMap.ker_zero, le_top]
+  add_mem' := by
+    intro T₁ T₂ hT₁ hT₂
+    simp only [SetLike.coe_subset_coe, Set.mem_setOf_eq]
+    simp at hT₁ hT₂
+    intro u hu
+    simp only [LinearMap.mem_ker, LinearMap.add_apply]
+    have h1 := hT₁ hu
+    have h2 := hT₂ hu
+    simp at h1 h2
+    simp only [h1, h2, add_zero]
+  smul_mem' := by
+    rintro c T hT
+    simp only [SetLike.coe_subset_coe, Set.mem_setOf_eq]
+    simp at hT
+    intro u hu
+    simp only [LinearMap.mem_ker, LinearMap.smul_apply]
+    have h := hT hu
+    simp at h
+    rw [h]
+    simp only [smul_zero]
 
 /-- 3D.10 part (b). We state the formula, but you need to prove it. -/
 theorem exercise_3D_10 [Finite F V] [Finite F W] (U : Submodule F V) :
     finrank F (exercise_3D_10_E U (W := W)) =
       (finrank F V - finrank F U) * finrank F W := by
-  sorry
+  -- using the hint - consider the map
+  -- L(V, W) → L(U, W) given by restriction to U
+  -- E is exactly the kernel of this map.
+  -- the rank-nullity says L(V, W) = dim E + dim range restriction map
+  -- only thing left is to show the restriction is surjective.
+  -- take a linear map from U to W, we can extend it trivially to V
+  -- take a basis of U and extending to V, and define the map to be zero
+  -- on the extension to V.
+  -- (equivalently: extend by zero on a complement of U, 2.34.)
+  classical
+  -- {lit}`E` is the kernel of restriction to {lit}`U`
+  have hker : LinearMap.ker
+      (LinearMap.domRestrict' U : (V →ₗ[F] W) →ₗ[F] (U →ₗ[F] W))
+      = exercise_3D_10_E U (W := W) := by
+    ext T
+    simp only [LinearMap.mem_ker]
+    constructor
+    · intro hT u hu
+      have h := congrArg (fun f : U →ₗ[F] W => f ⟨u, hu⟩) hT
+      simpa [LinearMap.domRestrict'] using h
+    · intro hT
+      ext u
+      have h : (u : V) ∈ LinearMap.ker T := hT u.2
+      simpa [LinearMap.domRestrict'] using h
+  -- restriction is surjective: extend by zero on a complement of {lit}`U`
+  have hsurj : LinearMap.range
+      (LinearMap.domRestrict' U : (V →ₗ[F] W) →ₗ[F] (U →ₗ[F] W)) = ⊤ := by
+    rw [LinearMap.range_eq_top]
+    intro S
+    obtain ⟨C, hC⟩ := U.exists_isCompl
+    refine ⟨S ∘ₗ Submodule.linearProjOfIsCompl U C hC, ?_⟩
+    ext u
+    show S (Submodule.linearProjOfIsCompl U C hC (u : V)) = S u
+    rw [Submodule.linearProjOfIsCompl_apply_left]
+  -- the fundamental theorem (3.21) plus 3.72 for both spaces
+  have hfin : finrank F (exercise_3D_10_E U (W := W)) + finrank F U * finrank F W
+      = finrank F V * finrank F W := by
+    have h := LADR.Section_3B.finrank_ker_add_finrank_range
+      (LinearMap.domRestrict' U : (V →ₗ[F] W) →ₗ[F] (U →ₗ[F] W))
+    rw [hker, hsurj, finrank_top, finrank_linearMap, finrank_linearMap] at h
+    exact h
+  rw [Nat.sub_mul]
+  exact Nat.eq_sub_of_add_eq hfin
 
 /-- 3D.11 -/
 theorem exercise_3D_11 [Finite F V] (S T : V →ₗ[F] V) :
     IsInvertible (S ∘ₗ T) ↔ IsInvertible S ∧ IsInvertible T := by
-  sorry
+  -- => if ST is invertible, it has to be injective and surjective
+  -- then T has to be injective as well, hence invertible
+  -- and S has to be surjective as well, hence invertible
+  -- <= trivial by composing the inverses
+  constructor
+  · intro hST
+    obtain ⟨hinj, hsurj⟩ := (isInvertible_iff_bijective (S ∘ₗ T)).mp hST
+    refine ⟨(isInvertible_iff_surjective rfl S).mpr fun w => ?_,
+      (isInvertible_iff_injective rfl T).mpr fun a b hab => ?_⟩
+    · obtain ⟨v, hv⟩ := hsurj w
+      exact ⟨T v, hv⟩
+    · refine hinj ?_
+      show S (T a) = S (T b)
+      rw [hab]
+  · rintro ⟨hS, hT⟩
+    obtain ⟨h, -⟩ := exercise_3D_2 T S hT hS
+    exact h
 
 /-- 3D.12 -/
 theorem exercise_3D_12 [Finite F V] (S T U : V →ₗ[F] V)
     (h : S ∘ₗ T ∘ₗ U = LinearMap.id) :
     ∃ hT : IsInvertible T, hT.inv = U ∘ₗ S := by
-  sorry
+  -- S T U = I, by one sided inverse = full in finite-dimensional case
+  -- U S T = I and T U S = I as well
+  -- but with different order of composition, those say T inv is US
+  have h1 : T ∘ₗ (U ∘ₗ S) = LinearMap.id :=
+    (mul_eq_id_iff_mul_eq_id rfl S (T ∘ₗ U)).mp h
+  have h2 : (U ∘ₗ S) ∘ₗ T = LinearMap.id :=
+    (mul_eq_id_iff_mul_eq_id rfl T (U ∘ₗ S)).mp h1
+  refine ⟨⟨U ∘ₗ S, h2, h1⟩, ?_⟩
+  -- the inverse is unique (3.60)
+  exact inv_unique T ⟨IsInvertible.inv_comp _, IsInvertible.comp_inv _⟩ ⟨h2, h1⟩
+
+/-- Forward shift on {lit}`F^∞`: {lit}`(x₁, x₂, …) ↦ (0, x₁, x₂, …)`.
+The backward shift of 3.3(e) undoes it, which is what 3D.13 needs. -/
+private def forwardShift : (ℕ → F) →ₗ[F] (ℕ → F) where
+  toFun x := fun i => match i with
+    | 0 => 0
+    | n + 1 => x n
+  map_add' x y := by funext i; cases i <;> simp
+  map_smul' a x := by funext i; cases i <;> simp
 
 /-- 3D.13 Such {lit}`S, T, U` exist only on an infinite-dimensional space, so
 the witness space {lit}`V` must be supplied as part of the existential (the
-statement would be false for a fixed finite-dimensional {lit}`V`, by 3D.12). -/
-theorem exercise_3D_13 :
-    ∃ (V : Type) (_ : AddCommGroup V) (_ : Module F V) (S T U : V →ₗ[F] V),
+statement would be false for a fixed finite-dimensional {lit}`V`, by 3D.12).
+The witness lives in the same universe as {lit}`F`: a nonzero {lit}`F`-vector
+space cannot be built in a smaller one. -/
+theorem exercise_3D_13.{u} {F : Type u} [Field F] :
+    ∃ (V : Type u) (_ : AddCommGroup V) (_ : Module F V) (S T U : V →ₗ[F] V),
       S ∘ₗ T ∘ₗ U = LinearMap.id ∧ ¬ IsInvertible T := by
-  sorry
+  -- take the vector space ℕ → ℝ
+  -- U - shift values right
+  -- T - shift values left with drop of a0
+  -- S - I
+  -- now T is not invertable, but S T U = I
+  refine ⟨ℕ → F, inferInstance, inferInstance, LinearMap.id,
+    LADR.Section_3A.backwardShift, forwardShift, ?_, ?_⟩
+  · -- dropping the first entry undoes prepending a zero
+    ext x i
+    rfl
+  · -- the backward shift kills {lit}`(1, 0, 0, …)`, so it is not injective
+    intro hT
+    have hinj := ((isInvertible_iff_bijective _).mp hT).1
+    have h0 : LADR.Section_3A.backwardShift
+        (Pi.single (0 : ℕ) (1 : F) : ℕ → F) = 0 := by
+      funext i
+      show (Pi.single (0 : ℕ) (1 : F) : ℕ → F) (i + 1) = 0
+      exact Pi.single_eq_of_ne (Nat.succ_ne_zero i) (1 : F)
+    have hsingle : (Pi.single (0 : ℕ) (1 : F) : ℕ → F) = 0 :=
+      hinj (by rw [h0, map_zero])
+    have h1 := congrFun hsingle 0
+    simp at h1
 
 /-- 3D.14 — prove or counterexample: {lit}`RST` surjective ⟹ {lit}`S`
 injective (on f.d.). -/
 def exercise_3D_14 :
     Decidable (∀ [Finite F V] (R S T : V →ₗ[F] V),
       Function.Surjective (R ∘ₗ S ∘ₗ T) → Function.Injective S) := by
-  sorry
+  apply isTrue
+  -- surjective in fin.dim L(V) implies invertable
+  -- then apply exercise 13 to get inverable S, which implies injective
+  intro _ R S T hsurj
+  have hinv : IsInvertible (R ∘ₗ S ∘ₗ T) :=
+    (isInvertible_iff_surjective rfl _).mpr hsurj
+  obtain ⟨-, hST⟩ := (exercise_3D_11 R (S ∘ₗ T)).mp hinv
+  obtain ⟨hS, -⟩ := (exercise_3D_11 S T).mp hST
+  exact ((isInvertible_iff_bijective S).mp hS).1
 
 /-- 3D.15 -/
 theorem exercise_3D_15 [Finite F V] (T : V →ₗ[F] V) {m : ℕ} (v : Fin m → V)
     (hTv : Spans F (fun k => T (v k))) : Spans F v := by
-  sorry
+  -- since T vi spans V, it has to be surjective
+  -- if we want preimage of w under T, we can take ∑ ai T vi = w
+  -- use ∑ ai vi as preimage by linearity
+  -- but now that also means T is invertable
+  -- so for every w, we can find T w = ∑ ai T vi because T vi span
+  -- and apply T⁻¹ to find w = ∑ ai vi, thus vi also span
+  have hspanT : Submodule.span F (Set.range fun k => T (v k)) = ⊤ := hTv
+  -- the image of {lit}`T` contains a spanning list, so {lit}`T` is onto
+  have hsurj : Function.Surjective T := by
+    rw [← LinearMap.range_eq_top, eq_top_iff, ← hspanT, Submodule.span_le]
+    rintro _ ⟨k, rfl⟩
+    exact ⟨v k, rfl⟩
+  -- hence invertible (3.65), in particular injective
+  have hinj : Function.Injective T :=
+    ((isInvertible_iff_bijective T).mp ((isInvertible_iff_surjective rfl T).mpr hsurj)).1
+  show Submodule.span F (Set.range v) = ⊤
+  rw [eq_top_iff]
+  intro w _
+  have hTw : T w ∈ Submodule.span F (Set.range fun k => T (v k)) := by
+    rw [hspanT]; trivial
+  obtain ⟨a, ha⟩ := (Submodule.mem_span_range_iff_exists_fun F).mp hTw
+  -- {lit}`T (∑ aᵢ vᵢ) = ∑ aᵢ T vᵢ = T w`, so {lit}`w = ∑ aᵢ vᵢ`
+  have hsum : T (∑ i, a i • v i) = T w := by
+    rw [map_sum]
+    simpa only [map_smul] using ha
+  rw [← hinj hsum]
+  exact Submodule.sum_mem _ fun i _ =>
+    Submodule.smul_mem _ _ (Submodule.subset_span ⟨i, rfl⟩)
 
 /-- 3D.16 — Every linear map {lit}`F^{n,1} → F^{m,1}` is matrix multiplication. -/
 theorem exercise_3D_16 {m n : ℕ}
     (T : Matrix (Fin n) (Fin 1) F →ₗ[F] Matrix (Fin m) (Fin 1) F) :
     ∃ A : Matrix (Fin m) (Fin n) F, ∀ x, T x = A * x := by
-  sorry
+  -- construct it by putting Aij = the i-th coeff of T e_j
+  -- the equality should follow by definition.
+  classical
+  refine ⟨Matrix.of fun i j => T (Matrix.single j 0 1) i 0, fun x => ?_⟩
+  -- write {lit}`x = ∑ⱼ xⱼ eⱼ` and push {lit}`T` through the sum
+  have hx : x = ∑ j, x j 0 • Matrix.single j 0 (1 : F) := by
+    ext i k
+    fin_cases k
+    simp [Matrix.sum_apply, Matrix.single_apply]
+  ext i k
+  fin_cases k
+  conv_lhs => rw [hx]
+  rw [map_sum]
+  simp only [map_smul, Matrix.sum_apply, Matrix.smul_apply, smul_eq_mul,
+    Matrix.mul_apply, Matrix.of_apply, mul_comm]
+  rfl
 
 /-- 3D.17 -/
 def exercise_3D_17_𝒜 (S : V →ₗ[F] V) : (V →ₗ[F] V) →ₗ[F] (V →ₗ[F] V) where
@@ -1040,54 +1628,366 @@ def exercise_3D_17_𝒜 (S : V →ₗ[F] V) : (V →ₗ[F] V) →ₗ[F] (V →�
 theorem exercise_3D_17a [Finite F V] (S : V →ₗ[F] V) :
     finrank F (LinearMap.ker (exercise_3D_17_𝒜 S)) =
       finrank F V * finrank F (LinearMap.ker S) := by
-  sorry
+  -- if T is in ker A, the range T must be in ker S.
+  -- so every such T can be restricted to a map from V to ker S.
+  -- the restriction map is injective, thus the dim of the ker A
+  -- is L(V, ker S) = dim V * dim ker S.
+  have hker : ∀ T ∈ LinearMap.ker (exercise_3D_17_𝒜 S), ∀ v, T v ∈ LinearMap.ker S := by
+    intro T hT v
+    have h := congrArg (fun f : V →ₗ[F] V => f v) (LinearMap.mem_ker.mp hT)
+    simpa [exercise_3D_17_𝒜] using h
+  -- restrict the codomain to {lit}`ker S`
+  let φ : LinearMap.ker (exercise_3D_17_𝒜 S) →ₗ[F] (V →ₗ[F] LinearMap.ker S) :=
+    { toFun := fun T => LinearMap.codRestrict _ T.1 (hker T.1 T.2)
+      map_add' := fun _ _ => by ext; rfl
+      map_smul' := fun _ _ => by ext; rfl }
+  -- injective: the restriction remembers every value {lit}`T v`
+  have hinj : Function.Injective φ := by
+    intro T₁ T₂ h
+    ext v
+    exact congrArg Subtype.val (LinearMap.congr_fun h v)
+  -- surjective: compose a map into {lit}`ker S` with the inclusion
+  have hsurj : Function.Surjective φ := by
+    intro R
+    refine ⟨⟨(LinearMap.ker S).subtype ∘ₗ R, ?_⟩, ?_⟩
+    · rw [LinearMap.mem_ker]
+      ext v
+      simp [exercise_3D_17_𝒜]
+    · ext; rfl
+  rw [(LinearEquiv.ofBijective φ ⟨hinj, hsurj⟩).finrank_eq, finrank_linearMap]
 
 /-- 3D.17 (b) -/
 theorem exercise_3D_17b [Finite F V] (S : V →ₗ[F] V) :
     finrank F (LinearMap.range (exercise_3D_17_𝒜 S)) =
       finrank F V * finrank F (LinearMap.range S) := by
-  sorry
+  -- apply rank-nullity to A first and then to S
+  have hA := LADR.Section_3B.finrank_ker_add_finrank_range (exercise_3D_17_𝒜 S)
+  have hS := LADR.Section_3B.finrank_ker_add_finrank_range S
+  rw [exercise_3D_17a, finrank_linearMap] at hA
+  -- {lit}`n·n = n·k + dim range 𝒜` and {lit}`n = k + r`, so {lit}`dim range 𝒜 = n·r`
+  have h : finrank F V * finrank F V = finrank F V * finrank F (LinearMap.ker S)
+      + finrank F V * finrank F (LinearMap.range S) := by
+    rw [← mul_add, hS]
+  omega
 
 /-- 3D.18 -/
 theorem exercise_3D_18 : Nonempty (V ≃ₗ[F] (F →ₗ[F] V)) := by
-  sorry
+  -- construct an explicit map from V tot F →ₗ[F] V
+  -- v ↦ (fun x: F, x • v)
+  -- show it is linear
+  -- a) v + w ↦ (fun x, x • (v + w)) = (fun x, x • v + x • w) = (fun x, x • v) + (fun x, x • w)
+  -- b) a • v ↦ (fun x, x • (a • v)) = (fun x, (x * a) • v) = (fun x, x • (a • v)) = a • (fun x, x • v)
+  -- show it is injective and surjective
+  -- a) if fun x, x • v = 0 for all x, then v = 0, so injective
+  -- b) for surjective, given f : F →ₗ[F] V, take v = f 1, then the map v ↦ (fun x, x • v) gives f.
+  let Φ : V →ₗ[F] (F →ₗ[F] V) :=
+    { toFun := fun v =>
+        { toFun := fun x => x • v
+          map_add' := fun x y => add_smul x y v
+          map_smul' := fun a x => by simp [mul_smul] }
+      map_add' := fun v w => by ext; simp [smul_add]
+      map_smul' := fun a v => by ext; simp [smul_smul, mul_comm] }
+  have hinj : Function.Injective Φ := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro v hv
+    -- evaluate at {lit}`x = 1`
+    simpa [Φ] using LinearMap.congr_fun hv 1
+  have hsurj : Function.Surjective Φ := by
+    intro f
+    refine ⟨f 1, ?_⟩
+    ext
+    simp [Φ, ← map_smul]
+  exact ⟨LinearEquiv.ofBijective Φ ⟨hinj, hsurj⟩⟩
 
 /-- 3D.19 -/
 theorem exercise_3D_19 [Finite F V] (T : V →ₗ[F] V) :
     (∀ {n : ℕ} (u v : Fin n → V) (hu : IsBasis F u) (hv : IsBasis F v),
       matrixOf hu hu T = matrixOf hv hv T) ↔
       ∃ γ : F, T = γ • LinearMap.id := by
-  sorry
+  -- => take a fixed basis vi for V
+  -- first for any i and j (s.t. i ≠ j), consider the new basis
+  -- vi' = vi + vj (with rest the same)
+  -- this will give a relation Mii = Mii + Mij, so Mij = 0 for i ≠ j
+  -- the matrix will be diagonal with all off-diagonal entries 0
+  -- then consider a swapped basis vi' = vj, vj' = vi (with rest the same)
+  -- this will give a relation Mii = Mjj, so all diagonal entries are equal
+  -- take M00 to be γ and arrive at T = γ • LinearMap.id
+  -- <= for any basis v, T vi = γ vi, so Mii = γ and Mij = 0 for i ≠ j.
+  classical
+  constructor
+  · intro h
+    obtain ⟨n, v, hv⟩ := LADR.Section_2B.exists_basis (F := F) (V := V)
+    have hn : n = finrank F V := LADR.Section_2C.isBasis_card_eq_finrank v hv
+    set M := matrixOf hv hv T with hM
+    set b := hv.toModuleBasis with hb
+    have hbv : ∀ k, b k = v k := IsBasis.toModuleBasis_apply hv
+    -- coordinates of {lit}`v l` and {lit}`T (v k)` in the basis {lit}`v`
+    have hrepr : ∀ l k, b.repr (v l) k = if l = k then 1 else 0 := by
+      intro l k
+      rw [← hbv, b.repr_self, Finsupp.single_apply]
+    have hcoord : ∀ l k, b.repr (T (v k)) l = M l k := fun l k =>
+      (matrixOf_apply hv hv T l k).symm
+    -- a list of length {lit}`n = dim V` whose span contains every {lit}`vₖ` is a basis
+    have hbasis : ∀ w : Fin n → V,
+        (∀ k, v k ∈ Submodule.span F (Set.range w)) → IsBasis F w := by
+      intro w hw
+      refine LADR.Section_2C.isBasis_of_spans_of_card_eq w ?_ hn
+      rw [Spans, eq_top_iff, ← hv.2, Submodule.span_le]
+      rintro _ ⟨k, rfl⟩
+      exact hw k
+    have hoff : ∀ i j, i ≠ j → M i j = 0 := by
+      intro i j hij
+      let v' := Function.update v i (v i + v j)
+      have hv'i : v' i = v i + v j := Function.update_self _ _ _
+      have hv'l : ∀ l, l ≠ i → v' l = v l := fun l hl => Function.update_of_ne hl _ _
+      have hv' : IsBasis F v' := by
+        refine hbasis v' fun k => ?_
+        by_cases hk : k = i
+        · subst hk
+          have hvk : v k = v' k - v' j := by rw [hv'i, hv'l j (Ne.symm hij)]; abel
+          rw [hvk]
+          exact Submodule.sub_mem _ (Submodule.subset_span ⟨k, rfl⟩)
+            (Submodule.subset_span ⟨j, rfl⟩)
+        · rw [← hv'l k hk]
+          exact Submodule.subset_span ⟨k, rfl⟩
+      -- {lit}`T (vᵢ + vⱼ) = ∑ₗ Mₗᵢ v'ₗ`; compare the {lit}`vᵢ`-coordinates
+      have hspec := matrixOf_spec hv' hv' T i
+      rw [← h v v' hv hv', ← hM] at hspec
+      have hc := congrArg (fun x => b.repr x i) hspec
+      simp only [hv'i, map_add, Finsupp.add_apply, hcoord, map_sum, map_smul,
+        Finsupp.coe_finset_sum, Finset.sum_apply, Finsupp.smul_apply, smul_eq_mul] at hc
+      rw [Finset.sum_eq_single i (fun l _ hl => by rw [hv'l l hl, hrepr, if_neg hl, mul_zero])
+        (by simp), hv'i, map_add, Finsupp.add_apply, hrepr, hrepr, if_pos rfl,
+        if_neg (Ne.symm hij)] at hc
+      linear_combination hc
+    have hdiag : ∀ i j, M i i = M j j := by
+      intro i j
+      let v' := v ∘ Equiv.swap i j
+      have hv' : IsBasis F v' := by
+        refine hbasis v' fun k => ?_
+        have hvk : v k = v' (Equiv.swap i j k) := by simp [v']
+        rw [hvk]
+        exact Submodule.subset_span ⟨_, rfl⟩
+      -- {lit}`T vⱼ = ∑ₗ Mₗᵢ v_{swap l}`; compare the {lit}`vⱼ`-coordinates
+      have hspec := matrixOf_spec hv' hv' T i
+      rw [← h v v' hv hv', ← hM] at hspec
+      have hc := congrArg (fun x => b.repr x j) hspec
+      simp only [v', Function.comp_apply, Equiv.swap_apply_left, hcoord, map_sum, map_smul,
+        Finsupp.coe_finset_sum, Finset.sum_apply, Finsupp.smul_apply, smul_eq_mul,
+        hrepr] at hc
+      rw [hc, Finset.sum_eq_single i]
+      · simp
+      · intro l _ hl
+        rw [if_neg, mul_zero]
+        rw [Equiv.swap_apply_eq_iff, Equiv.swap_apply_right]
+        exact hl
+      · simp
+    -- take M00 as γ; every {lit}`T vₖ = Mₖₖ vₖ = M₀₀ vₖ`
+    refine ⟨if h0 : 0 < n then M ⟨0, h0⟩ ⟨0, h0⟩ else 0, b.ext fun k => ?_⟩
+    rw [dif_pos (Fin.pos k), hbv, matrixOf_spec hv hv T k, ← hM,
+      Finset.sum_eq_single k (fun l _ hl => by rw [hoff l k hl, zero_smul]) (by simp),
+      hdiag k ⟨0, Fin.pos k⟩]
+    simp
+  · rintro ⟨γ, rfl⟩ n u v hu hv
+    have hscalar : ∀ {w : Fin n → V} (hw : IsBasis F w),
+        matrixOf hw hw (γ • LinearMap.id) = γ • (1 : Matrix (Fin n) (Fin n) F) := by
+      intro w hw
+      ext j k
+      rw [matrixOf_apply, LinearMap.smul_apply, LinearMap.id_apply,
+        ← IsBasis.toModuleBasis_apply hw, map_smul, hw.toModuleBasis.repr_self]
+      simp [Finsupp.single_apply, Matrix.one_apply, eq_comm]
+    rw [hscalar hu, hscalar hv]
 
 /-- 3D.20 -/
 theorem exercise_3D_20 (q : Polynomial ℝ) :
     ∃ p : Polynomial ℝ, ∀ x : ℝ,
       q.eval x = (x ^ 2 + x) * (p.derivative.derivative.eval x) +
         2 * x * (p.derivative.eval x) + p.eval 3 := by
-  sorry
+  -- similar to one in the chapter
+  -- first show (x^2+x)p'' + 2*x*p' + p(3) is a linear operator
+  -- more over it respects degree, so it map Pk to Pk for each k
+  -- because derivative lowers the degree by 1, but multiplication by x^2+x raises.
+  -- the operator is also injective on Pk
+  -- consider the highest degree term of p with cooeff a ≠ 0
+  -- the operator will transform a x^k to (k(k-1) + 2k) a = k(k+1) a for the highest degree term.
+  -- (assuming non-const), so if T p = 0, then the highest degree term must have coefficient 0
+  -- which is a contradiction. For constant, p(3) = C must be zero, so also zero.
+  -- since the operator is injective on Pk it is also surjective.
+  -- finally, apply it to Pk where k is deg q for the given q,
+  -- to find the desired solution using surjectivity.
+  classical
+  set c : Polynomial ℝ := Polynomial.X ^ 2 + Polynomial.X with hc
+  -- the operator {lit}`L p = (x² + x) p'' + 2x p' + p(3)` is linear
+  set L : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ :=
+    LinearMap.mulLeft ℝ c ∘ₗ Polynomial.derivative ∘ₗ Polynomial.derivative
+      + LinearMap.mulLeft ℝ (2 * Polynomial.X) ∘ₗ Polynomial.derivative
+      + (Polynomial.leval (3 : ℝ)).smulRight (1 : Polynomial ℝ) with hL_def
+  have hL : ∀ p, L p = c * p.derivative.derivative + 2 * Polynomial.X * p.derivative
+      + Polynomial.C (p.eval 3) := by
+    intro p
+    simp [hL_def, LinearMap.mulLeft_apply, Polynomial.smul_eq_C_mul, mul_assoc]
+  -- {lit}`L` does not raise the degree
+  have hdeg : ∀ p : Polynomial ℝ, (L p).natDegree ≤ p.natDegree := by
+    intro p
+    have h1 : p.derivative.natDegree ≤ p.natDegree - 1 := Polynomial.natDegree_derivative_le _
+    have h2 : p.derivative.derivative.natDegree ≤ p.derivative.natDegree - 1 :=
+      Polynomial.natDegree_derivative_le _
+    have hc2 : c.natDegree ≤ 2 := by rw [hc]; compute_degree
+    have hX2 : (2 * Polynomial.X : Polynomial ℝ).natDegree ≤ 1 := by compute_degree
+    rw [hL]
+    refine Polynomial.natDegree_add_le_of_degree_le
+      (Polynomial.natDegree_add_le_of_degree_le ?_ ?_) (by simp)
+    · -- {lit}`deg ((x² + x) p'') ≤ 2 + (deg p - 2)`, and {lit}`p'' = 0` when {lit}`deg p < 2`
+      by_cases hd : 2 ≤ p.natDegree
+      · exact le_trans Polynomial.natDegree_mul_le (by omega)
+      · rw [Polynomial.derivative_of_natDegree_zero (by omega), mul_zero,
+          Polynomial.natDegree_zero]
+        exact Nat.zero_le _
+    · by_cases hd : 1 ≤ p.natDegree
+      · exact le_trans Polynomial.natDegree_mul_le (by omega)
+      · rw [Polynomial.derivative_of_natDegree_zero (by omega), mul_zero,
+          Polynomial.natDegree_zero]
+        exact Nat.zero_le _
+  -- {lit}`L` is injective
+  have hinj : ∀ p, L p = 0 → p = 0 := by
+    intro p hp
+    by_contra hp0
+    set d := p.natDegree with hd
+    rcases Nat.eq_zero_or_pos d with hd0 | hdpos
+    · -- constant {lit}`p = a`: then {lit}`L p = p(3) = a`
+      have hpC := Polynomial.eq_C_of_natDegree_eq_zero hd0
+      rw [hL, hpC] at hp
+      simp at hp
+      exact hp0 (by rw [hpC, hp, Polynomial.C_0])
+    · -- the coefficient of {lit}`x^d` in {lit}`L p` is {lit}`d(d+1)·a`
+      have hlead : (L p).coeff d = p.coeff d * (d * (d + 1)) := by
+        have hnext : p.coeff (d + 1) = 0 :=
+          Polynomial.coeff_eq_zero_of_natDegree_lt (by omega)
+        obtain ⟨e, he⟩ : ∃ e, d = e + 1 := ⟨d - 1, by omega⟩
+        rw [he] at hnext ⊢
+        rw [hL, hc]
+        rcases e with _ | f
+        · simp [add_mul, mul_assoc, Polynomial.coeff_derivative, Polynomial.coeff_X_pow_mul',
+            Polynomial.coeff_X_mul, hnext]
+          ring
+        · simp [add_mul, mul_assoc, Polynomial.coeff_derivative, Polynomial.coeff_X_pow_mul',
+            Polynomial.coeff_X_mul, hnext]
+          ring
+      rw [hp, Polynomial.coeff_zero] at hlead
+      have ha : p.coeff d ≠ 0 := by
+        rw [hd]; exact mt Polynomial.leadingCoeff_eq_zero.mp hp0
+      have hdd : (d : ℝ) * (d + 1) ≠ 0 := by positivity
+      exact mul_ne_zero ha hdd hlead.symm
+  -- restrict {lit}`L` to {lit}`𝒫_m(ℝ)` with {lit}`m = deg q`
+  set m := q.natDegree with hm
+  have hmem : ∀ p : Polynomial ℝ,
+      p ∈ Polynomial.degreeLT ℝ (m + 1) ↔ p.natDegree ≤ m := by
+    intro p
+    rw [Polynomial.mem_degreeLT, Polynomial.degree_lt_iff_coeff_zero,
+      Polynomial.natDegree_le_iff_coeff_eq_zero]
+    exact Iff.rfl
+  have hmaps : ∀ p ∈ Polynomial.degreeLT ℝ (m + 1), L p ∈ Polynomial.degreeLT ℝ (m + 1) := by
+    intro p hp
+    rw [hmem] at hp ⊢
+    exact le_trans (hdeg p) hp
+  set T := L.restrict hmaps with hT_def
+  have hTinj : Function.Injective T := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro z hz
+    exact Subtype.ext (hinj z (congrArg Subtype.val hz))
+  -- injective on {lit}`𝒫_m(ℝ)`, hence surjective (3.65)
+  have hTsurj : Function.Surjective T := (injective_iff_surjective rfl T).mp hTinj
+  obtain ⟨z, hz⟩ := hTsurj ⟨q, (hmem q).mpr le_rfl⟩
+  have hLz : L z = q := congrArg Subtype.val hz
+  refine ⟨z, fun x => ?_⟩
+  rw [← hLz, hL, hc]
+  simp
 
 /-- 3D.21 -/
 theorem exercise_3D_21 {n : ℕ} (A : Fin n → Fin n → F) :
     (∀ x : Fin n → F, (∀ j, ∑ k, A j k * x k = 0) → x = 0) ↔
       (∀ c : Fin n → F, ∃ x : Fin n → F, ∀ j, ∑ k, A j k * x k = c j) := by
-  sorry
+  -- consider linear transformation T for vector space F^n, that has A as a matrix
+  -- for the standard ei basis
+  -- now this statements is equivalent to injectivity is equivalent to surjectivity of T.
+  let T : (Fin n → F) →ₗ[F] (Fin n → F) :=
+    { toFun := fun x j => ∑ k, A j k * x k
+      map_add' := fun x y => by ext j; simp [mul_add, Finset.sum_add_distrib]
+      map_smul' := fun a x => by ext j; simp [Finset.mul_sum, mul_left_comm] }
+  have hT : ∀ x j, T x j = ∑ k, A j k * x k := fun _ _ => rfl
+  -- the left side says {lit}`T` is injective, the right side that it is surjective
+  have hinj : (∀ x : Fin n → F, (∀ j, ∑ k, A j k * x k = 0) → x = 0) ↔
+      Function.Injective T := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    refine forall_congr' fun x => imp_congr_left ?_
+    rw [funext_iff]
+    simp only [hT, Pi.zero_apply]
+  have hsurj : (∀ c : Fin n → F, ∃ x : Fin n → F, ∀ j, ∑ k, A j k * x k = c j) ↔
+      Function.Surjective T := by
+    refine forall_congr' fun c => exists_congr fun x => ?_
+    rw [funext_iff]
+    simp only [hT]
+  rw [hinj, hsurj]
+  exact injective_iff_surjective rfl T
 
 /-- 3D.22 -/
 theorem exercise_3D_22 [Finite F V] {n : ℕ}
     {v : Fin n → V} (hv : IsBasis F v) (T : V →ₗ[F] V) :
     IsUnit (matrixOf hv hv T) ↔ IsInvertible T := by
-  sorry
+  -- => if M' is the inverse of M, it gives raise to a transformation T' s.t.
+  -- M' * M = 1, hence T' * T = id, so T' is the inverse of T (for finite basis, one side is enough)
+  -- <= if T is invertible, consider its inverse T' s.t T' * T = id
+  -- then M' is the matrix of T' with respect to the same basis, and M' * M = 1
+  -- since matrix multiplication is lin. trans. composition.
+  constructor
+  · rintro ⟨u, hu⟩
+    -- the linear map {lit}`T'` with {lit}`ℳ(T') = M⁻¹`
+    obtain ⟨T', hT'⟩ := matrixOfₗ_surjective hv hv (u⁻¹ : (Matrix (Fin n) (Fin n) F)ˣ)
+    rw [matrixOfₗ_apply] at hT'
+    have hcomp : T' ∘ₗ T = LinearMap.id := by
+      apply matrixOfₗ_injective hv hv
+      rw [matrixOfₗ_apply, matrixOfₗ_apply, matrixOf_comp hv hv hv, hT', ← hu,
+        Units.inv_mul, matrixOf_id_self]
+    exact ⟨T', hcomp, (mul_eq_id_iff_mul_eq_id rfl T' T).mp hcomp⟩
+  · rintro ⟨S, hST, hTS⟩
+    -- {lit}`ℳ(S) ℳ(T) = ℳ(ST) = ℳ(I) = 1`, and symmetrically
+    refine ⟨⟨matrixOf hv hv T, matrixOf hv hv S, ?_, ?_⟩, rfl⟩
+    · rw [← matrixOf_comp, hTS, matrixOf_id_self]
+    · rw [← matrixOf_comp, hST, matrixOf_id_self]
 
 /-- 3D.23 -/
 theorem exercise_3D_23 {n : ℕ}
     {u v : Fin n → V} (hu : IsBasis F u) (hv : IsBasis F v)
     (T : V →ₗ[F] V) (hT : ∀ k, T (v k) = u k) :
     matrixOf hv hv T = matrixOf hu hv LinearMap.id := by
-  sorry
+  -- matrix hv hv T = matrix hv hv (I T) =
+  -- matrix hu hv I * matrix hv hu T
+  -- but matrix hv hu T by definition is just I
+  -- giving the final answer.
+  have hTvu : matrixOf hv hu T = 1 := by
+    ext j k
+    rw [matrixOf_apply, hT, ← IsBasis.toModuleBasis_apply hu, hu.toModuleBasis.repr_self,
+      Finsupp.single_apply, Matrix.one_apply]
+    simp only [eq_comm]
+  rw [show T = LinearMap.id ∘ₗ T from rfl, matrixOf_comp hv hu hv, hTvu, mul_one]
 
 /-- 3D.24 — {lit}`A * B = 1 ⟹ B * A = 1` -/
 theorem exercise_3D_24 {n : ℕ} (A B : Matrix (Fin n) (Fin n) F)
     (hAB : A * B = 1) : B * A = 1 := by
-  sorry
+  -- translate to linear maps for F^n
+  -- we already proved for A,B in L(V) with V finite
+  -- that invertable just needs one-sided inverse.
+  have he := LADR.Section_2B.isBasis_stdBasis (F := F) n
+  obtain ⟨S, hS⟩ := matrixOfₗ_surjective he he A
+  obtain ⟨T, hT⟩ := matrixOfₗ_surjective he he B
+  rw [matrixOfₗ_apply] at hS hT
+  -- {lit}`ℳ(ST) = AB = 1 = ℳ(I)`, so {lit}`ST = I`
+  have hST : S ∘ₗ T = LinearMap.id := by
+    apply matrixOfₗ_injective he he
+    rw [matrixOfₗ_apply, matrixOfₗ_apply, matrixOf_comp he he he, hS, hT, hAB,
+      matrixOf_id_self]
+  -- hence {lit}`TS = I` (3.68), and {lit}`BA = ℳ(TS) = 1`
+  have hTS := (mul_eq_id_iff_mul_eq_id rfl S T).mp hST
+  rw [← hS, ← hT, ← matrixOf_comp, hTS, matrixOf_id_self]
 
 end LADR.Section_3D
