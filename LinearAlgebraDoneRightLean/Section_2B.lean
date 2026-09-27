@@ -148,8 +148,9 @@ length is 2, the same as the length of the standard basis of {lit}`F²`; this
 is no coincidence (see 2.34). -/
 
 /-- Two vectors in {lit}`F²` form a basis exactly when the determinant of the
-{lit}`2 × 2` matrix they form is nonzero; used for (b) and for the note below. -/
-private lemma isBasis_pair {a b c d : F} (h : a * d - b * c ≠ 0) :
+{lit}`2 × 2` matrix they form is nonzero; used for (b), for the note below,
+and for concrete {lit}`F²` bases in later sections. -/
+theorem isBasis_pair {a b c d : F} (h : a * d - b * c ≠ 0) :
     IsBasis F (![![a, b], ![c, d]] : Fin 2 → Fin 2 → F) := by
   constructor
   · rw [Fintype.linearIndependent_iff]
