@@ -914,13 +914,15 @@ theorem change_of_basis {n : ℕ}
 
 /-! 3.86 {lit}`ℳ(T⁻¹) = ℳ(T)⁻¹`: the matrix of the inverse is the inverse of
 the matrix (with respect to a single basis). Axler leaves the proof as an
-exercise, so we state it and leave it as {lit}`sorry`. -/
+exercise: by 3.43, {lit}`ℳ(T⁻¹) ℳ(T) = ℳ(T⁻¹ T) = ℳ(I) = 1`, so {lit}`ℳ(T⁻¹)`
+is the (unique) inverse of {lit}`ℳ(T)`. -/
 
 theorem matrixOf_inv {n : ℕ}
     {v : Fin n → V} (hv : IsBasis F v) (T : V →ₗ[F] V)
     (hT : IsInvertible T) :
     matrixOf hv hv hT.inv = (matrixOf hv hv T)⁻¹ := by
-  sorry
+  refine (Matrix.inv_eq_left_inv ?_).symm
+  rw [← matrixOf_comp, hT.inv_comp, matrixOf_id_self]
 
 /-! # Exercises -/
 
@@ -939,8 +941,8 @@ theorem exercise_3D_2 (T : U →ₗ[F] V) (S : V →ₗ[F] W)
 every basis of {lit}`V` to a basis; {lit}`T` maps some basis to a basis. -/
 theorem exercise_3D_3 [Finite F V] (T : V →ₗ[F] V) :
     [IsInvertible T,
-     ∀ {n : ℕ} (v : Fin n → V) (h : IsBasis F v), IsBasis F (fun k => T (v k)),
-     ∃ (n : ℕ) (v : Fin n → V) (h : IsBasis F v), IsBasis F (fun k => T (v k))].TFAE := by
+     ∀ {n : ℕ} (v : Fin n → V) (_ : IsBasis F v), IsBasis F (fun k => T (v k)),
+     ∃ (n : ℕ) (v : Fin n → V) (_ : IsBasis F v), IsBasis F (fun k => T (v k))].TFAE := by
   sorry
 
 /-- 3D.4 -/
@@ -1006,9 +1008,11 @@ theorem exercise_3D_12 [Finite F V] (S T U : V →ₗ[F] V)
 
 /-- 3D.13 Such {lit}`S, T, U` exist only on an infinite-dimensional space, so
 the witness space {lit}`V` must be supplied as part of the existential (the
-statement would be false for a fixed finite-dimensional {lit}`V`, by 3D.12). -/
-theorem exercise_3D_13 :
-    ∃ (V : Type) (_ : AddCommGroup V) (_ : Module F V) (S T U : V →ₗ[F] V),
+statement would be false for a fixed finite-dimensional {lit}`V`, by 3D.12).
+The witness lives in the same universe as {lit}`F`: a nonzero {lit}`F`-vector
+space cannot be built in a smaller one. -/
+theorem exercise_3D_13.{u} {F : Type u} [Field F] :
+    ∃ (V : Type u) (_ : AddCommGroup V) (_ : Module F V) (S T U : V →ₗ[F] V),
       S ∘ₗ T ∘ₗ U = LinearMap.id ∧ ¬ IsInvertible T := by
   sorry
 
