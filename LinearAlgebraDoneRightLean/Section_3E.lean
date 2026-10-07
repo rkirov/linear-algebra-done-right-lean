@@ -25,6 +25,7 @@ import LinearAlgebraDoneRightLean.Section_2B
 import LinearAlgebraDoneRightLean.Section_2C
 import LinearAlgebraDoneRightLean.Section_3A
 import LinearAlgebraDoneRightLean.Section_3B
+import LinearAlgebraDoneRightLean.Section_3D
 import CompanionHelper
 
 /-!
@@ -661,37 +662,163 @@ theorem exercise_3E_1 {V W : Type*} [AddCommGroup V] [Module F V]
     (∃ S : V →ₗ[F] W, ∀ v, S v = T v) ↔
       ∃ (U : Submodule F (V × W)),
         (U : Set (V × W)) = {p | p.2 = T p.1} := by
-  sorry
+  -- (v, Tv) + (w, Tw) = (v + w, Tv + Tw), for this to be a submodule
+  -- we need Tv + Tw = T(v + w), is the linearity condition for T
+  -- (av, T(av)) is submodule iff T(av) = aT(v), which is the other
+  -- condition for submodule.
+  -- so the two conditions match on both sides.
+  constructor
+  · rintro ⟨S, hS⟩
+    refine ⟨{ carrier := {p | p.2 = T p.1}, add_mem' := ?_, zero_mem' := ?_,
+              smul_mem' := ?_ }, rfl⟩
+    · rintro ⟨v, _⟩ ⟨w, _⟩ (rfl : _ = T v) (rfl : _ = T w)
+      show T v + T w = T (v + w)
+      rw [← hS, ← hS, ← hS, map_add]
+    · show (0 : W) = T 0
+      rw [← hS, map_zero]
+    · rintro a ⟨v, _⟩ (rfl : _ = T v)
+      show a • T v = T (a • v)
+      rw [← hS, ← hS, map_smul]
+  · rintro ⟨U, hU⟩
+    have mem : ∀ v, (v, T v) ∈ U := fun v => by
+      rw [← SetLike.mem_coe, hU]; rfl
+    refine ⟨{ toFun := T, map_add' := ?_, map_smul' := ?_ }, fun _ => rfl⟩
+    · intro v w
+      have h := U.add_mem (mem v) (mem w)
+      rw [← SetLike.mem_coe, hU] at h
+      exact h.symm
+    · intro a v
+      have h := U.smul_mem a (mem v)
+      rw [← SetLike.mem_coe, hU] at h
+      exact h.symm
 
 /-- 3E.2 -/
 theorem exercise_3E_2 {m : ℕ} (V : Fin m → Type*) [∀ i, AddCommGroup (V i)]
     [∀ i, Module F (V i)] [Finite F ((i : Fin m) → V i)] (i : Fin m) :
     Finite F (V i) := by
-  sorry
+  -- lemma (might be proven earlier) - if a VS injects into a fin.dim one
+  -- it is also fin.dim - proof goes that the basis of the injected one
+  -- is LI in the larger, but by fin.dim. the basis has to be finite.
+  -- then apply using the natural injection of Vi into the product,
+  -- sending vi to the tuple with vi in the i-th position and zeros elsewhere.
+  have finite_of_injective : ∀ {U X : Type _} [AddCommGroup U] [Module F U]
+      [AddCommGroup X] [Module F X] [Finite F X] (S : U →ₗ[F] X),
+      Function.Injective S → Finite F U := by
+    intro U X _ _ _ _ _ S hS
+    let b := Module.Free.chooseBasis F U
+    have hli : LinearIndependent F (S ∘ b) :=
+      b.linearIndependent.map' S (LinearMap.ker_eq_bot_of_injective hS)
+    have : _root_.Finite (Module.Free.ChooseBasisIndex F U) := hli.finite
+    exact Module.Finite.of_basis b
+  exact @finite_of_injective _ _ _ _ _ _ ‹_› (LinearMap.single F V i) (Pi.single_injective i)
 
 /-- 3E.3 -/
 theorem exercise_3E_3 {m : ℕ} (V : Fin m → Type*) [∀ i, AddCommGroup (V i)]
     [∀ i, Module F (V i)] (W : Type*) [AddCommGroup W] [Module F W] :
     Nonempty ((((i : Fin m) → V i) →ₗ[F] W) ≃ₗ[F]
               ((i : Fin m) → (V i →ₗ[F] W))) := by
-  sorry
+  -- take T : ((i : Fin m) → V i) →ₗ[F] W
+  -- and define maps Ti : V i →ₗ[F] W by Ti(vi) = T(..., 0, vi, 0, ...)
+  -- clearly these are linear by linearity of T, so need to show inj, and surj.
+  -- (inj) assume Ti v = 0 for all i and v, then T(..., 0, vi, 0, ...) = 0 for all i and vi
+  -- but T(v) = ∑ T(..., 0, vi, 0, ...) over the components, so T(v) = 0, showing injectivity.
+  -- (surj) given a family of linear maps Ti : V i →ₗ[F] W, define T by T(v) = ∑ Ti(vi) over the components.
+  -- This is linear and clearly maps to the given family, showing surjectivity.
+  let Φ : (((i : Fin m) → V i) →ₗ[F] W) →ₗ[F] ((i : Fin m) → (V i →ₗ[F] W)) :=
+    { toFun := fun T i => T ∘ₗ LinearMap.single F V i
+      map_add' := fun _ _ => rfl
+      map_smul' := fun _ _ => rfl }
+  refine ⟨LinearEquiv.ofBijective Φ ⟨?_, ?_⟩⟩
+  · rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro T hT
+    have hTi : ∀ i (vi : V i), T (Pi.single i vi) = 0 := fun i vi =>
+      LinearMap.congr_fun (congr_fun hT i) vi
+    apply LinearMap.ext
+    intro v
+    rw [← Finset.univ_sum_single v, map_sum]
+    simp [hTi]
+  · intro Ts
+    refine ⟨∑ i, Ts i ∘ₗ LinearMap.proj i, ?_⟩
+    funext i
+    ext vi
+    simp only [Φ, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.comp_apply,
+      LinearMap.coe_single, LinearMap.coe_sum, Finset.sum_apply, LinearMap.coe_proj,
+      Function.eval]
+    rw [Finset.sum_eq_single i (fun j _ hj => by rw [Pi.single_eq_of_ne hj, map_zero])
+      (by simp), Pi.single_eq_same]
 
 /-- 3E.4 -/
 theorem exercise_3E_4 {m : ℕ} (W : Fin m → Type*) [∀ i, AddCommGroup (W i)]
     [∀ i, Module F (W i)] (V : Type*) [AddCommGroup V] [Module F V] :
     Nonempty ((V →ₗ[F] ((i : Fin m) → W i)) ≃ₗ[F]
               ((i : Fin m) → (V →ₗ[F] W i))) := by
-  sorry
+  -- map T : V →ₗ[F] ((i : Fin m) → W i)
+  -- to the family of linear maps Ti : V →ₗ[F] W i by Ti(v) = T(v)_i
+  -- clearly these are linear by linearity of T, so need to show inj, and surj.
+  -- (inj) assume Ti = 0 for all i, then T(v)_i = 0 for all i, so T(v) = 0
+  -- (surj) given a family of linear maps Ti : V →ₗ[F] W i, define T by T(v)_i = Ti(v)
+  -- This is linear and clearly maps to the given family, showing surjectivity.
+  let Φ : (V →ₗ[F] ((i : Fin m) → W i)) →ₗ[F] ((i : Fin m) → (V →ₗ[F] W i)) :=
+    { toFun := fun T i => LinearMap.proj i ∘ₗ T
+      map_add' := fun _ _ => rfl
+      map_smul' := fun _ _ => rfl }
+  refine ⟨LinearEquiv.ofBijective Φ ⟨?_, ?_⟩⟩
+  · rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro T hT
+    apply LinearMap.ext
+    intro v
+    funext i
+    exact LinearMap.congr_fun (congr_fun hT i) v
+  · intro Ts
+    exact ⟨LinearMap.pi Ts, rfl⟩
+
+/-- Helper for 3E.5: isomorphisms {lit}`Uᵢ ≅ Xᵢ` of the factors give an
+isomorphism {lit}`U₁ × ⋯ × Uₘ ≅ X₁ × ⋯ × Xₘ` of the products, acting
+componentwise. -/
+def piCongr {m : ℕ} {U X : Fin m → Type*} [∀ i, AddCommGroup (U i)]
+    [∀ i, Module F (U i)] [∀ i, AddCommGroup (X i)] [∀ i, Module F (X i)]
+    (e : ∀ i, U i ≃ₗ[F] X i) : ((i : Fin m) → U i) ≃ₗ[F] ((i : Fin m) → X i) where
+  toFun u i := e i (u i)
+  invFun x i := (e i).symm (x i)
+  map_add' u w := by funext i; simp
+  map_smul' a u := by funext i; simp
+  left_inv u := by funext i; simp
+  right_inv x := by funext i; simp
 
 /-- 3E.5 -/
 theorem exercise_3E_5 (m : ℕ) :
     Nonempty ((Fin m → V) ≃ₗ[F] ((Fin m → F) →ₗ[F] V)) := by
-  sorry
+  -- map v : Fin m → V to the linear map T_v : (Fin m → F) →ₗ[F] V
+  -- defined on ei by T_v(ei) = v_i, extend linearly to a map on F^n
+  -- show the map is linear
+  -- (inj) if T_v = 0 then v_i = T_v(ei) = 0 for all i, so v = 0
+  -- (surj) given T, take v_i = T(ei); then T_v and T agree on the basis ei,
+  -- so T_v = T.
+  -- (alternative proof) - use ex3 and L(F, V) iso to V (proven earlier)
+  -- need a lemma that isos of products make an iso
+  obtain ⟨e3⟩ := exercise_3E_3 (F := F) (fun _ : Fin m => F) V
+  exact ⟨(piCongr fun _ => (LADR.Section_3D.exercise_3D_18 (F := F) (V := V)).some).trans
+    e3.symm⟩
 
 /-- 3E.6 -/
 theorem exercise_3E_6 (v x : V) (U W : Submodule F V)
     (h : translate v U = translate x W) : U = W := by
-  sorry
+  -- take u ∈ U, then exists w ∈ W s.t. v + u = x + w
+  -- also exists w' ∈ W s.t. v + 0 = x + w' (because 0 in U)
+  -- subtract the two eq. get u = w - w' ∈ W, so U ⊆ W.
+  -- by symmetry, W ⊆ U, so U = W.
+  have key : ∀ (v x : V) (U W : Submodule F V),
+      translate v (U : Set V) = translate x W → U ≤ W := by
+    intro v x U W h u hu
+    obtain ⟨w, hw, hw_eq⟩ : v + u ∈ translate x (W : Set V) := h ▸ ⟨u, hu, rfl⟩
+    obtain ⟨w', hw', hw'_eq⟩ : v + 0 ∈ translate x (W : Set V) := h ▸ ⟨0, U.zero_mem, rfl⟩
+    have : u = w - w' :=
+      calc u = (v + u) - (v + 0) := by abel
+        _ = (x + w) - (x + w') := by rw [hw_eq, hw'_eq]
+        _ = w - w' := by abel
+    rw [this]
+    exact W.sub_mem hw hw'
+  exact le_antisymm (key v x U W h) (key x v W U h.symm)
 
 /-- 3E.7 -/
 def exercise_3E_7_U : Submodule ℝ (Fin 3 → ℝ) where
@@ -712,24 +839,148 @@ def exercise_3E_7_U : Submodule ℝ (Fin 3 → ℝ) where
 theorem exercise_3E_7 (A : Set (Fin 3 → ℝ)) :
     IsTranslate exercise_3E_7_U A ↔
       ∃ c : ℝ, A = {v : Fin 3 → ℝ | 2 * v 0 + 3 * v 1 + 5 * v 2 = c} := by
-  sorry
+  -- translate means exists v s.t. A = v + U for the given U
+  -- x ∈ A ↔ x - v ∈ U ↔ 2 * (x - v) 0 + 3 * (x - v) 1 + 5 * (x - v) 2 = 0
+  -- ↔ 2 * x 0 + 3 * x 1 + 5 * x 2 = 2 * v 0 + 3 * v 1 + 5 * v 2
+  -- so c = 2 * v 0 + 3 * v 1 + 5 * v 2
+  have key : ∀ v : Fin 3 → ℝ, translate v (exercise_3E_7_U : Set (Fin 3 → ℝ)) =
+      {x | 2 * x 0 + 3 * x 1 + 5 * x 2 = 2 * v 0 + 3 * v 1 + 5 * v 2} := by
+    intro v
+    ext x
+    constructor
+    · rintro ⟨u, hu, rfl⟩
+      have hu' : 2 * u 0 + 3 * u 1 + 5 * u 2 = 0 := hu
+      show 2 * (v + u) 0 + 3 * (v + u) 1 + 5 * (v + u) 2 = _
+      simp only [Pi.add_apply]; linarith
+    · intro hx
+      have hx' : 2 * x 0 + 3 * x 1 + 5 * x 2 = 2 * v 0 + 3 * v 1 + 5 * v 2 := hx
+      refine ⟨x - v, ?_, by abel⟩
+      show 2 * (x - v) 0 + 3 * (x - v) 1 + 5 * (x - v) 2 = 0
+      simp only [Pi.sub_apply]; linarith
+  constructor
+  · rintro ⟨v, rfl⟩
+    exact ⟨_, key v⟩
+  · rintro ⟨c, rfl⟩
+    -- any v on the plane works, e.g. v = (c/2, 0, 0)
+    refine ⟨![c / 2, 0, 0], ?_⟩
+    rw [key]
+    simp [mul_div_cancel₀ c two_ne_zero]
 
 /-- 3E.8 (a) -/
 theorem exercise_3E_8a (T : V →ₗ[F] W) (c : W) :
     {x : V | T x = c} = ∅ ∨ IsTranslate (LinearMap.ker T) {x : V | T x = c} := by
-  sorry
+  -- assume non-empty, so v in {x : V | T x = c} for some v
+  -- then iff v' in {x : V | T x = c}, by linearity Tv' - Tv = c - c = 0,
+  -- so v' ∈ v + ker T
+  -- for the other direction, if v' ∈ v + ker T, then v' = v + u for some u ∈ ker T, so T v' = T v + T u = c + 0 = c, hence v' ∈ {x : V | T x = c}
+  -- so {x : V | T x = c} = v + ker T.
+  -- part b) is just the observation that each system of equations is
+  -- a linear map from F^n to F^m, so above applies.
+  rcases Set.eq_empty_or_nonempty {x : V | T x = c} with h | ⟨v, hv⟩
+  · exact Or.inl h
+  right
+  refine ⟨v, ?_⟩
+  ext v'
+  constructor
+  · intro hv'
+    refine ⟨v' - v, ?_, by abel⟩
+    show T (v' - v) = 0
+    rw [map_sub, hv', hv, sub_self]
+  · rintro ⟨u, hu, rfl⟩
+    show T (v + u) = c
+    rw [map_add, hv, LinearMap.mem_ker.mp hu, add_zero]
 
-/-- 3E.9 -/
-theorem exercise_3E_9 (A : Set V) (hA : A.Nonempty) :
+/-- 3E.9. The book's {lit}`F` is {lit}`ℝ` or {lit}`ℂ`; the {lit}`⇐` direction
+uses {lit}`γ = 1/2`, so we assume {lit}`[CharZero F]`. (Over {lit}`𝔽₂` the only
+scalars are {lit}`0, 1`, so every nonempty set satisfies the condition.) -/
+theorem exercise_3E_9 [CharZero F] (A : Set V) (hA : A.Nonempty) :
     (∃ U : Submodule F V, IsTranslate U A) ↔
       ∀ v ∈ A, ∀ w ∈ A, ∀ γ : F, γ • v + (1 - γ) • w ∈ A := by
-  sorry
+  -- => v = a + x, w = a + y, for x, y in U a subspace
+  -- γv + (1-γ)w = γ(a + x) + (1-γ)(a + y) = a + (γx + (1-γ)y)
+  -- the second part is in U, by subspace rules, so we have γv + (1-γ)w ∈ A.
+  -- <= pick v in A (as it is non-empty)
+  -- we will show that A - v is a subspace (so A is a translate).
+  -- assume w in A - v so w = w' - v for w' in A, will show a w is in A - v too for any a.
+  -- suffices to show a w + v ∈ A
+  -- a w + v = a w' - a v + v = a w' + (1 - a) v in A since w' and v are in A
+  -- thus a w + v ∈ A, so a w ∈ A - v, showing closure under scalar multiplication.
+  -- then if w₁ and w₂ in A - v, say w₁ = w₁' - v and w₂ = w₂' - v for w₁', w₂' in A
+  -- w₁ + w₂ = (w₁' - v) + (w₂' - v) = (w₁' + w₂' - v) - v, so
+  -- need to show w₁' + w₂' - v ∈ A, when w₁', w₂' ∈ A and v ∈ A
+  -- we know 2w₁ - v in A, 2w₂ - v in A, using γ = 2
+  -- then apply γ = 1/2 to those two
+  -- then (1/2)(2w₁ - v) + (1/2)(2w₂ - v) = w₁ + w₂ - v ∈ A, as desired.
+  constructor
+  · rintro ⟨U, a, rfl⟩ v ⟨x, hx, rfl⟩ w ⟨y, hy, rfl⟩ γ
+    refine ⟨γ • x + (1 - γ) • y, U.add_mem (U.smul_mem γ hx) (U.smul_mem _ hy), ?_⟩
+    rw [smul_add, smul_add, add_add_add_comm, ← add_smul, add_sub_cancel, one_smul]
+  · intro hconv
+    obtain ⟨v, hv⟩ := hA
+    -- {lit}`U = A - v`, i.e. {lit}`w ∈ U ↔ w + v ∈ A`
+    have smul_mem : ∀ a : F, ∀ w, w + v ∈ A → a • w + v ∈ A := by
+      intro a w hw
+      have := hconv _ hw v hv a
+      convert this using 1
+      rw [smul_add, sub_smul, one_smul]; abel
+    let U : Submodule F V :=
+      { carrier := {w | w + v ∈ A}
+        zero_mem' := by simpa using hv
+        smul_mem' := fun a w hw => smul_mem a w hw
+        add_mem' := by
+          intro w₁ w₂ hw₁ hw₂
+          -- 2w₁' - v and 2w₂' - v are in A (γ = 2), then average them (γ = 1/2)
+          have h₁ := smul_mem 2 w₁ hw₁
+          have h₂ := smul_mem 2 w₂ hw₂
+          have := hconv _ h₁ _ h₂ (1 / 2)
+          show w₁ + w₂ + v ∈ A
+          convert this using 1
+          have h2 : (2 : F) ≠ 0 := two_ne_zero
+          rw [smul_add, smul_add, smul_smul, smul_smul]
+          have e : (1 - 1 / 2 : F) = 1 / 2 := by field_simp; norm_num
+          rw [e, one_div, inv_mul_cancel₀ h2, one_smul, one_smul]
+          rw [show w₁ + (2 : F)⁻¹ • v + (w₂ + (2 : F)⁻¹ • v)
+              = w₁ + w₂ + (2 * (2 : F)⁻¹) • v by rw [two_mul, add_smul]; abel,
+            mul_inv_cancel₀ h2, one_smul] }
+    refine ⟨U, v, ?_⟩
+    ext x
+    constructor
+    · intro hx
+      exact ⟨x - v, show x - v + v ∈ A by simpa using hx, by abel⟩
+    · rintro ⟨u, hu, rfl⟩
+      have hu : u + v ∈ A := hu
+      rwa [add_comm]
 
-/-- 3E.10 -/
+/-- 3E.10. -/
 theorem exercise_3E_10 (A₁ A₂ : Set V) (U₁ U₂ : Submodule F V)
     (v w : V) (hA₁ : A₁ = translate v U₁) (hA₂ : A₂ = translate w U₂) :
     A₁ ∩ A₂ = ∅ ∨ ∃ U : Submodule F V, IsTranslate U (A₁ ∩ A₂) := by
-  sorry
+  -- assume x in A₁ ∩ A₂
+  -- (x - v) ∈ U₁ and (x - w) ∈ U₂
+  -- by 3.101, then A₁ = x + U₁ and A₂ = x + U₂
+  -- so A₁ ∩ A₂ = x + (U₁ ∩ U₂), which is a translate of the submodule U₁ ∩ U₂
+  rcases Set.eq_empty_or_nonempty (A₁ ∩ A₂) with h | ⟨x, hx₁, hx₂⟩
+  · exact Or.inl h
+  right
+  rw [hA₁] at hx₁
+  rw [hA₂] at hx₂
+  obtain ⟨u₁, hu₁, rfl⟩ := hx₁
+  obtain ⟨u₂, hu₂, hx⟩ := hx₂
+  have hxv : (v + u₁) - v ∈ U₁ := by rwa [add_sub_cancel_left]
+  have hxw : (v + u₁) - w ∈ U₂ := by rw [← hx, add_sub_cancel_left]; exact hu₂
+  have e₁ : translate (v + u₁) (U₁ : Set V) = translate v U₁ :=
+    ((translate_tfae U₁ _ v).out 0 1).mp hxv
+  have e₂ : translate (v + u₁) (U₂ : Set V) = translate w U₂ :=
+    ((translate_tfae U₂ _ w).out 0 1).mp hxw
+  refine ⟨U₁ ⊓ U₂, v + u₁, ?_⟩
+  rw [hA₁, hA₂, ← e₁, ← e₂]
+  ext y
+  constructor
+  · rintro ⟨⟨a, ha, rfl⟩, ⟨b, hb, hab⟩⟩
+    obtain rfl : b = a := add_left_cancel hab
+    exact ⟨b, ⟨ha, hb⟩, rfl⟩
+  · rintro ⟨a, ⟨ha₁, ha₂⟩, rfl⟩
+    exact ⟨⟨a, ha₁, rfl⟩, ⟨a, ha₂, rfl⟩⟩
 
 /-- 3E.11 (a) -/
 def exercise_3E_11_U : Submodule F (ℕ → F) where
@@ -738,81 +989,431 @@ def exercise_3E_11_U : Submodule F (ℕ → F) where
   -- only finitely many nonzero entries. The `filter_upward` tactic is useful for
   -- working with this condition.
   carrier := {x | ∀ᶠ k in Filter.atTop, x k = 0}
-  zero_mem' := by sorry
-  add_mem' := by sorry
-  smul_mem' := by sorry
+  zero_mem' := by simp only [Filter.eventually_atTop, ge_iff_le, Set.mem_setOf_eq, Pi.zero_apply,
+    implies_true, exists_const]
+  add_mem' := by
+    intro x y hx hy
+    simp at hx hy ⊢
+    obtain ⟨M, hM⟩ := hx
+    obtain ⟨N, hN⟩ := hy
+    use max M N
+    intro b hb
+    have h1 := le_max_left M N
+    have h2 := le_max_right M N
+    specialize hM b (h1.trans hb)
+    specialize hN b (h2.trans hb)
+    rw [hM, hN]
+    simp only [add_zero]
+  smul_mem' := by
+    intro c x hx
+    simp at hx ⊢
+    obtain ⟨M, hM⟩ := hx
+    use M
+    intro b hb
+    specialize hM b hb
+    rw [hM]
+    right
+    rfl
 
 /-- 3E.11 (b) -/
 theorem exercise_3E_11b : ¬ Finite F ((ℕ → F) ⧸ exercise_3E_11_U (F := F)) := by
-  sorry
+  -- will show there is an infinite LI set in the quotient (thus there can't be finite basis)
+  -- consider the sequences xi j = 1 if j % (prime i) == 0 else 0
+  -- we will show that in the quotient, these sequences are LI.
+  -- assume there is some subset S s.t. ∑_{i ∈ S} ai xi = 0 in the quotient.
+  -- then means as sequences
+  -- ∑_{i ∈ S} ai xi = u for some u ∈ U
+  -- for each i in S, pick an index (prime i)^k for some k s.t. the index is
+  -- larger than the biggest non-zero index of u.
+  -- at that index the RHS is 0, and LHS is ai * 1 = ai, so that ai must be 0.
+  -- repeat to get all ai = 0, showing the set of xi is linearly independent in the quotient.
+  -- since xi is infinite LI in the quotient, it cannot have a finite basis.
+  intro hfin
+  let x : {p : ℕ // p.Prime} → (ℕ → F) := fun p j => if (p : ℕ) ∣ j then 1 else 0
+  have : Infinite {p : ℕ // p.Prime} := Nat.infinite_setOf_prime.to_subtype
+  apply Module.Finite.not_linearIndependent_of_infinite (R := F)
+    (fun p => Submodule.Quotient.mk (p := exercise_3E_11_U (F := F)) (x p))
+  rw [linearIndependent_iff']
+  intro S a hsum i hi
+  -- ∑_{i ∈ S} ai xi = u for some u ∈ U
+  have hU : ∑ p ∈ S, a p • x p ∈ exercise_3E_11_U (F := F) := by
+    have h : (exercise_3E_11_U (F := F)).mkQ (∑ p ∈ S, a p • x p) = 0 := by
+      rw [map_sum]
+      simpa using hsum
+    rwa [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at h
+  obtain ⟨N, hN⟩ := Filter.eventually_atTop.mp hU
+  -- the index (prime i)^(N+1) lies past N, where u is zero
+  have hlt : N + 1 < (i : ℕ) ^ (N + 1) := Nat.lt_pow_self i.2.one_lt
+  have h := hN ((i : ℕ) ^ (N + 1)) (by omega)
+  rw [Finset.sum_apply, Finset.sum_eq_single i] at h
+  · -- LHS is ai * 1 = ai
+    simpa [x, dvd_pow_self _ (Nat.succ_ne_zero N)] using h
+  · -- a different prime doesn't divide (prime i)^(N+1)
+    intro j _ hji
+    have hndvd : ¬ (j : ℕ) ∣ (i : ℕ) ^ (N + 1) := fun hdvd =>
+      hji (Subtype.ext ((Nat.prime_dvd_prime_iff_eq j.2 i.2).mp (j.2.dvd_of_dvd_pow hdvd)))
+    simp [x, hndvd]
+  · exact fun h => absurd hi h
 
 /-- The set {lit}`A` of affine combinations of {lit}`v₁, …, vₘ`, namely
 {lit}`{λ₁v₁ + ⋯ + λₘvₘ : λ₁ + ⋯ + λₘ = 1}` (shared by the parts of 3E.12). -/
 def affineCombSet {m : ℕ} (v : Fin m → V) : Set V :=
   {x : V | ∃ γ : Fin m → F, (∑ i, γ i) = 1 ∧ x = ∑ i, γ i • v i}
 
+/-- The construction behind 3E.12 (a): with {lit}`γₘ = 1 - ∑_{i < m} γᵢ`, the set
+{lit}`A - vₘ` is the range of {lit}`γ ↦ ∑_{i < m} γᵢ (vᵢ - vₘ)` on {lit}`F^(m-1)`. -/
+theorem affineCombSet_eq_translate {n : ℕ} (v : Fin (n + 1) → V) :
+    affineCombSet (F := F) v = translate (v (Fin.last n))
+      (LinearMap.range (Fintype.linearCombination F
+        (fun i : Fin n => v i.castSucc - v (Fin.last n)))) := by
+  ext x
+  simp only [affineCombSet, translate, Set.mem_setOf_eq, SetLike.mem_coe, LinearMap.mem_range,
+    Fintype.linearCombination_apply]
+  constructor
+  · rintro ⟨γ, hγ, rfl⟩
+    rw [Fin.sum_univ_castSucc] at hγ
+    -- γm = 1 - ∑_{i < m} γi
+    have hlast : γ (Fin.last n) = 1 - ∑ i : Fin n, γ i.castSucc := by
+      rw [← hγ]; ring
+    refine ⟨_, ⟨fun i => γ i.castSucc, rfl⟩, ?_⟩
+    rw [Fin.sum_univ_castSucc, hlast]
+    simp only [smul_sub, Finset.sum_sub_distrib, ← Finset.sum_smul, sub_smul, one_smul]
+    abel
+  · rintro ⟨_, ⟨γ, rfl⟩, rfl⟩
+    refine ⟨Fin.snoc γ (1 - ∑ i, γ i), ?_, ?_⟩
+    · simp [Fin.sum_univ_castSucc]
+    · simp only [Fin.sum_univ_castSucc, Fin.snoc_castSucc, Fin.snoc_last, smul_sub,
+        Finset.sum_sub_distrib, ← Finset.sum_smul, sub_smul, one_smul]
+      abel
+
 /-- 3E.12 (a) The affine combinations {lit}`{∑ λᵢ vᵢ : ∑ λᵢ = 1}` form a
 translate of a subspace. -/
-theorem exercise_3E_12a {m : ℕ} (v : Fin m → V) :
+theorem exercise_3E_12a {m : ℕ} (hm : 0 < m) (v : Fin m → V) :
     (∃ U : Submodule F V, IsTranslate U (affineCombSet (F := F) v)) := by
-  sorry
+  -- plug in γm = 1 - ∑_{i < m-1} γi to express the last coefficient in terms of the others.
+  -- now consider A - ∨m, we can show it is the range of a linear map
+  -- from F^(m-1) to V, whose range is exactly A - vₘ.
+  -- thus A is a translate of a subspace.
+  obtain ⟨n, rfl⟩ : ∃ n, m = n + 1 := ⟨m - 1, by omega⟩
+  exact ⟨_, _, affineCombSet_eq_translate v⟩
 
 /-- 3E.12 (b) That translate {lit}`A` is the smallest such: any translate
 {lit}`B` of a subspace containing all the {lit}`vᵢ` contains {lit}`A`. -/
 theorem exercise_3E_12b {m : ℕ} (v : Fin m → V) (B : Set V)
     (hB : ∃ W : Submodule F V, IsTranslate W B) (hvB : ∀ i, v i ∈ B) :
     affineCombSet (F := F) v ⊆ B := by
-  sorry
+  -- say B = U + t for some submodule U and translation t.
+  -- then vi - t ∈ U for all i
+  -- say γi s.t. ∑ γi = 1, then ∑ γi (vi - t) ∈ U too
+  -- so ∑ γi vi - t ∈ U, and hence ∑ γi vi ∈ B, so any member of A is in B.
+  -- so A ⊆ B.
+  obtain ⟨U, t, rfl⟩ := hB
+  -- then vi - t ∈ U for all i
+  have hv : ∀ i, v i - t ∈ U := fun i => by
+    obtain ⟨u, hu, hui⟩ := hvB i
+    rw [← hui, add_sub_cancel_left]
+    exact hu
+  rintro _ ⟨γ, hγ, rfl⟩
+  -- ∑ γi (vi - t) ∈ U, and t + ∑ γi (vi - t) = ∑ γi vi
+  refine ⟨∑ i, γ i • (v i - t), U.sum_mem fun i _ => U.smul_mem _ (hv i), ?_⟩
+  simp only [smul_sub, Finset.sum_sub_distrib, ← Finset.sum_smul, hγ, one_smul]
+  abel
 
 /-- 3E.12 (c) {lit}`A` is a translate of a subspace of dimension less than
 {lit}`m`. -/
 theorem exercise_3E_12c {m : ℕ} (hm : 0 < m) (v : Fin m → V) :
     (∃ U : Submodule F V, IsTranslate U (affineCombSet (F := F) v) ∧ finrank F U < m) := by
-  sorry
+  -- we already showed in part (a) that A is a translate of a subspace of dimension at most m - 1.
+  obtain ⟨n, rfl⟩ : ∃ n, m = n + 1 := ⟨m - 1, by omega⟩
+  refine ⟨_, ⟨_, affineCombSet_eq_translate v⟩, ?_⟩
+  calc finrank F (LinearMap.range _) ≤ finrank F (Fin n → F) := LinearMap.finrank_range_le _
+    _ = n := Module.finrank_fin_fun F
+    _ < n + 1 := Nat.lt_succ_self n
 
 /-- 3E.13 -/
 theorem exercise_3E_13 (U : Submodule F V) [Finite F (V ⧸ U)] :
     Nonempty (V ≃ₗ[F] U × (V ⧸ U)) := by
-  sorry
+  -- we will construct an explicit map as follows
+  -- fix a basis for V/U and fix representatives vi ∈ V , vi + U is basis.
+  -- define f: V -> U, to be ai(v) is the coefficient for vi + U for v + U
+  -- f(v) = v - ∑ ai(v) vi
+  -- since v + U = ∑ ai (vi + U), f(v) is in U
+  -- F : V → U × (V ⧸ U) given by v ↦ (f(v), v + U)
+  -- we need to show that this map is linear first
+  -- the second component is just the quotient map which is linear
+  -- the first one follows after showing ai are linear maps to F
+  -- but they are compositions of the quotient map + coordinate projections (previously shown?), hence linear composition.
+  -- finally we need to show
+  -- (inj) assume F(v) = 0, so ∨ in U by second component being zero
+  -- but then ai(v) = 0 for all i (unique representation in the basis), so v = 0 too.
+  -- (surj) take (u, v + U) for some u ∈ U and v + U in V/U
+  -- take a representative v ∈ V for v + U
+  -- F(v - f(v) + u) = (f(v - f(v) + u), v - f(v) + u + U) =
+  -- =(f(v) - f(v) + u, v + U) = (u, v + U) because f(v) and u ∈ U, and f(u) = u
+  -- and v + (-f(v)) + u + U = v + U
+  let b := Module.finBasis F (V ⧸ U)
+  choose w hw using fun i => Submodule.Quotient.mk_surjective U (b i)
+  -- g(v) = ∑ ai(v) vi, where ai = (coordinate i) ∘ (quotient map) is linear
+  let g : V →ₗ[F] V := ∑ i, (b.coord i ∘ₗ U.mkQ).smulRight (w i)
+  have hg : ∀ v, g v = ∑ i, b.coord i (U.mkQ v) • w i := fun v => by simp [g]
+  -- since v + U = ∑ ai (vi + U), f(v) = v - g(v) is in U
+  have hmem : ∀ v, v - g v ∈ U := fun v => by
+    rw [← Submodule.Quotient.eq]
+    have : U.mkQ (g v) = U.mkQ v := by
+      simp only [hg, map_sum, map_smul, Submodule.mkQ_apply, hw, Module.Basis.coord_apply,
+        Module.Basis.sum_repr]
+    exact this.symm
+  let f : V →ₗ[F] U := (LinearMap.id - g).codRestrict U hmem
+  have hf : ∀ v, (f v : V) = v - g v := fun v => rfl
+  -- f(u) = u for u ∈ U: u + U = 0, so all ai(u) = 0
+  have hfU : ∀ u ∈ U, (f u : V) = u := fun u hu => by
+    have : U.mkQ u = 0 := (Submodule.Quotient.mk_eq_zero U).mpr hu
+    simp [hf, hg, this]
+  let T : V →ₗ[F] U × (V ⧸ U) := f.prod U.mkQ
+  refine ⟨LinearEquiv.ofBijective T ⟨?_, ?_⟩⟩
+  · -- (inj)
+    rw [injective_iff_map_eq_zero]
+    intro v hv
+    have h1 : f v = 0 := congrArg Prod.fst hv
+    have h2 : U.mkQ v = 0 := congrArg Prod.snd hv
+    have hvU : v ∈ U := (Submodule.Quotient.mk_eq_zero U).mp h2
+    -- f(v) = v since v ∈ U, and f(v) = 0
+    rw [← hfU v hvU, h1, Submodule.coe_zero]
+  · -- (surj)
+    rintro ⟨u, q⟩
+    obtain ⟨v, rfl⟩ := Submodule.Quotient.mk_surjective U q
+    refine ⟨v - f v + u, Prod.ext (Subtype.ext ?_) ?_⟩
+    · change (f (v - f v + u) : V) = u
+      rw [map_add, map_sub, Submodule.coe_add, Submodule.coe_sub, hfU _ (f v).2, hfU _ u.2]
+      abel
+    · change U.mkQ (v - f v + u) = Submodule.Quotient.mk v
+      rw [Submodule.mkQ_apply, Submodule.Quotient.eq]
+      have : v - (f v : V) + u - v = u - f v := by abel
+      rw [this]
+      exact U.sub_mem u.2 (f v).2
 
 /-- 3E.14 -/
 theorem exercise_3E_14 (U W : Submodule F V) (hUW : IsCompl U W) {m : ℕ}
     (w : Fin m → W) (hw : IsBasis F w) :
     IsBasis F (fun i => (U.mkQ (w i : V) : V ⧸ U)) := by
-  sorry
+  -- by definition every v can be written as v = u + ∑ ai wi, for
+  -- unique choice of ai and u.
+  -- take random element v + U from V / U
+  -- using a representative v, it can be writen as u + ∑ ai wi
+  -- thus wi + U span V / U
+  -- for LI, suppose ∑ ai (wi + U) = 0
+  -- then ∑ ai wi + (- u) = 0 for some u ∈ U, but
+  -- by uniquess, the solution can only be ai = 0 for all i (and u = 0)
+  -- this LI
+  set b := hw.toModuleBasis
+  refine ⟨?_, ?_⟩
+  · -- (LI) suppose ∑ ai (wi + U) = 0
+    rw [Fintype.linearIndependent_iff]
+    intro a ha
+    -- then x = ∑ ai wi ∈ U, and also x ∈ W
+    set x : V := ∑ i, a i • (w i : V)
+    have hxU : x ∈ U := by
+      rw [← Submodule.Quotient.mk_eq_zero, ← Submodule.mkQ_apply]
+      simpa [x, map_sum] using ha
+    have hxW : x ∈ W := W.sum_mem fun i _ => W.smul_mem _ (w i).2
+    -- by uniqueness (U ∩ W = 0), x = 0, so ∑ ai wi = 0 in W
+    have hx : x = 0 := (Submodule.disjoint_def.mp hUW.disjoint) x hxU hxW
+    have hsum : ∑ i, a i • w i = 0 := Subtype.ext (by simpa [x] using hx)
+    exact Fintype.linearIndependent_iff.mp hw.1 a hsum
+  · -- (spans) take v + U, write the representative as v = u + w' with u ∈ U, w' ∈ W
+    rw [Spans, eq_top_iff]
+    rintro q -
+    obtain ⟨v, rfl⟩ := Submodule.Quotient.mk_surjective U q
+    have hv : v ∈ U ⊔ W := hUW.sup_eq_top ▸ Submodule.mem_top
+    obtain ⟨u, hu, w', hw', rfl⟩ := Submodule.mem_sup.mp hv
+    -- w' = ∑ ai wi
+    have hw'sum : w' = ∑ i, b.repr ⟨w', hw'⟩ i • (w i : V) := by
+      have := congrArg Subtype.val (b.sum_repr ⟨w', hw'⟩)
+      simpa [b] using this.symm
+    -- so u + w' + U = ∑ ai (wi + U)
+    have : Submodule.Quotient.mk (p := U) (u + w') =
+        ∑ i, b.repr ⟨w', hw'⟩ i • U.mkQ (w i : V) := by
+      rw [Submodule.Quotient.mk_add, (Submodule.Quotient.mk_eq_zero U).mpr hu, zero_add]
+      calc Submodule.Quotient.mk w'
+          = U.mkQ (∑ i, b.repr ⟨w', hw'⟩ i • (w i : V)) := by
+            rw [Submodule.mkQ_apply, ← hw'sum]
+        _ = _ := by simp only [map_sum, map_smul]
+    rw [this]
+    exact Submodule.sum_mem _ fun i _ => Submodule.smul_mem _ _ (Submodule.subset_span ⟨i, rfl⟩)
 
 /-- 3E.15 -/
 theorem exercise_3E_15 (U : Submodule F V) {m n : ℕ}
     (v : Fin m → V) (hv : IsBasis F (fun i => (U.mkQ (v i) : V ⧸ U)))
     (u : Fin n → U) (hu : IsBasis F u) :
     IsBasis F (Fin.append v (fun i => (u i : V))) := by
-  sorry
+  -- by ex. 13 everything is finite dim and dim match, so enough to
+  -- show only spanning, since linear independence will follow from the dimension count
+  -- take v ∈ V, exists ∑ ai (v i + U) = v + U
+  -- this means v = u + ∑ ai (v i) for some u ∈ U
+  -- now u = ∑ bi ui, so ui and vi together span v
+  set bv := hv.toModuleBasis
+  set bu := hu.toModuleBasis
+  -- by ex. 13 everything is finite dim and dim match
+  haveI : Finite F (V ⧸ U) := Module.Finite.of_basis bv
+  haveI : Finite F U := Module.Finite.of_basis bu
+  obtain ⟨e⟩ := exercise_3E_13 U
+  haveI : Finite F V := Module.Finite.equiv e.symm
+  have hdim : m + n = finrank F V := by
+    rw [e.finrank_eq, Module.finrank_prod,
+      ← LADR.Section_2C.isBasis_card_eq_finrank _ hu,
+      ← LADR.Section_2C.isBasis_card_eq_finrank _ hv, add_comm]
+  -- so enough to show only spanning (2.42)
+  refine LADR.Section_2C.isBasis_of_spans_of_card_eq _ ?_ hdim
+  rw [Spans, eq_top_iff]
+  rintro x -
+  set S := Set.range (Fin.append v (fun i => (u i : V)))
+  have hvS : ∀ i, v i ∈ Submodule.span F S := fun i =>
+    Submodule.subset_span ⟨Fin.castAdd n i, Fin.append_left _ _ _⟩
+  have huS : ∀ j, (u j : V) ∈ Submodule.span F S := fun j =>
+    Submodule.subset_span ⟨Fin.natAdd m j, Fin.append_right _ _ _⟩
+  -- take v ∈ V, exists ∑ ai (v i + U) = v + U
+  set a := bv.repr (U.mkQ x)
+  have hxa : U.mkQ x = ∑ i, a i • U.mkQ (v i) := by
+    conv_lhs => rw [← bv.sum_repr (U.mkQ x)]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    simp only [bv, LADR.Section_2B.IsBasis.toModuleBasis_apply]
+    rfl
+  -- this means v = u + ∑ ai (v i) for some u ∈ U
+  have hyU : x - ∑ i, a i • v i ∈ U := by
+    rw [← Submodule.Quotient.eq, ← Submodule.mkQ_apply, ← Submodule.mkQ_apply, hxa]
+    simp only [map_sum, map_smul]
+  set y : U := ⟨x - ∑ i, a i • v i, hyU⟩
+  have hx : x = ∑ i, a i • v i + (y : V) := by simp [y]
+  -- now u = ∑ bi ui
+  have hy : (y : V) = ∑ j, bu.repr y j • (u j : V) := by
+    have := congrArg Subtype.val (bu.sum_repr y)
+    simpa [bu] using this.symm
+  rw [hx, hy]
+  exact add_mem (Submodule.sum_mem _ fun i _ => Submodule.smul_mem _ _ (hvS i))
+    (Submodule.sum_mem _ fun j _ => Submodule.smul_mem _ _ (huS j))
 
 /-- 3E.16 -/
 theorem exercise_3E_16 (φ : V →ₗ[F] F) (hφ : φ ≠ 0) :
     finrank F (V ⧸ LinearMap.ker φ) = 1 := by
-  sorry
+  -- dim range φ = 1 (since φ ≠ 0), and we proved that T/ker T is iso to range T
+  rw [(quotKer_equiv_range φ).finrank_eq]
+  -- range φ is a nonzero subspace of F, so it is all of F
+  have hrange : LinearMap.range φ = ⊤ :=
+    (eq_bot_or_eq_top (LinearMap.range φ)).resolve_left (LinearMap.range_eq_bot.not.mpr hφ)
+  rw [hrange, finrank_top, Module.finrank_self]
 
 /-- 3E.17 -/
 theorem exercise_3E_17 (U : Submodule F V) (h : finrank F (V ⧸ U) = 1) :
     ∃ φ : V →ₗ[F] F, LinearMap.ker φ = U := by
-  sorry
+  -- take quotient map V → V/U and compose with an isomorphism V/U ≃ F to get φ
+  haveI : Finite F (V ⧸ U) := Module.finite_of_finrank_pos (by omega)
+  let e : (V ⧸ U) ≃ₗ[F] F := LinearEquiv.ofFinrankEq _ _ (by rw [h, Module.finrank_self])
+  refine ⟨e.toLinearMap ∘ₗ U.mkQ, ?_⟩
+  rw [LinearEquiv.ker_comp, Submodule.ker_mkQ]
 
 /-- 3E.18 (a) -/
 theorem exercise_3E_18a (U : Submodule F V) [Finite F (V ⧸ U)]
     (W : Submodule F V) [Finite F W] (hUW : U ⊔ W = ⊤) :
     finrank F W ≥ finrank F (V ⧸ U) := by
-  sorry
+  -- restrict the quotient map V → V/U to W, giving a linear map W → V/U.
+  -- the quotient map is surjective, but U is in the kernel, and U ⊔ W = ⊤,
+  -- so the restricted map W → V/U is also surjective.
+  -- thus the dimension of W is at least the dimension of V/U.
+  let π : W →ₗ[F] V ⧸ U := U.mkQ ∘ₗ W.subtype
+  have hsurj : LinearMap.range π = ⊤ := by
+    rw [eq_top_iff]
+    rintro q -
+    obtain ⟨v, rfl⟩ := Submodule.Quotient.mk_surjective U q
+    -- v = u + w with u ∈ U, w ∈ W, and v + U = w + U
+    have hv : v ∈ U ⊔ W := hUW ▸ Submodule.mem_top
+    obtain ⟨u, hu, w, hw, rfl⟩ := Submodule.mem_sup.mp hv
+    refine ⟨⟨w, hw⟩, ?_⟩
+    simp only [π, LinearMap.comp_apply, Submodule.subtype_apply, Submodule.mkQ_apply,
+      Submodule.Quotient.mk_add, (Submodule.Quotient.mk_eq_zero U).mpr hu, zero_add]
+  calc finrank F (V ⧸ U) = finrank F (LinearMap.range π) := by rw [hsurj, finrank_top]
+    _ ≤ finrank F W := LinearMap.finrank_range_le π
 
 /-- 3E.18 (b) -/
 theorem exercise_3E_18b (U : Submodule F V) [Finite F (V ⧸ U)] :
     ∃ W : Submodule F V, Finite F W ∧
       finrank F W = finrank F (V ⧸ U) ∧ IsCompl U W := by
-  sorry
+  -- take representative vectors for vi + U of a basis of V/U
+  -- then one can show vi are LI in V too (consequence of quotient map linear)
+  -- take w = span {vi} then dim W = dim V/U
+  -- also W ∩ U = {0}, assume v = ∑ ai vi ∈ W and also in U, then ∑ ai (vi + U) = 0 in V/U, by basis
+  -- ai = 0 for all i, showing that v = 0 and hence W ∩ U = {0}.
+  -- and W + U = V, proven by taking any v ∈ V, writing v + U as a linear combination of the basis of V/U
+  -- thus v = ∑ ai vi + u for some u ∈ U, showing that V = W + U.
+  let b := Module.finBasis F (V ⧸ U)
+  choose v hv using fun i => Submodule.Quotient.mk_surjective U (b i)
+  have hvb : ∀ i, U.mkQ (v i) = b i := hv
+  -- mapping ∑ ai vi to V/U gives ∑ ai (vi + U)
+  have hmk : ∀ a : Fin _ → F, U.mkQ (∑ i, a i • v i) = ∑ i, a i • b i := fun a => by
+    simp only [map_sum, map_smul, hvb]
+  -- vi are LI in V
+  have hli : LinearIndependent F v := by
+    rw [Fintype.linearIndependent_iff]
+    intro a ha
+    have : ∑ i, a i • b i = 0 := by rw [← hmk, ha, map_zero]
+    exact Fintype.linearIndependent_iff.mp b.linearIndependent a this
+  refine ⟨Submodule.span F (Set.range v),
+    Module.Finite.span_of_finite F (Set.finite_range v), ?_, ?_⟩
+  · -- dim W = dim V/U
+    rw [finrank_span_eq_card hli, Fintype.card_fin]
+  refine isCompl_iff.mpr ⟨Submodule.disjoint_def.mpr ?_, codisjoint_iff.mpr ?_⟩
+  · -- W ∩ U = {0}
+    intro x hxU hxW
+    obtain ⟨a, rfl⟩ := Submodule.mem_span_range_iff_exists_fun F |>.mp hxW
+    have h0 : ∑ i, a i • b i = 0 := by
+      rw [← hmk]
+      exact (Submodule.Quotient.mk_eq_zero U).mpr hxU
+    have ha := Fintype.linearIndependent_iff.mp b.linearIndependent a h0
+    simp [ha]
+  · -- W + U = V
+    rw [eq_top_iff]
+    rintro x -
+    set a := b.repr (U.mkQ x)
+    have hxU : x - ∑ i, a i • v i ∈ U := by
+      rw [← Submodule.Quotient.eq, ← Submodule.mkQ_apply, ← Submodule.mkQ_apply, hmk,
+        b.sum_repr]
+    exact Submodule.mem_sup.mpr ⟨_, hxU, _, Submodule.sum_mem _ fun i _ =>
+      Submodule.smul_mem _ _ (Submodule.subset_span ⟨i, rfl⟩), sub_add_cancel _ _⟩
 
 /-- 3E.19 -/
 theorem exercise_3E_19 (T : V →ₗ[F] W) (U : Submodule F V) :
     (∃ S : V ⧸ U →ₗ[F] W, T = S ∘ₗ U.mkQ) ↔ U ≤ LinearMap.ker T := by
-  sorry
+  -- => assume v in U, then T v = S (U.mk v) = S 0 = 0, so v ∈ ker T
+  -- <= assume U ⊆ ker T, define S on V/U by S(v + U) = T v
+  -- for any representative v + U of a coset in V/U.
+  -- show that choice doesn't matter, by assumption, v - v' ∈ U ⊆ ker T,
+  -- so T v = T v'.
+  -- show that S is linear (follows from linearity of T)
+  -- finally, verify that T = S ∘ₗ U.mkQ by construction
+  constructor
+  · -- (=>)
+    rintro ⟨S, rfl⟩ v hv
+    rw [LinearMap.mem_ker, LinearMap.comp_apply, Submodule.mkQ_apply,
+      (Submodule.Quotient.mk_eq_zero U).mpr hv, map_zero]
+  · -- (<=) S(v + U) = T v; the choice of representative doesn't matter
+    intro h
+    let s : V ⧸ U → W := Quotient.lift T fun a b hab => by
+      -- a - b ∈ U ⊆ ker T, so T a = T b
+      have hker := h ((Submodule.quotientRel_def U).mp hab)
+      rwa [LinearMap.mem_ker, map_sub, sub_eq_zero] at hker
+    have hs : ∀ v, s (Submodule.Quotient.mk v) = T v := fun v => rfl
+    -- S is linear, from linearity of T
+    let S : V ⧸ U →ₗ[F] W :=
+      { toFun := s
+        map_add' := by
+          intro x y
+          obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective U x
+          obtain ⟨y, rfl⟩ := Submodule.Quotient.mk_surjective U y
+          rw [← Submodule.Quotient.mk_add, hs, hs, hs, map_add]
+        map_smul' := by
+          intro c x
+          obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective U x
+          rw [← Submodule.Quotient.mk_smul, hs, hs, map_smul, RingHom.id_apply] }
+    -- T = S ∘ₗ U.mkQ by construction
+    exact ⟨S, LinearMap.ext fun v => rfl⟩
 
 end LADR.Section_3E
