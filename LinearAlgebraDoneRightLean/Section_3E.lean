@@ -719,8 +719,10 @@ theorem exercise_3E_8a (T : V →ₗ[F] W) (c : W) :
     {x : V | T x = c} = ∅ ∨ IsTranslate (LinearMap.ker T) {x : V | T x = c} := by
   sorry
 
-/-- 3E.9 -/
-theorem exercise_3E_9 (A : Set V) (hA : A.Nonempty) :
+/-- 3E.9. The book's {lit}`F` is {lit}`ℝ` or {lit}`ℂ`; the {lit}`⇐` direction
+uses {lit}`γ = 1/2`, so we assume {lit}`[CharZero F]`. (Over {lit}`𝔽₂` the only
+scalars are {lit}`0, 1`, so every nonempty set satisfies the condition.) -/
+theorem exercise_3E_9 [CharZero F] (A : Set V) (hA : A.Nonempty) :
     (∃ U : Submodule F V, IsTranslate U A) ↔
       ∀ v ∈ A, ∀ w ∈ A, ∀ γ : F, γ • v + (1 - γ) • w ∈ A := by
   sorry
@@ -753,7 +755,7 @@ def affineCombSet {m : ℕ} (v : Fin m → V) : Set V :=
 
 /-- 3E.12 (a) The affine combinations {lit}`{∑ λᵢ vᵢ : ∑ λᵢ = 1}` form a
 translate of a subspace. -/
-theorem exercise_3E_12a {m : ℕ} (v : Fin m → V) :
+theorem exercise_3E_12a {m : ℕ} (hm : 0 < m) (v : Fin m → V) :
     (∃ U : Submodule F V, IsTranslate U (affineCombSet (F := F) v)) := by
   sorry
 
