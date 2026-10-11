@@ -72,7 +72,7 @@ found. *Playtested* means someone (the author or someone else) has worked throug
 | 3D. Invertibility and Isomorphisms | ✓ | ✓ | ✓ |
 | 3E. Products and Quotients of Vector Spaces | ✓ | ✓ | ✓ |
 | 3F. Duality | ✓ | ✓ | ✓ |
-| 4. Polynomials | ✓ | ✓ | — |
+| 4. Polynomials | ✓ | ✓ | ✓ |
 | 5A. Invariant Subspaces | ✓ | ✓ | ✓ |
 | 5B. The Minimal Polynomial | ✓ | ✓ | ✓ |
 | 5C. Upper-Triangular Matrices | ✓ | ✓ | ✓ |
