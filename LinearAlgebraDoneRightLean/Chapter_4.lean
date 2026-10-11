@@ -30,6 +30,7 @@ import Mathlib.Tactic.Ring
 import LinearAlgebraDoneRightLean.Section_2A
 import LinearAlgebraDoneRightLean.Section_2B
 import LinearAlgebraDoneRightLean.Section_2C
+import LinearAlgebraDoneRightLean.Section_3F
 import CompanionHelper
 
 /-!
@@ -905,106 +906,372 @@ end RealFactorizationUniqueness
 /-- 4.1 (a) -/
 @[avoiding Complex.add_conj]
 theorem exercise_4_1a (z : ℂ) : z + conj z = 2 * z.re := by
-  sorry
+  apply Complex.ext
+  · simp only [Complex.add_re, Complex.conj_re, Complex.mul_re, Complex.re_ofNat,
+    Complex.ofReal_re, Complex.im_ofNat, Complex.ofReal_im, mul_zero, sub_zero]
+    ring
+  · simp only [Complex.add_im, Complex.conj_im, add_neg_cancel, Complex.mul_im, Complex.re_ofNat,
+    Complex.ofReal_im, mul_zero, Complex.im_ofNat, Complex.ofReal_re, zero_mul, add_zero]
+
 
 /-- 4.1 (b) -/
 @[avoiding Complex.sub_conj]
 theorem exercise_4_1b (z : ℂ) :
     z - conj z = 2 * z.im * Complex.I := by
-  sorry
+  apply Complex.ext
+  · simp only [Complex.sub_re, Complex.conj_re, sub_self, Complex.mul_re, Complex.re_ofNat,
+    Complex.ofReal_re, Complex.im_ofNat, Complex.ofReal_im, mul_zero, sub_zero, Complex.I_re,
+    Complex.mul_im, zero_mul, add_zero, Complex.I_im, mul_one]
+  · simp only [Complex.sub_im, Complex.conj_im, sub_neg_eq_add, Complex.mul_im, Complex.mul_re,
+    Complex.re_ofNat, Complex.ofReal_re, Complex.im_ofNat, Complex.ofReal_im, mul_zero, sub_zero,
+    Complex.I_im, mul_one, zero_mul, add_zero, Complex.I_re]
+    ring
+
+/-- `‖z‖² = (Re z)² + (Im z)²`, used in 4.1 (c) and (f). -/
+lemma norm_sq_eq_re_sq_add_im_sq (z : ℂ) : ‖z‖ ^ 2 = z.re ^ 2 + z.im ^ 2 := by
+  rw [Complex.norm_def, Real.sq_sqrt (Complex.normSq_nonneg z), Complex.normSq_apply]
+  ring
 
 /-- 4.1 (c) -/
 @[avoiding Complex.mul_conj, Complex.sq_norm]
 theorem exercise_4_1c (z : ℂ) : z * conj z = (‖z‖ : ℂ) ^ 2 := by
-  sorry
+  -- ||z||^2 = z.re^2 + z.im^2
+  -- z * conj z = (z.re + z.im * I) * (z.re - z.im * I) = z.re^2 + z.im^2
+  rw [← Complex.ofReal_pow, norm_sq_eq_re_sq_add_im_sq]
+  apply Complex.ext
+  · rw [Complex.mul_re, Complex.conj_re, Complex.conj_im, Complex.ofReal_re]; ring
+  · rw [Complex.mul_im, Complex.conj_re, Complex.conj_im, Complex.ofReal_im]; ring
 
 /-- 4.1 (d) -/
-@[avoiding map_add, map_mul]
+@[avoiding map_add, map_mul, RingHom.map_add, RingHom.map_mul, star_add, star_mul']
 theorem exercise_4_1d (w z : ℂ) :
     conj (w + z) = conj w + conj z ∧
     conj (w * z) = conj w * conj z := by
-  sorry
+  -- (w.re + I * w.im) * (z.re + I * z.im) = (w.re * z.re - w.im * z.im) + I * (w.re * z.im + w.im * z.re)
+  -- conj = (w.re * z.re - w.im * z.im) - I * (w.re * z.im + w.im * z.re)
+  -- (w.re - I * w.im) * (z.re - I * z.im) =
+  -- = (w.re * z.re - w.im * z.im) - I * (w.re * z.im + w.im * z.re)
+  constructor
+  · apply Complex.ext
+    · simp only [Complex.add_re, Complex.conj_re]
+    · simp only [Complex.add_im, Complex.conj_im]; ring
+  · apply Complex.ext
+    · simp only [Complex.mul_re, Complex.conj_re, Complex.conj_im]; ring
+    · simp only [Complex.mul_im, Complex.conj_re, Complex.conj_im]; ring
 
 /-- 4.1 (e) -/
 @[avoiding Complex.conj_conj]
 theorem exercise_4_1e (z : ℂ) : conj (conj z) = z := by
-  sorry
+  apply Complex.ext
+  · rw [Complex.conj_re, Complex.conj_re]
+  · rw [Complex.conj_im, Complex.conj_im, neg_neg]
 
 /-- 4.1 (f) -/
 @[avoiding Complex.abs_re_le_norm, Complex.abs_im_le_norm]
 theorem exercise_4_1f (z : ℂ) : |z.re| ≤ ‖z‖ ∧ |z.im| ≤ ‖z‖ := by
-  sorry
+  -- show |z.re|^2 ≤ ‖z‖^2 and |z.im|^2 ≤ ‖z‖^2 first then follow by sqrt
+  -- |z.re|^2 = z.re^2 ≤ z.re^2 + z.im^2 = ‖z‖^2
+  -- |z.im|^2 = z.im^2 ≤ z.re^2 + z.im^2 = ‖z‖^2
+  constructor
+  · rw [← sq_le_sq₀ (abs_nonneg _) (norm_nonneg _), sq_abs, norm_sq_eq_re_sq_add_im_sq]
+    linarith [sq_nonneg z.im]
+  · rw [← sq_le_sq₀ (abs_nonneg _) (norm_nonneg _), sq_abs, norm_sq_eq_re_sq_add_im_sq]
+    linarith [sq_nonneg z.re]
 
 /-- 4.1 (g) -/
 @[avoiding Complex.norm_conj]
 theorem exercise_4_1g (z : ℂ) : ‖conj z‖ = ‖z‖ := by
-  sorry
+  -- follows from ||conj z||^2 = ||z||^2
+  -- ||conj z||^2 = z.re^2 + (-z.im)^2 = z.re^2 + z.im^2 = ||z||^2
+  rw [← sq_eq_sq₀ (norm_nonneg _) (norm_nonneg _), norm_sq_eq_re_sq_add_im_sq,
+    norm_sq_eq_re_sq_add_im_sq, Complex.conj_re, Complex.conj_im, neg_sq]
 
 /-- 4.1 (h) -/
 @[avoiding norm_mul]
 theorem exercise_4_1h (w z : ℂ) : ‖w * z‖ = ‖w‖ * ‖z‖ := by
-  sorry
+  -- follows from ||w * z||^2 = ||w||^2 * ||z||^2
+  -- ||w * z||^2 = |w * z * conj (w * z)|
+  -- = ||w * conj w * z * conj z|| = ||w * conj w|| * ||z * conj z|| = ‖w‖^2 * ‖z‖^2
+  have h : ((‖w * z‖ ^ 2 : ℝ) : ℂ) = ((‖w‖ * ‖z‖) ^ 2 : ℝ) := by
+    push_cast
+    rw [← exercise_4_1c, mul_pow, ← exercise_4_1c, ← exercise_4_1c, (exercise_4_1d w z).2]
+    ring
+  rw [← sq_eq_sq₀ (norm_nonneg _) (mul_nonneg (norm_nonneg _) (norm_nonneg _))]
+  exact Complex.ofReal_injective h
 
 /-- 4.2 Reverse triangle inequality. -/
 @[avoiding abs_norm_sub_norm_le]
 theorem exercise_4_2 (w z : ℂ) : |‖w‖ - ‖z‖| ≤ ‖w - z‖ := by
-  sorry
+  -- apply triangle to w and z - w,
+  -- ||w|| + ||z - w|| ≤ ||w + (z - w)|| = ||z||
+  -- ||w|| - ||z|| ≤ ||w - z|| (since ||-x|| = ||x||)
+  -- by symmetry,
+  -- ||z|| - ||w|| ≤ ||w - z||
+  -- thus |‖w‖ - ‖z‖| ≤ ‖w - z‖
+  have h1 : ‖z‖ - ‖w‖ ≤ ‖w - z‖ := by
+    have := norm_add_le w (z - w)
+    rw [add_sub_cancel, norm_sub_rev] at this
+    linarith
+  have h2 : ‖w‖ - ‖z‖ ≤ ‖w - z‖ := by
+    have := norm_add_le z (w - z)
+    rw [add_sub_cancel] at this
+    linarith
+  exact abs_sub_le_iff.2 ⟨h2, h1⟩
 
 /-- 4.3 -/
 theorem exercise_4_3 {V : Type*} [AddCommGroup V] [Module ℂ V]
     (φ : V →ₗ[ℂ] ℂ) (v : V) :
     φ v = (φ v).re - Complex.I * (φ (Complex.I • v)).re := by
-  sorry
+  -- φ v = (φ v).re - I * (φ (I • v)).re
+  -- = (φ v).re - I * (I * φ (v)).re (using Re I*c = - Im c)
+  -- = (φ v).re + I * (φ (v)).im
+  -- = φ v
+  rw [map_smul, smul_eq_mul, Complex.I_mul_re, Complex.ofReal_neg, mul_neg, sub_neg_eq_add,
+    mul_comm, Complex.re_add_im]
 
 /-- 4.4 -/
 def exercise_4_4 (m : ℕ) (hm : 1 ≤ m) :
     Decidable (∃ (U : Submodule F (Polynomial F)),
       ∀ p : Polynomial F, p ∈ U ↔ p = 0 ∨ p.natDegree = m) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  -- both x^p and -x^p - 1 are in U, but their sum is -1, which is not.
+  rintro ⟨U, hU⟩
+  have h1 : (Polynomial.X ^ m : Polynomial F) ∈ U :=
+    (hU _).2 (Or.inr (Polynomial.natDegree_X_pow m))
+  have h2 : (-Polynomial.X ^ m - 1 : Polynomial F) ∈ U := by
+    refine (hU _).2 (Or.inr ?_)
+    rw [Polynomial.natDegree_sub_eq_left_of_natDegree_lt, Polynomial.natDegree_neg,
+      Polynomial.natDegree_X_pow]
+    rw [Polynomial.natDegree_neg, Polynomial.natDegree_X_pow, Polynomial.natDegree_one]
+    omega
+  have h3 := U.add_mem h1 h2
+  rw [show (Polynomial.X ^ m + (-Polynomial.X ^ m - 1) : Polynomial F) = -1 by ring] at h3
+  rcases (hU _).1 h3 with h | h
+  · exact one_ne_zero (neg_eq_zero.1 h)
+  · rw [Polynomial.natDegree_neg, Polynomial.natDegree_one] at h
+    omega
 
 /-- 4.5 -/
 def exercise_4_5 :
     Decidable (∃ (U : Submodule F (Polynomial F)),
       ∀ p : Polynomial F, p ∈ U ↔ p = 0 ∨ Even p.natDegree) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  -- x^2 and -x^2 + x are in U, but their sum is x, which is not of even degree.
+  rintro ⟨U, hU⟩
+  have h1 : (Polynomial.X ^ 2 : Polynomial F) ∈ U :=
+    (hU _).2 (Or.inr ⟨1, by rw [Polynomial.natDegree_X_pow]⟩)
+  have h2 : (-Polynomial.X ^ 2 + Polynomial.X : Polynomial F) ∈ U :=
+    (hU _).2 (Or.inr ⟨1, by
+      rw [show (-Polynomial.X ^ 2 + Polynomial.X : Polynomial F).natDegree = 2 by
+        compute_degree!]⟩)
+  have h3 := U.add_mem h1 h2
+  rw [add_neg_cancel_left] at h3
+  rcases (hU _).1 h3 with h | h
+  · exact Polynomial.X_ne_zero h
+  · rw [Polynomial.natDegree_X] at h
+    exact Nat.not_even_one h
 
 /-- 4.6 The zeros of {lit}`p` are exactly {lit}`Set.range lams`, with {lit}`deg p = n`. -/
 theorem exercise_4_6 (m n : ℕ) (hm : 1 ≤ m) (hmn : m ≤ n) (lams : Fin m → F) :
     ∃ p : Polynomial F, p.natDegree = n ∧ {x | p.IsRoot x} = Set.range lams := by
-  sorry
+  -- take (x - λ₁) ⋯ (x - λₘ) (x - λ₁)^(n - m)
+  let i₀ : Fin m := ⟨0, hm⟩
+  have hq : (∏ i, (Polynomial.X - Polynomial.C (lams i))).Monic :=
+    Polynomial.monic_prod_of_monic _ _ fun i _ => Polynomial.monic_X_sub_C (lams i)
+  have hr : ((Polynomial.X - Polynomial.C (lams i₀)) ^ (n - m)).Monic :=
+    (Polynomial.monic_X_sub_C _).pow _
+  refine ⟨(∏ i, (Polynomial.X - Polynomial.C (lams i))) *
+    (Polynomial.X - Polynomial.C (lams i₀)) ^ (n - m), ?_, ?_⟩
+  · rw [hq.natDegree_mul hr, Polynomial.natDegree_prod_of_monic _ _
+      fun i _ => Polynomial.monic_X_sub_C (lams i), (Polynomial.monic_X_sub_C _).natDegree_pow]
+    simp only [Polynomial.natDegree_X_sub_C, Finset.sum_const, Finset.card_univ,
+      Fintype.card_fin, smul_eq_mul, mul_one]
+    omega
+  · ext x
+    simp only [Set.mem_setOf_eq, Polynomial.IsRoot, Polynomial.eval_mul, Polynomial.eval_prod,
+      Polynomial.eval_pow, Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C,
+      mul_eq_zero, Finset.prod_eq_zero_iff, Finset.mem_univ, true_and, pow_eq_zero_iff',
+      sub_eq_zero, Set.mem_range]
+    constructor
+    · rintro (⟨i, rfl⟩ | ⟨rfl, -⟩)
+      · exact ⟨i, rfl⟩
+      · exact ⟨i₀, rfl⟩
+    · rintro ⟨i, rfl⟩
+      exact Or.inl ⟨i, rfl⟩
 
 /-- 4.7 Lagrange interpolation. -/
-theorem exercise_4_7 {m : ℕ} (z : Fin (m + 1) → F) (_hz : Function.Injective z)
+theorem exercise_4_7 {m : ℕ} (z : Fin (m + 1) → F) (hz : Function.Injective z)
     (w : Fin (m + 1) → F) :
     ∃! p : Polynomial.degreeLT F (m + 1),
       ∀ k, (p : Polynomial F).eval (z k) = w k := by
-  sorry
+  -- each eval at z k is a unique functional φ_i from P{m+1} -> F
+  -- by 3F_25, the map Γ sending a polynomial to its evaluations at z k
+  -- is surjective if φi are LI
+  -- to show that φi are LI, assume a linear combination ∑ a_i φ_i = 0
+  -- evaluate at the polynomial Π {i ≠ j} (z - zi) for each j
+  -- that shows aj = 0, and hence all a_i = 0, proving linear independence of φi
+  -- uniqueness follows from the injectivity of the evaluation map (3E_25b)
+  -- which can be done with dimension count (surjective endomap has to be injective)
+  set V := Polynomial.degreeLT F (m + 1)
+  have hV : finrank F V = finrank F (Fin (m + 1) → F) :=
+    (Polynomial.degreeLTEquiv F (m + 1)).finrank_eq
+  haveI : Module.Finite F V := Module.Finite.equiv (Polynomial.degreeLTEquiv F (m + 1)).symm
+  -- φ k is evaluation at z k
+  let φ : Fin (m + 1) → Module.Dual F V := fun k => (Polynomial.leval (z k)).comp V.subtype
+  let Γ : V →ₗ[F] (Fin (m + 1) → F) := LinearMap.pi φ
+  have hLI : LinearIndependent F φ := by
+    rw [Fintype.linearIndependent_iff]
+    intro a ha j
+    -- ℓ = ∏_{i ≠ j} (x - z i), of degree m
+    let ℓ : Polynomial F := ∏ i ∈ Finset.univ.erase j, (Polynomial.X - Polynomial.C (z i))
+    have hmonic : ∀ i ∈ Finset.univ.erase j, (Polynomial.X - Polynomial.C (z i)).Monic :=
+      fun i _ => Polynomial.monic_X_sub_C (z i)
+    have hℓ : ℓ ∈ V := by
+      rw [Polynomial.mem_degreeLT,
+        Polynomial.degree_eq_natDegree (Polynomial.monic_prod_of_monic _ _ hmonic).ne_zero,
+        Polynomial.natDegree_prod_of_monic _ _ hmonic]
+      simp only [Polynomial.natDegree_X_sub_C, Finset.sum_const, smul_eq_mul, mul_one,
+        Finset.card_erase_of_mem (Finset.mem_univ j), Finset.card_univ, Fintype.card_fin,
+        Nat.add_sub_cancel]
+      exact_mod_cast Nat.lt_succ_self m
+    have hφ (i : Fin (m + 1)) : φ i ⟨ℓ, hℓ⟩ = ℓ.eval (z i) := rfl
+    -- ℓ vanishes at z i for i ≠ j, but not at z j
+    have hzero (i : Fin (m + 1)) (hij : i ≠ j) : ℓ.eval (z i) = 0 := by
+      rw [Polynomial.eval_prod]
+      exact Finset.prod_eq_zero (Finset.mem_erase.2 ⟨hij, Finset.mem_univ i⟩) (by simp)
+    have hne : ℓ.eval (z j) ≠ 0 := by
+      rw [Polynomial.eval_prod, Finset.prod_ne_zero_iff]
+      intro i hi
+      simpa [sub_eq_zero] using hz.ne (Finset.ne_of_mem_erase hi).symm
+    have h := LinearMap.congr_fun ha ⟨ℓ, hℓ⟩
+    simp only [LinearMap.coe_sum, Finset.sum_apply, LinearMap.smul_apply, hφ, smul_eq_mul,
+      LinearMap.zero_apply] at h
+    rw [Finset.sum_eq_single j (fun i _ hij => by rw [hzero i hij, mul_zero])
+      (fun h => absurd (Finset.mem_univ j) h)] at h
+    exact (mul_eq_zero.1 h).resolve_right hne
+  have hsurj : Function.Surjective Γ := (LADR.Section_3F.exercise_3F_25 φ).2.1 hLI
+  have hinj : Function.Injective Γ :=
+    (LADR.Section_3D.injective_iff_surjective hV Γ).2 hsurj
+  obtain ⟨p, hp⟩ := hsurj w
+  refine ⟨p, fun k => congr_fun hp k, fun q hq => hinj ?_⟩
+  rw [hp]
+  exact funext hq
 
+open Polynomial in
 /-- 4.8 {lit}`p` has {lit}`deg p` distinct zeros iff {lit}`p` and {lit}`p'` have no common zero. -/
 theorem exercise_4_8 (p : Polynomial ℂ) (hp : 0 < p.natDegree) :
     p.roots.toFinset.card = p.natDegree ↔
       ∀ z : ℂ, p.IsRoot z → ¬ p.derivative.IsRoot z := by
-  sorry
+  -- => if unique roots, p = (z - z₁) * ... * (z - z_n) for distinct z_i
+  -- then p' = ∑_{i=1}^n ∏_{j ≠ i} (x - z_j)
+  -- so p'(z_i) = ∏_{j ≠ i} (z_i - z_j) ≠ 0 since roots unique for all i
+  -- so p and p' have no common roots
+  -- <= (by counterpositive) if not unique roots, p = (x - z_i)^2 * r for some root z_i and some polynomial r
+  -- p' = 2 * (x - z_i) * r + (x - z_i)^2 * r', so p'(z_i) = 0, which is common root
+  classical
+  have hp0 : p ≠ 0 := by rintro rfl; simp at hp
+  have hcard : p.roots.card = p.natDegree := IsAlgClosed.card_roots_eq_natDegree
+  rw [← hcard, Multiset.toFinset_card_eq_card_iff_nodup]
+  constructor
+  · intro hnd z hz hz'
+    set s := p.roots.toFinset
+    have hfac : p = C p.leadingCoeff * ∏ a ∈ s, (X - C a) := by
+      conv_lhs => rw [← fta_factorization p]
+      rw [Finset.prod_eq_multiset_prod, Multiset.toFinset_val, hnd.dedup]
+    have hzs : z ∈ s := Multiset.mem_toFinset.2 ((mem_roots hp0).2 hz)
+    rw [hfac, IsRoot.def, derivative_C_mul, derivative_prod_finset, eval_mul, eval_C,
+      eval_finset_sum, Finset.sum_eq_single z] at hz'
+    · -- p'(z) = c * ∏_{b ≠ z} (z - b) ≠ 0
+      simp only [derivative_X_sub_C, mul_one, eval_prod, eval_sub, eval_X, eval_C] at hz'
+      rcases mul_eq_zero.1 hz' with h | h
+      · exact leadingCoeff_ne_zero.2 hp0 h
+      · obtain ⟨b, hb, hb0⟩ := Finset.prod_eq_zero_iff.1 h
+        exact Finset.ne_of_mem_erase hb (sub_eq_zero.1 hb0).symm
+    · -- the other terms contain the factor (x - z)
+      intro b _ hbz
+      rw [eval_mul, eval_prod, Finset.prod_eq_zero (Finset.mem_erase.2 ⟨Ne.symm hbz, hzs⟩)
+        (by simp), zero_mul]
+    · exact fun h => absurd hzs h
+  · intro h
+    by_contra hnd
+    rw [Multiset.nodup_iff_count_le_one] at hnd
+    push Not at hnd
+    obtain ⟨z, hz⟩ := hnd
+    rw [count_roots] at hz
+    obtain ⟨r, hr⟩ := (le_rootMultiplicity_iff hp0 (n := 2)).1 hz
+    apply h z
+    · rw [hr, IsRoot.def]; simp
+    · rw [hr, IsRoot.def]; simp [derivative_mul, derivative_pow]
 
 /-- 4.9 Every odd-degree real polynomial has a real zero. -/
 theorem exercise_4_9 (p : Polynomial ℝ) (hp : Odd p.natDegree) :
     ∃ x : ℝ, p.IsRoot x := by
-  sorry
+  -- by theorem 4.16, p can be factorized as a product of linear and quadratic factors.
+  -- because odd, at least one linear, thus zero
+  have hp0 : p ≠ 0 := by rintro rfl; simp at hp
+  obtain ⟨c, m, M, lams, bs, cs, -, hfac⟩ := real_polynomial_factorization p hp0
+  rcases m with _ | m
+  · -- no linear factors: deg p = 2M is even
+    exfalso
+    have hc : c ≠ 0 := by rintro rfl; simp [hfac] at hp0
+    have hquad : ∀ k ∈ Finset.univ, (Polynomial.X ^ 2 + Polynomial.C (bs k) * Polynomial.X +
+        Polynomial.C (cs k)).Monic := fun k _ => by monicity!
+    have hdeg : p.natDegree = M * 2 := by
+      rw [hfac, Finset.univ_eq_empty, Finset.prod_empty, mul_one,
+        Polynomial.natDegree_C_mul hc, Polynomial.natDegree_prod_of_monic _ _ hquad]
+      simp only [show ∀ k, (Polynomial.X ^ 2 + Polynomial.C (bs k) * Polynomial.X +
+        Polynomial.C (cs k)).natDegree = 2 from fun k => by compute_degree!,
+        Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]
+    rw [hdeg, Nat.odd_iff] at hp
+    omega
+  · -- a linear factor x - λ₀ gives the zero λ₀
+    refine ⟨lams 0, ?_⟩
+    rw [hfac, Polynomial.IsRoot.def, Polynomial.eval_mul, Polynomial.eval_mul,
+      Polynomial.eval_prod, Finset.prod_eq_zero (Finset.mem_univ 0) (by simp), mul_zero,
+      zero_mul]
 
 /-- 4.10 The difference-quotient linear map
 {lit}`(Tp)(x) = (p(x) − p(3))/(x − 3)`. The map is stated for the underlying
 function; mathlib representation is left to the solver. -/
-noncomputable def exercise_4_10_T : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ := sorry
+-- expand p(x) - p(3) = ∑i ai (x^i - 3^i)
+-- using x^i - 3^i = (x - 3) * (x^(i-1) + x^(i-2) * 3 + ... + 3^(i-1))
+-- p(x) - p(3) = (x - 3) * ∑i ai (x^(i-1) + x^(i-2) * 3 + ... + 3^(i-1))
+-- so T(p)(x) = ∑i=1^n ai ∑j=0^(i-1) x^j * 3^i-1-j
+-- when x = 3, the second sum simplifies to (i-1) * 3^i-1 which is the definition of derivative.
+-- only thing left is to prove that this is a linear map for polynomials.
+-- which is clear by observing how ai is used in the forumula for T(p)
+noncomputable def exercise_4_10_T : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ :=
+  Polynomial.lsum fun i => LinearMap.smulRight LinearMap.id
+    (∑ j ∈ Finset.range i, Polynomial.X ^ j * Polynomial.C (3 ^ (i - 1 - j)))
+
+/-- {lit}`(Tp)(y) = ∑ᵢ aᵢ ∑_{j<i} yʲ 3^{i-1-j}`. -/
+lemma exercise_4_10_T_eval (p : Polynomial ℝ) (y : ℝ) :
+    (exercise_4_10_T p).eval y =
+      p.sum fun i a => a * ∑ j ∈ Finset.range i, y ^ j * 3 ^ (i - 1 - j) := by
+  simp [exercise_4_10_T, Polynomial.lsum_apply, Polynomial.sum, Polynomial.eval_finset_sum]
 
 theorem exercise_4_10a (p : Polynomial ℝ) (x : ℝ) (hx : x ≠ 3) :
     (exercise_4_10_T p).eval x = (p.eval x - p.eval 3) / (x - 3) := by
-  sorry
+  rw [eq_div_iff (sub_ne_zero.2 hx), exercise_4_10_T_eval, Polynomial.eval_eq_sum,
+    Polynomial.eval_eq_sum, Polynomial.sum, Polynomial.sum, Polynomial.sum, Finset.sum_mul,
+    ← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  -- x^i - 3^i = (x - 3) * ∑_{j<i} x^j 3^(i-1-j)
+  rw [mul_assoc, geom_sum₂_mul, mul_sub]
 
 theorem exercise_4_10b (p : Polynomial ℝ) :
     (exercise_4_10_T p).eval 3 = p.derivative.eval 3 := by
-  sorry
+  rw [exercise_4_10_T_eval, Polynomial.derivative_apply, Polynomial.sum, Polynomial.sum,
+    Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  -- at x = 3 the inner sum is ∑_{j<i} 3^(i-1) = i * 3^(i-1)
+  rw [Finset.sum_congr rfl fun j hj => by
+      rw [← pow_add, show j + (i - 1 - j) = i - 1 by have := Finset.mem_range.1 hj; omega],
+    Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+  simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
+  ring
 
 /-- 4.11 (setup) The candidate polynomial {lit}`q = p · p̄`, where
 {lit}`p̄ = p.map conj` conjugates the coefficients, satisfies
@@ -1013,34 +1280,111 @@ theorem exercise_4_10b (p : Polynomial ℝ) :
 This solves the first part of exercise 4.11, showing the function is a polynomial. -/
 lemma exercise_4_11_eval (p : Polynomial ℂ) (z : ℂ) :
     p.eval z * conj (p.eval (conj z)) = (p * p.map conj).eval z := by
-  sorry
+  -- conj preserves + and *, and z = conj (conj z)
+  rw [Polynomial.eval_mul, Polynomial.eval_map]
+  rw [← Polynomial.eval₂_at_apply, Complex.conj_conj]
 
 /-- 4.11 That polynomial {lit}`q` has real coefficients: every coefficient has
 zero imaginary part. -/
 theorem exercise_4_11 (p : Polynomial ℂ) :
     ∀ k, ((p * p.map conj).coeff k).im = 0 := by
-  sorry
+  -- if p = ∑ ai x^i, then p.map conj = ∑ conj(ai) x^i
+  -- so k-th coeff of p * p.map conj is ∑_{i+j=k} a_i * conj(a_j)
+  -- to show this sum is real, notice by symmetry
+  -- a_i * conj(a_j) + a_j * conj(a_i) is real for all i ≠ j,
+  -- as it is a_i * conj(a_j) + conj(a_i * conj(a_j)) (see ex1)
+  -- and if i = j, then a_i * conj(a_i) is real as well.
+  intro k
+  rw [Polynomial.coeff_mul]
+  simp_rw [Polynomial.coeff_map]
+  -- S = ∑_{i+j=k} a_i * conj(a_j) equals its conjugate: swap i and j
+  apply Complex.conj_eq_iff_im.1
+  rw [map_sum, ← Finset.Nat.sum_antidiagonal_swap]
+  refine Finset.sum_congr rfl fun ij _ => ?_
+  rw [Prod.fst_swap, Prod.snd_swap, map_mul, Complex.conj_conj, mul_comm]
 
 /-- 4.12 -/
 theorem exercise_4_12 {m : ℕ} (p : Polynomial.degreeLT ℂ (m + 1))
     (x : Fin (m + 1) → ℝ) (hx : Function.Injective x)
     (hpx : ∀ k, ((p : Polynomial ℂ).eval ((x k : ℝ) : ℂ)).im = 0) :
     ∀ k : ℕ, ((p : Polynomial ℂ).coeff k).im = 0 := by
-  sorry
+  -- by ex7, exists a polynomial with real coeff that agrees with p
+  -- on the points x k of deg ≤ m. p - that polynomial is a poly,
+  -- of degree ≤ m with m + 1 zeros, hence zero, hence p has real coefficients.
+  intro k
+  -- real interpolant r with r(x k) = p(x k) (which is real)
+  obtain ⟨r, hr, -⟩ := exercise_4_7 x hx (fun k => ((p : Polynomial ℂ).eval (x k : ℂ)).re)
+  set r' : Polynomial ℂ := (r : Polynomial ℝ).map Complex.ofRealHom
+  have hr'mem : r' ∈ Polynomial.degreeLT ℂ (m + 1) := by
+    rw [Polynomial.mem_degreeLT]
+    exact Polynomial.degree_map_le.trans_lt (Polynomial.mem_degreeLT.1 r.2)
+  -- uniqueness in ex 7 over ℂ: p and r' agree at the m + 1 distinct points x k
+  obtain ⟨q, -, huniq⟩ := exercise_4_7 (fun k => (x k : ℂ))
+    (Complex.ofReal_injective.comp hx) (fun k => (p : Polynomial ℂ).eval (x k))
+  have h1 := huniq p fun k => rfl
+  have h2 := huniq ⟨r', hr'mem⟩ fun k => by
+    change r'.eval (Complex.ofRealHom (x k)) = _
+    rw [Polynomial.eval_map, Polynomial.eval₂_at_apply, hr k]
+    exact Complex.ext (by simp) (by simp [hpx k])
+  have hpr : (p : Polynomial ℂ) = r' := congrArg Subtype.val (h1.trans h2.symm)
+  rw [hpr, Polynomial.coeff_map]
+  simp
 
 /-- 4.13 The subspace {lit}`U = {p · q : q ∈ 𝒫(F)}`. Mathlib knows that is
   a subspace of {lit}`Polynomial F`. -/
 noncomputable def exercise_4_13_U (p : Polynomial F) : Submodule F (Polynomial F) :=
   LinearMap.range (LinearMap.mulLeft F p)
 
+/-- 4.13 The map {lit}`r ↦ r + U` from polynomials of degree {lit}`< deg p` to
+{lit}`𝒫(F)/U` is an isomorphism. -/
+noncomputable def exercise_4_13_equiv (p : Polynomial F) (hp : p ≠ 0) :
+    Polynomial.degreeLT F p.natDegree ≃ₗ[F] (Polynomial F ⧸ exercise_4_13_U p) :=
+  LinearEquiv.ofBijective ((exercise_4_13_U p).mkQ ∘ₗ (Polynomial.degreeLT F p.natDegree).subtype)
+    ⟨by
+      -- unique: if r ∈ U then r = p * s, and deg r < deg p forces s = 0
+      rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+      rintro ⟨r, hr⟩ h
+      rw [LinearMap.comp_apply, Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] at h
+      obtain ⟨s, hs⟩ := LinearMap.mem_range.1 h
+      replace hs : p * s = r := hs
+      refine Subtype.ext ?_
+      by_contra hr0
+      replace hr0 : r ≠ 0 := hr0
+      have hs0 : s ≠ 0 := by rintro rfl; simp [← hs] at hr0
+      rw [Polynomial.mem_degreeLT, ← hs, Polynomial.degree_eq_natDegree (mul_ne_zero hp hs0),
+        Polynomial.natDegree_mul hp hs0] at hr
+      have : p.natDegree + s.natDegree < p.natDegree := by exact_mod_cast hr
+      omega,
+    by
+      -- exists: x = p * q + r with deg r < deg p, and r + U = x + U
+      intro x
+      induction x using Submodule.Quotient.induction_on with | _ x => ?_
+      obtain ⟨⟨q, r⟩, ⟨hx, hr⟩, -⟩ := division_algorithm x p hp
+      refine ⟨⟨r, ?_⟩, ?_⟩
+      · rwa [Polynomial.mem_degreeLT, ← Polynomial.degree_eq_natDegree hp]
+      · rw [LinearMap.comp_apply, Submodule.mkQ_apply, Submodule.Quotient.eq]
+        exact ⟨-q, by simp [hx]⟩⟩
+
 /-- 4.13 (a) {lit}`dim 𝒫(F)/U = deg p`. -/
+-- any coset of U has a representative of degree less than deg p.
+-- if x is in the coset, using division with remainder by p, we can write x = q * p + r with deg r < deg p.
+-- Then r is a representative of the same coset.
+-- to show these are unique, assume q + U = r + U for q, r of deg less than deg p
+-- then q - r ∈ U, so q - r = p * s for some s
+-- but deg(q - r) < deg p, so s must be zero, hence q = r
+-- so P(F)/U is isomorphic to the space of polynomials of degree less than deg p, which has dimension deg p.
+-- and basis 1,X,X^2,...,X^(deg p - 1).
 theorem exercise_4_13a (p : Polynomial F) (hp : p ≠ 0) :
     finrank F (Polynomial F ⧸ exercise_4_13_U p) = p.natDegree := by
-  sorry
+  rw [← (exercise_4_13_equiv p hp).finrank_eq,
+    (Polynomial.degreeLTEquiv F p.natDegree).finrank_eq, Module.finrank_fin_fun]
 
 /-- 4.13 (b) -/
 noncomputable def exercise_4_13b (p : Polynomial F) (hp : p ≠ 0) :
-    Module.Basis (Fin p.natDegree) F (Polynomial F ⧸ exercise_4_13_U p) := sorry
+    Module.Basis (Fin p.natDegree) F (Polynomial F ⧸ exercise_4_13_U p) :=
+  -- the image of the basis 1, x, …, x^(deg p - 1) of polynomials of degree < deg p
+  (Pi.basisFun F (Fin p.natDegree)).map
+    ((Polynomial.degreeLTEquiv F p.natDegree).symm ≪≫ₗ exercise_4_13_equiv p hp)
 
 /-- 4.14 (a) The map {lit}`T(r, s) = r·p + s·q` from
 {lit}`𝒫_{n−1}(ℂ) × 𝒫_{m−1}(ℂ)` to {lit}`𝒫_{m+n−1}(ℂ)`.) -/
@@ -1048,20 +1392,84 @@ noncomputable def exercise_4_14_T (m n : ℕ) (p q : Polynomial ℂ)
     (hp : p.natDegree ≤ m) (hq : q.natDegree ≤ n) :
     Polynomial.degreeLT ℂ n × Polynomial.degreeLT ℂ m →ₗ[ℂ]
       Polynomial.degreeLT ℂ (m + n) where
-  toFun := fun ⟨r, s⟩ => ⟨r.val * p + s.val * q, by sorry⟩
-  map_add' := by sorry
-  map_smul' := by sorry
+  toFun := fun ⟨r, s⟩ => ⟨r.val * p + s.val * q, by
+    -- deg (r p) ≤ deg r + deg p < n + m, and likewise for s q
+    have key : ∀ {a b : ℕ} (f g : Polynomial ℂ), f ∈ Polynomial.degreeLT ℂ a →
+        g.natDegree ≤ b → f * g ∈ Polynomial.degreeLT ℂ (a + b) := by
+      intro a b f g hf hg
+      by_cases hf0 : f = 0
+      · simp [hf0]
+      rw [Polynomial.mem_degreeLT] at hf ⊢
+      have hfa := (Polynomial.natDegree_lt_iff_degree_lt hf0).2 hf
+      calc (f * g).degree ≤ (f * g).natDegree := Polynomial.degree_le_natDegree
+        _ ≤ (f.natDegree + g.natDegree : ℕ) := by exact_mod_cast Polynomial.natDegree_mul_le
+        _ < (a + b : ℕ) := by exact_mod_cast (by omega : f.natDegree + g.natDegree < a + b)
+    refine Submodule.add_mem _ ?_ ?_
+    · rw [add_comm]; exact key _ _ r.2 hp
+    · exact key _ _ s.2 hq⟩
+  map_add' _ _ := by
+    apply Subtype.ext
+    simp only [Submodule.coe_add]
+    ring
+  map_smul' _ _ := by
+    apply Subtype.ext
+    simp only [Submodule.coe_smul, RingHom.id_apply, smul_mul_assoc, smul_add]
 
 theorem exercise_4_14a (p q : Polynomial ℂ) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
     (m n : PNat) (hpdeg : p.natDegree = m) (hqdeg : q.natDegree = n) :
     Function.Injective (exercise_4_14_T m n p q hpdeg.le hqdeg.le) := by
-  sorry
+  -- assume rp + sq = 0 for some r and s
+  -- then rp = -sq, so each zero of p has to be a zero of s,
+  -- but s is of lower degree, so only possible if s = 0, which then leads to rp = 0, and r = 0.
+  rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+  rintro ⟨⟨r, hr⟩, ⟨s, hs⟩⟩ h
+  have h' : r * p + s * q = 0 := congrArg Subtype.val h
+  have hp0 : p ≠ 0 := by rintro rfl; have := m.pos; simp at hpdeg; omega
+  have hq0 : q ≠ 0 := by rintro rfl; have := n.pos; simp at hqdeg; omega
+  have hs0 : s = 0 := by
+    by_contra hs0
+    have hsq : -s * q ≠ 0 := mul_ne_zero (neg_ne_zero.2 hs0) hq0
+    have hrp : r * p = -s * q := by rw [neg_mul]; exact eq_neg_of_add_eq_zero_left h'
+    have hrp0 : r * p ≠ 0 := hrp ▸ hsq
+    -- every zero of p is a zero of -s, with at least the same multiplicity
+    have hle : p.roots ≤ (-s).roots := by
+      classical
+      rw [Multiset.le_iff_count]
+      intro a
+      rw [Polynomial.count_roots, Polynomial.count_roots]
+      by_cases hpa : p.IsRoot a
+      · have := congrArg (Polynomial.rootMultiplicity a) hrp
+        rw [Polynomial.rootMultiplicity_mul hrp0, Polynomial.rootMultiplicity_mul hsq,
+          Polynomial.rootMultiplicity_eq_zero (fun hqa => hpq a ⟨hpa, hqa⟩)] at this
+        omega
+      · rw [Polynomial.rootMultiplicity_eq_zero hpa]
+        exact Nat.zero_le _
+    -- so deg s ≥ #roots of p = m, contradicting deg s < m
+    have h1 := Multiset.card_le_card hle
+    rw [IsAlgClosed.card_roots_eq_natDegree, hpdeg] at h1
+    have h2 := Polynomial.card_roots' (-s)
+    rw [Polynomial.natDegree_neg] at h2
+    have h3 := (Polynomial.natDegree_lt_iff_degree_lt hs0).2 (Polynomial.mem_degreeLT.1 hs)
+    omega
+  subst hs0
+  rw [zero_mul, add_zero] at h'
+  have hr0 : r = 0 := (mul_eq_zero.1 h').resolve_right hp0
+  subst hr0
+  rfl
 
 /-- 4.14 (b) The same map is surjective. -/
 theorem exercise_4_14b (p q : Polynomial ℂ) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
     (m n : PNat) (hpdeg : p.natDegree = m) (hqdeg : q.natDegree = n) :
     Function.Surjective (exercise_4_14_T m n p q hpdeg.le hqdeg.le) := by
-  sorry
+  -- dimension count - so inj -> surj since T is iso between same dim spaces.
+  haveI (k : ℕ) : Module.Finite ℂ (Polynomial.degreeLT ℂ k) :=
+    Module.Finite.equiv (Polynomial.degreeLTEquiv ℂ k).symm
+  have hdeg (k : ℕ) : finrank ℂ (Polynomial.degreeLT ℂ k) = k := by
+    rw [(Polynomial.degreeLTEquiv ℂ k).finrank_eq, Module.finrank_fin_fun]
+  have hdim : finrank ℂ (Polynomial.degreeLT ℂ n × Polynomial.degreeLT ℂ m) =
+      finrank ℂ (Polynomial.degreeLT ℂ (m + n)) := by
+    rw [Module.finrank_prod, hdeg, hdeg, hdeg, add_comm]
+  exact (LADR.Section_3D.injective_iff_surjective hdim _).1 (exercise_4_14a p q hpq m n hpdeg hqdeg)
 
 /-- 4.14 (c) Bezout: there exist {lit}`r ∈ 𝒫_{n−1}(ℂ)`, {lit}`s ∈ 𝒫_{m−1}(ℂ)`
 with {lit}`rp + sq = 1`. -/
@@ -1069,6 +1477,12 @@ theorem exercise_4_14c (p q : Polynomial ℂ) (hp : p.natDegree ≠ 0)
     (hq : q.natDegree ≠ 0) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z)) :
     ∃ (r : Polynomial.degreeLT ℂ q.natDegree) (s : Polynomial.degreeLT ℂ p.natDegree),
       r.val * p + s.val * q = 1 := by
-  sorry
+  -- apply the surjectivity of exercise_4_14_T to 1
+  have h1 : (1 : Polynomial ℂ) ∈ Polynomial.degreeLT ℂ (p.natDegree + q.natDegree) := by
+    rw [Polynomial.mem_degreeLT, Polynomial.degree_one]
+    exact_mod_cast (by omega : 0 < p.natDegree + q.natDegree)
+  obtain ⟨⟨r, s⟩, hrs⟩ := exercise_4_14b p q hpq ⟨p.natDegree, Nat.pos_of_ne_zero hp⟩
+    ⟨q.natDegree, Nat.pos_of_ne_zero hq⟩ rfl rfl ⟨1, h1⟩
+  exact ⟨r, s, congrArg Subtype.val hrs⟩
 
 end LADR.Chapter_4
