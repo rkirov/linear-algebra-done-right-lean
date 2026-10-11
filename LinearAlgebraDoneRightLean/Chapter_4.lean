@@ -982,9 +982,9 @@ theorem exercise_4_7 {m : ℕ} (z : Fin (m + 1) → F) (_hz : Function.Injective
       ∀ k, (p : Polynomial F).eval (z k) = w k := by
   sorry
 
-/-- 4.8 -/
+/-- 4.8 {lit}`p` has {lit}`deg p` distinct zeros iff {lit}`p` and {lit}`p'` have no common zero. -/
 theorem exercise_4_8 (p : Polynomial ℂ) (hp : 0 < p.natDegree) :
-    p.roots.card = p.natDegree ↔
+    p.roots.toFinset.card = p.natDegree ↔
       ∀ z : ℂ, p.IsRoot z → ¬ p.derivative.IsRoot z := by
   sorry
 
@@ -1004,10 +1004,10 @@ theorem exercise_4_10 (p : Polynomial ℝ) (x : ℝ) (hx : x ≠ 3) :
 
 /-- 4.11 (setup) The candidate polynomial {lit}`q = p · p̄`, where
 {lit}`p̄ = p.map conj` conjugates the coefficients, satisfies
-{lit}`q.eval x = p(x) · conj (p(x))` for real {lit}`x` — i.e. it realizes Axler's
-{lit}`q(z) = p(z) · conj (p(z))` as an honest polynomial. -/
-lemma exercise_4_11_eval (p : Polynomial ℂ) (x : ℝ) :
-    (p * p.map conj).eval (x : ℂ) = p.eval (x : ℂ) * conj (p.eval (x : ℂ)) := by
+{lit}`q.eval z = p(z) · conj (p(conj z))` — i.e. it realizes Axler's
+{lit}`q(z) = p(z) · conj (p(conj z))` as an honest polynomial. -/
+lemma exercise_4_11_eval (p : Polynomial ℂ) (z : ℂ) :
+    p.eval z * conj (p.eval (conj z)) = (p * p.map conj).eval z := by
   sorry
 
 /-- 4.11 That polynomial {lit}`q` has real coefficients: every coefficient has
@@ -1039,7 +1039,8 @@ noncomputable def exercise_4_13b (p : Polynomial F) (hp : p ≠ 0) :
 
 /-- 4.14 (a) The map {lit}`T(r, s) = r·p + s·q` from
 {lit}`𝒫_{n−1}(ℂ) × 𝒫_{m−1}(ℂ)` to {lit}`𝒫_{m+n−1}(ℂ)`.) -/
-noncomputable def exercise_4_14_T (m n : ℕ) (p q : Polynomial ℂ) :
+noncomputable def exercise_4_14_T (m n : ℕ) (p q : Polynomial ℂ)
+    (hp : p.natDegree ≤ m) (hq : q.natDegree ≤ n) :
     Polynomial.degreeLT ℂ n × Polynomial.degreeLT ℂ m →ₗ[ℂ]
       Polynomial.degreeLT ℂ (m + n) where
   toFun := fun ⟨r, s⟩ => ⟨r.val * p + s.val * q, by sorry⟩
@@ -1048,13 +1049,13 @@ noncomputable def exercise_4_14_T (m n : ℕ) (p q : Polynomial ℂ) :
 
 theorem exercise_4_14a (p q : Polynomial ℂ) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
     (m n : PNat) (hpdeg : p.natDegree = m) (hqdeg : q.natDegree = n) :
-    Function.Injective (exercise_4_14_T m n p q) := by
+    Function.Injective (exercise_4_14_T m n p q hpdeg.le hqdeg.le) := by
   sorry
 
 /-- 4.14 (b) The same map is surjective. -/
 theorem exercise_4_14b (p q : Polynomial ℂ) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
     (m n : PNat) (hpdeg : p.natDegree = m) (hqdeg : q.natDegree = n) :
-    Function.Surjective (exercise_4_14_T m n p q) := by
+    Function.Surjective (exercise_4_14_T m n p q hpdeg.le hqdeg.le) := by
   sorry
 
 /-- 4.14 (c) Bezout: there exist {lit}`r ∈ 𝒫_{n−1}(ℂ)`, {lit}`s ∈ 𝒫_{m−1}(ℂ)`
