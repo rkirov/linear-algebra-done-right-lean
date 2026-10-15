@@ -247,7 +247,7 @@ example (S T : V →ₗ[F] W) (v : V) : (S + T) v = S v + T v := LinearMap.add_a
 example (γ : F) (T : V →ₗ[F] W) (v : V) : (γ • T) v = γ • T v :=
   LinearMap.smul_apply _ _ _
 
-/-! 3.6 {lit}`ℒ(V, W)` is a vector space (over {lit}`F`).
+/-! 3.6 {lit}`ℒ(V, W)` is a vector space (over {lit}`F`) (exercise 3A.5).
 
 In mathlib a vector space is the combination of two typeclasses:
 {name}`AddCommGroup` (the additive group structure {lit}`+`, {lit}`0`, {lit}`-`)
@@ -340,10 +340,10 @@ theorem exercise_3A_4 {m : ℕ} (T : V →ₗ[F] W) (v : Fin m → V)
     (hTv : LinearIndependent F (T ∘ v)) : LinearIndependent F v := by
   sorry
 
-/-! 3A.5 {lit}`ℒ(V, W)` is a vector space (3.6) — already proved above. -/
+/-! 3A.5 {lit}`ℒ(V, W)` is a vector space — stated above as 3.6. -/
 
-/-! 3A.6 Algebraic properties of products of linear maps (3.8) — already
-proved above. -/
+/-! 3A.6 Algebraic properties of products of linear maps — stated above as
+3.8. -/
 
 theorem exercise_3A_7 [Finite F V] (hV : finrank F V = 1) (T : V →ₗ[F] V) :
     ∃ γ : F, ∀ v : V, T v = γ • v := by
