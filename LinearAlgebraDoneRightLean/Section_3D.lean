@@ -846,10 +846,29 @@ column of {lit}`ℳ(I, u, v)` lists the coordinates of {lit}`u_k` in {lit}`v`:
 {lit}`ℳ(I, u, v) = [[4,5],[2,3]]`. By 3.82 its inverse is
 {lit}`ℳ(I, v, u) = [[3/2, -5/2],[-1, 2]]`. -/
 
-/-- The list {lit}`(4,2), (5,3)` is a basis of {lit}`ℝ²` (a {lit}`2B.2`-style
-fact, left as {lit}`sorry`). -/
+/-- The list {lit}`(4,2), (5,3)` is a basis of {lit}`ℝ²`: solve for the
+coefficients directly (the determinant {lit}`4·3 - 2·5 = 2` is nonzero). -/
 theorem isBasis_4253 :
-    IsBasis ℝ (![![4, 2], ![5, 3]] : Fin 2 → Fin 2 → ℝ) := by sorry
+    IsBasis ℝ (![![4, 2], ![5, 3]] : Fin 2 → Fin 2 → ℝ) := by
+  constructor
+  · -- g₀(4,2) + g₁(5,3) = 0 forces g₀ = g₁ = 0
+    rw [Fintype.linearIndependent_iff]
+    intro g hg i
+    have h0 := congrFun hg 0
+    have h1 := congrFun hg 1
+    simp [Fin.sum_univ_two] at h0 h1
+    fin_cases i
+    · show g 0 = 0
+      linear_combination (3 * h0 - 5 * h1) / 2
+    · show g 1 = 0
+      linear_combination (4 * h1 - 2 * h0) / 2
+  · -- (x, y) = ((3x - 5y)/2)(4,2) + ((4y - 2x)/2)(5,3)
+    rw [Spans, eq_top_iff]
+    intro x _
+    rw [Submodule.mem_span_range_iff_exists_fun]
+    refine ⟨![(3 * x 0 - 5 * x 1) / 2, (4 * x 1 - 2 * x 0) / 2], ?_⟩
+    funext j
+    fin_cases j <;> simp [Fin.sum_univ_two] <;> ring
 
 /-- {lit}`ℳ(I, u, v) = [[4,5],[2,3]]`: the {lit}`k`th column lists {lit}`u_k`'s
 coordinates in the standard basis. -/
