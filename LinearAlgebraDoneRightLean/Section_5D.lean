@@ -18,6 +18,7 @@ import Mathlib.LinearAlgebra.Matrix.Gershgorin
 import Mathlib.LinearAlgebra.Matrix.IsDiag
 import Mathlib.LinearAlgebra.Matrix.Notation
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.RingTheory.RootsOfUnity.Complex
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
@@ -1050,19 +1051,110 @@ diagonalizable. -/
 theorem exercise_5D_1a {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) (h : T ^ 4 = LinearMap.id) :
     IsDiagonalizable T := by
-  sorry
+  -- p(z) = z^4 - 1 = (z - 1)(z + 1)(z - i)(z + i) over C
+  have hp : (∏ a ∈ ({1, -1, Complex.I, -Complex.I} : Finset ℂ),
+      (Polynomial.X - Polynomial.C a)) = Polynomial.X ^ 4 - 1 := by
+    rw [Finset.prod_insert (by norm_num [Complex.ext_iff]),
+      Finset.prod_insert (by norm_num [Complex.ext_iff]),
+      Finset.prod_pair (by norm_num [Complex.ext_iff])]
+    have hI : Polynomial.C Complex.I ^ 2 = -1 := by
+      rw [← map_pow, Complex.I_sq, map_neg, map_one]
+    simp only [map_neg, map_one]
+    linear_combination (1 - Polynomial.X ^ 2) * hI
+  -- since p(T) = 0, min.poly must divide p(z), which means it has distinct roots
+  have hpT : aeval T (Polynomial.X ^ 4 - 1 : Polynomial ℂ) = 0 := by
+    rw [map_sub, map_pow, Polynomial.aeval_X, map_one, h,
+      ← Module.End.one_eq_id, sub_self]
+  have hdvd := (aeval_eq_zero_iff_minpoly_dvd T _).mp hpT
+  rw [← hp] at hdvd
+  -- so T is diagonalizable.
+  exact isDiagonalizable_of_minpoly_dvd_prod T _ hdvd
 
 /-- 5D.1 (b) {lit}`T⁴ = T` also implies diagonalizable. -/
 theorem exercise_5D_1b {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) (h : T ^ 4 = T) :
     IsDiagonalizable T := by
-  sorry
+  -- p(z) = z^4 - z = z(z - 1)(z - ζ3)(z - ζ3^2) over C
+  set ζ := Complex.exp (2 * Real.pi * Complex.I / 3) with hζ_def
+  have hζ : IsPrimitiveRoot ζ 3 := Complex.isPrimitiveRoot_exp 3 (by norm_num)
+  have hζ0 : ζ ≠ 0 := hζ.ne_zero (by norm_num)
+  have hζ1 : ζ ≠ 1 := hζ.ne_one (by norm_num)
+  have hζ2 : ζ ^ 2 ≠ 1 := hζ.pow_ne_one_of_pos_of_lt (by norm_num) (by norm_num)
+  have hζζ2 : ζ ≠ ζ ^ 2 := fun hh =>
+    hζ1 (mul_left_cancel₀ hζ0 (by rw [mul_one, ← sq, ← hh]))
+  have hsum : ζ ^ 2 + ζ + 1 = 0 := by
+    have := hζ.geom_sum_eq_zero (by norm_num)
+    simp only [Finset.sum_range_succ, Finset.sum_range_zero, pow_zero,
+      pow_one, zero_add] at this
+    linear_combination this
+  have hc1 : Polynomial.C ζ ^ 2 + Polynomial.C ζ + 1 = 0 := by
+    rw [← map_pow, ← map_one Polynomial.C, ← map_add, ← map_add, hsum,
+      map_zero]
+  have hc3 : Polynomial.C ζ ^ 3 = 1 := by
+    rw [← map_pow, hζ.pow_eq_one, map_one]
+  have hp : (∏ a ∈ ({0, 1, ζ, ζ ^ 2} : Finset ℂ),
+      (Polynomial.X - Polynomial.C a)) = Polynomial.X ^ 4 - Polynomial.X := by
+    rw [Finset.prod_insert (by simp [hζ0.symm, (pow_ne_zero 2 hζ0).symm]),
+      Finset.prod_insert (by simp [hζ1.symm, hζ2.symm]),
+      Finset.prod_pair hζζ2]
+    simp only [map_zero, map_one, map_pow, sub_zero]
+    linear_combination
+      (-(Polynomial.X * (Polynomial.X - 1) * Polynomial.X)) * hc1 +
+      (Polynomial.X * (Polynomial.X - 1)) * hc3
+  -- since p(T) = 0, min.poly must divide p(z), which means it has distinct roots
+  have hpT : aeval T (Polynomial.X ^ 4 - Polynomial.X : Polynomial ℂ) = 0 := by
+    rw [map_sub, map_pow, Polynomial.aeval_X, h, sub_self]
+  have hdvd := (aeval_eq_zero_iff_minpoly_dvd T _).mp hpT
+  rw [← hp] at hdvd
+  -- so T is diagonalizable.
+  exact isDiagonalizable_of_minpoly_dvd_prod T _ hdvd
+
+/-- The operator {lit}`T(x, y) = (y, 0)` on {lit}`ℂ²`, with matrix
+{lit}`[[0, 1], [0, 0]]`. -/
+noncomputable def T_5D_1c : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ) where
+  toFun x := ![x 1, 0]
+  map_add' x y := by funext i; fin_cases i <;> simp
+  map_smul' c x := by funext i; fin_cases i <;> simp
 
 /-- 5D.1 (c) But {lit}`T⁴ = T²` does not. -/
 theorem exercise_5D_1c :
     ∃ T : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ),
       T ^ 4 = T ^ 2 ∧ ¬ IsDiagonalizable T := by
-  sorry
+  -- use T = [[0, 1], [0, 0]] which satisfies T^4 = T^2 = 0,
+  have hsq : T_5D_1c ^ 2 = 0 := by
+    apply LinearMap.ext; intro x; funext i
+    fin_cases i <;> simp [T_5D_1c, sq, Module.End.mul_apply]
+  refine ⟨T_5D_1c, ?_, ?_⟩
+  · rw [hsq, show (4 : ℕ) = 2 + 2 from rfl, pow_add, hsq, mul_zero]
+  -- but has min.poly = z^2 (since T^2 = 0, and only O matrix has min.poly = z)
+  have hne : T_5D_1c ≠ 0 := by
+    intro h0
+    have := congrFun (LinearMap.congr_fun h0 ![0, 1]) 0
+    simp [T_5D_1c] at this
+  have hmin : minpoly ℂ T_5D_1c = Polynomial.X ^ 2 := by
+    have hdvd : minpoly ℂ T_5D_1c ∣ Polynomial.X ^ 2 :=
+      (aeval_eq_zero_iff_minpoly_dvd _ _).mp (by rw [map_pow,
+        Polynomial.aeval_X, hsq])
+    obtain ⟨i, hi, hassoc⟩ := (dvd_prime_pow Polynomial.prime_X 2).mp hdvd
+    have heq := Polynomial.eq_of_monic_of_associated
+      (minpoly.monic (Algebra.IsIntegral.isIntegral T_5D_1c))
+      (Polynomial.monic_X_pow i) hassoc
+    interval_cases i
+    · exact absurd (heq.trans (pow_zero _)) (minpoly.ne_one ℂ T_5D_1c)
+    · have := minpoly.aeval ℂ T_5D_1c
+      rw [heq, pow_one, Polynomial.aeval_X] at this
+      exact absurd this hne
+    · exact heq
+  -- hence T is not diagonalizable since root not distinct.
+  intro hdiag
+  obtain ⟨s, hs⟩ :=
+    (isDiagonalizable_iff_minpoly_eq_prod_distinct T_5D_1c).mp hdiag
+  have hroots := congrArg Polynomial.roots (hmin.symm.trans hs)
+  rw [Polynomial.roots_prod_X_sub_C, Polynomial.roots_X_pow] at hroots
+  have := s.nodup
+  rw [← hroots] at this
+  rw [two_nsmul] at this
+  simp at this
 
 /-- 5D.2 If {lit}`T` has a diagonal matrix {lit}`A` with respect to some
 basis, then {lit}`λ` appears on the diagonal of {lit}`A` exactly
@@ -1072,19 +1164,158 @@ theorem exercise_5D_2 [Finite F V] {n : ℕ} {v : Fin n → V}
     (hA : (matrixOf hv hv T).IsDiag) (lam : F) :
     Nat.card {k : Fin n // matrixOf hv hv T k k = lam} =
       finrank F (Module.End.eigenspace T lam) := by
-  sorry
+  classical
+  -- take the v_i s.t. matrixOf hv hv T i i = lam
+  set S : F → Finset (Fin n) := fun μ =>
+    Finset.univ.filter (fun k => matrixOf hv hv T k k = μ) with hS_def
+  -- 1) T v_i = lam v_i for those i
+  -- 2) they are L.I. since v_i are basis
+  -- so span (v_i) ⊆ eigenspace T lam
+  have hle : ∀ μ, (S μ).card ≤ finrank F (Module.End.eigenspace T μ) := by
+    intro μ
+    let w : S μ → Module.End.eigenspace T μ := fun i =>
+      ⟨v i, Module.End.mem_eigenspace_iff.mpr (by
+        rw [apply_eq_smul_of_isDiag hv T hA i, (Finset.mem_filter.mp i.2).2])⟩
+    have hw : LinearIndependent F w := by
+      apply LinearIndependent.of_comp (Module.End.eigenspace T μ).subtype
+      exact hv.1.comp _ Subtype.val_injective
+    simpa using hw.fintype_card_le_finrank
+  -- by cardinality count over all eigenvalues, we get equality with the dimension of the eigenspace.
+  -- (Summing over the distinct diagonal entries {lit}`D`, the counts add up
+  -- to {lit}`n = dim V`, while the eigenspace dimensions add up to at most
+  -- {lit}`dim V`; so every inequality above is an equality.)
+  set D : Finset F := Finset.univ.image (fun k => matrixOf hv hv T k k)
+    with hD_def
+  have hcount : ∑ μ ∈ D, (S μ).card = n := by
+    have h := Finset.card_eq_sum_card_fiberwise (s := Finset.univ) (t := D)
+      (f := fun k => matrixOf hv hv T k k)
+      (fun k _ => Finset.mem_image_of_mem _ (Finset.mem_univ k))
+    rw [Finset.card_univ, Fintype.card_fin] at h
+    exact h.symm
+  have hsumle : ∑ μ ∈ D, finrank F (Module.End.eigenspace T μ) ≤ n := by
+    have h := sum_finrank_eigenspaces_le T
+      (lam := fun k : Fin D.card => (D.equivFin.symm k : F))
+      (fun a b hab => D.equivFin.symm.injective (Subtype.ext hab))
+    rw [← Section_2C.isBasis_card_eq_finrank v hv] at h
+    calc ∑ μ ∈ D, finrank F (Module.End.eigenspace T μ)
+        = ∑ μ : D, finrank F (Module.End.eigenspace T μ) :=
+          (Finset.sum_coe_sort D _).symm
+      _ = ∑ k : Fin D.card,
+          finrank F (Module.End.eigenspace T (D.equivFin.symm k)) :=
+          (Equiv.sum_comp D.equivFin.symm
+            (fun μ : D => finrank F (Module.End.eigenspace T μ))).symm
+      _ ≤ n := h
+  have heq : ∀ μ ∈ D,
+      (S μ).card = finrank F (Module.End.eigenspace T μ) := by
+    have htot : ∑ μ ∈ D, (S μ).card =
+        ∑ μ ∈ D, finrank F (Module.End.eigenspace T μ) :=
+      le_antisymm (Finset.sum_le_sum fun μ _ => hle μ)
+        (hcount.symm ▸ hsumle)
+    exact (Finset.sum_eq_sum_iff_of_le fun μ _ => hle μ).mp htot
+  rw [Nat.card_eq_fintype_card, Fintype.card_subtype]
+  by_cases hlam : lam ∈ D
+  · exact heq lam hlam
+  · -- If {lit}`λ` is not on the diagonal, both sides are {lit}`0`.
+    have h0 : (Finset.univ.filter fun k => matrixOf hv hv T k k = lam) = ∅ :=
+      Finset.filter_eq_empty_iff.mpr fun k _ hk =>
+        hlam (hk ▸ Finset.mem_image_of_mem _ (Finset.mem_univ k))
+    have hbot : Module.End.eigenspace T lam = ⊥ := by
+      by_contra hne
+      obtain ⟨k, hk⟩ := (hasEigenvalue_iff_diag hv T hA lam).mp
+        (Module.End.hasEigenvalue_iff.mpr hne)
+      exact hlam (hk ▸ Finset.mem_image_of_mem _ (Finset.mem_univ k))
+    rw [h0, hbot, finrank_bot, Finset.card_empty]
 
 /-- 5D.3 -/
 theorem exercise_5D_3 [Finite F V] (T : V →ₗ[F] V)
     (hT : IsDiagonalizable T) : IsCompl (ker T) (range T) := by
-  sorry
+  -- assume v_i is the basis that diagonalizes T
+  obtain ⟨n, v, hv, hA⟩ := hT
+  set b := hv.toModuleBasis with hb_def
+  have hb : ∀ i, b i = v i := hv.toModuleBasis_apply
+  -- In coordinates, {lit}`T` multiplies the {lit}`i`-th coordinate by the
+  -- {lit}`i`-th diagonal entry.
+  have hrepr : ∀ x i,
+      b.repr (T x) i = matrixOf hv hv T i i * b.repr x i := by
+    intro x i
+    have hlin : Finsupp.lapply i ∘ₗ b.repr.toLinearMap ∘ₗ T =
+        matrixOf hv hv T i i • (Finsupp.lapply i ∘ₗ b.repr.toLinearMap) := by
+      apply b.ext
+      intro j
+      show b.repr (T (b j)) i = matrixOf hv hv T i i * b.repr (b j) i
+      rw [hb j, apply_eq_smul_of_isDiag hv T hA j, map_smul, ← hb j,
+        b.repr_self, Finsupp.smul_apply, smul_eq_mul, Finsupp.single_apply]
+      split_ifs with h
+      · subst h; rfl
+      · simp
+    exact LinearMap.congr_fun hlin x
+  set K : Set (Fin n) := {i | matrixOf hv hv T i i = 0} with hK_def
+  -- easy to see that v_i ∈ ker T iff the corresponding diagonal entry is 0
+  -- thus ker T = span {v_i | corresponding diagonal entry is 0}
+  have hker : ker T = Submodule.span F (b '' K) := by
+    ext x
+    rw [LinearMap.mem_ker, b.mem_span_image]
+    constructor
+    · intro hx i hi
+      rw [Finset.mem_coe, Finsupp.mem_support_iff] at hi
+      have h := hrepr x i
+      rw [hx, map_zero, Finsupp.coe_zero, Pi.zero_apply] at h
+      exact (mul_eq_zero.mp h.symm).resolve_right hi
+    · intro hsub
+      apply b.repr.injective
+      ext i
+      rw [hrepr, map_zero, Finsupp.coe_zero, Pi.zero_apply]
+      by_cases hi : b.repr x i = 0
+      · rw [hi, mul_zero]
+      · have hK : matrixOf hv hv T i i = 0 :=
+          hsub (Finsupp.mem_support_iff.mpr hi)
+        rw [hK, zero_mul]
+  -- similarly, v_i ∈ range T iff the corresponding diagonal entry is nonzero
+  -- thus range T = span {v_i | corresponding diagonal entry is nonzero}
+  have hrange : range T = Submodule.span F (b '' Kᶜ) := by
+    apply le_antisymm
+    · rintro _ ⟨x, rfl⟩
+      rw [b.mem_span_image]
+      intro i hi
+      rw [Finset.mem_coe, Finsupp.mem_support_iff, hrepr] at hi
+      exact left_ne_zero_of_mul hi
+    · rw [Submodule.span_le]
+      rintro _ ⟨i, hi, rfl⟩
+      refine ⟨(matrixOf hv hv T i i)⁻¹ • b i, ?_⟩
+      rw [map_smul, hb i, apply_eq_smul_of_isDiag hv T hA i, smul_smul,
+        inv_mul_cancel₀ hi, one_smul]
+  -- thus ker T and range T have zero intersection and together they span the whole space.
+  rw [hker, hrange]
+  exact b.linearIndependent.isCompl_span_image b.span_eq isCompl_compl
 
 /-- 5D.4 -/
 theorem exercise_5D_4 [Finite F V] (T : V →ₗ[F] V) :
     [IsCompl (ker T) (range T),
       ker T ⊔ range T = ⊤,
       ker T ⊓ range T = ⊥].TFAE := by
-  sorry
+  -- prove by showing 1 ↔ 2 ∧ 3 (trivially by def)
+  -- so enough to prove 2 ↔ 3 by dim count
+  have h23 : ker T ⊔ range T = ⊤ ↔ ker T ⊓ range T = ⊥ := by
+    -- we have dim (ker T ⊔ range T) = dim (ker T) + dim (range T) - dim (ker T ⊓ range T)
+    have hdim := Section_2C.finrank_sup_add_finrank_inf_eq (ker T) (range T)
+    -- and also dim ker T + dim range T = dim V (by rank-nullity)
+    have hfund := Section_3B.finrank_ker_add_finrank_range T
+    -- hence dim (ker T ⊔ range T) = dim V - dim (ker T ⊓ range T)
+    -- so ker T ⊔ range T = V ↔ ker T ⊓ range T = 0
+    constructor
+    · intro htop
+      rw [htop, finrank_top] at hdim
+      exact Submodule.finrank_eq_zero.mp (by omega)
+    · intro hbot
+      rw [hbot, finrank_bot] at hdim
+      exact Section_2C.subspace_eq_top_of_finrank_eq _ (by omega)
+  tfae_have 1 → 2 := fun h => h.sup_eq_top
+  tfae_have 1 → 3 := fun h => h.inf_eq_bot
+  tfae_have 2 → 1 := fun h =>
+    ⟨disjoint_iff.mpr (h23.mp h), codisjoint_iff.mpr h⟩
+  tfae_have 3 → 1 := fun h =>
+    ⟨disjoint_iff.mpr h, codisjoint_iff.mpr (h23.mpr h)⟩
+  tfae_finish
 
 /-- 5D.5 For {lit}`V` complex: {lit}`T` is diagonalizable iff
 {lit}`V = null(T − λI) ⊕ range(T − λI)` for every {lit}`λ ∈ ℂ`. -/
@@ -1093,20 +1324,133 @@ theorem exercise_5D_5 {V : Type*} [AddCommGroup V] [Module ℂ V]
     IsDiagonalizable T ↔
       ∀ γ : ℂ, IsCompl (ker (T - γ • (LinearMap.id : V →ₗ[ℂ] V)))
         (range (T - γ • (LinearMap.id : V →ₗ[ℂ] V))) := by
-  sorry
+  classical
+  constructor
+  · -- => if T is diagonal w.r.t. v_1, …, v_n, then so is T - λ I (same basis,
+    -- diagonal entries shifted by -λ), so T - λ I is diagonalizable and 5D.3
+    -- gives V = null (T - λ I) ⊕ range (T - λ I).
+    rintro ⟨n, v, hv, hA⟩ γ
+    apply exercise_5D_3
+    refine ⟨n, v, hv, isDiag_matrixOf_of_eigenvectors hv _ fun j =>
+      ⟨matrixOf hv hv T j j - γ, ?_⟩⟩
+    rw [LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply,
+      apply_eq_smul_of_isDiag hv T hA j, sub_smul]
+  · -- <= by earlier theorems
+    -- T diagonalizable iff min poly splits into distinct linear factors
+    -- and over C any poly splits into linear factors, but of unknown multiplicity.
+    -- so enough to show no (z - λ)^2 divides minpoly T.
+    intro hcompl
+    have hmp0 : minpoly ℂ T ≠ 0 :=
+      minpoly.ne_zero (Algebra.IsIntegral.isIntegral T)
+    have hnodup : (minpoly ℂ T).roots.Nodup :=
+      Multiset.nodup_iff_count_le_one.mpr fun γ => by
+        rw [Polynomial.count_roots]
+        by_contra hlt
+        -- (contrapositive) if (z - λ)^2 | minpoly T,
+        obtain ⟨p, hp⟩ :=
+          (Polynomial.le_rootMultiplicity_iff hmp0 (a := γ) (n := 2)).mp
+            (by omega)
+        set N := T - γ • (LinearMap.id : V →ₗ[ℂ] V) with hN_def
+        have hN : aeval T (Polynomial.X - Polynomial.C γ) = N := by
+          rw [aeval_X_sub_C_eq, Algebra.algebraMap_eq_smul_one,
+            Module.End.one_eq_id]
+        -- then (T-Iλ)^2 p(T) = 0, so for any v (T - λ I) p(T) v is in
+        -- both ker (T - λ I) and range (T - λ I), giving a nonzero intersection, contradiction.
+        -- (Some such vector is nonzero: {lit}`(z − λ)p(z)` has smaller degree
+        -- than the minimal polynomial, so {lit}`(T − λI)p(T) ≠ 0`.)
+        have hp0 : p ≠ 0 := by rintro rfl; exact hmp0 (by rw [hp, mul_zero])
+        have hne : aeval T ((Polynomial.X - Polynomial.C γ) * p) ≠ 0 := by
+          intro h0
+          have hdeg := Polynomial.natDegree_le_of_dvd
+            ((aeval_eq_zero_iff_minpoly_dvd T _).mp h0)
+            (mul_ne_zero (Polynomial.X_sub_C_ne_zero γ) hp0)
+          rw [hp, Polynomial.natDegree_mul
+              (pow_ne_zero 2 (Polynomial.X_sub_C_ne_zero γ)) hp0,
+            Polynomial.natDegree_mul (Polynomial.X_sub_C_ne_zero γ) hp0,
+            Polynomial.natDegree_pow, Polynomial.natDegree_X_sub_C] at hdeg
+          omega
+        obtain ⟨v, hv⟩ :
+            ∃ v, aeval T ((Polynomial.X - Polynomial.C γ) * p) v ≠ 0 := by
+          by_contra h
+          push Not at h
+          exact hne (LinearMap.ext h)
+        have hmem : aeval T ((Polynomial.X - Polynomial.C γ) * p) v ∈
+            ker N ⊓ range N := by
+          refine ⟨?_, aeval T p v, ?_⟩
+          · rw [SetLike.mem_coe, LinearMap.mem_ker, ← hN, ← LinearMap.comp_apply,
+              ← aeval_mul_eq_comp, ← mul_assoc, ← sq, ← hp, minpoly.aeval,
+              LinearMap.zero_apply]
+          · rw [aeval_mul_eq_comp, LinearMap.comp_apply, hN]
+        rw [(hcompl γ).inf_eq_bot, Submodule.mem_bot] at hmem
+        exact hv hmem
+    apply isDiagonalizable_of_minpoly_dvd_prod T (minpoly ℂ T).roots.toFinset
+    rw [Finset.prod_eq_multiset_prod, Multiset.toFinset_val,
+      Multiset.dedup_eq_self.mpr hnodup]
+    have hsplit := Polynomial.C_leadingCoeff_mul_prod_multiset_X_sub_C
+      (p := minpoly ℂ T)
+      (Polynomial.splits_iff_card_roots.mp (IsAlgClosed.splits _))
+    rw [(minpoly.monic (Algebra.IsIntegral.isIntegral T)).leadingCoeff,
+      Polynomial.C_1, one_mul] at hsplit
+    rw [hsplit]
 
 /-- 5D.6 -/
 theorem exercise_5D_6 (T : (Fin 5 → ℝ) →ₗ[ℝ] (Fin 5 → ℝ))
     (h : finrank ℝ (Module.End.eigenspace T 8) = 4) :
     IsInvertible (T - 2 • LinearMap.id) ∨
       IsInvertible (T - 6 • LinearMap.id) := by
-  sorry
+  -- assume for contradiction that neither (T - 2 I) nor (T - 6 I) is invertible.
+  by_contra hcon
+  push Not at hcon
+  obtain ⟨h2, h6⟩ := hcon
+  -- thus there are non-zero vectors in their kernels
+  -- thus eigenspaces corresponding to 2 and 6 are non-trivial
+  have hker : ∀ c : ℝ, ¬ IsInvertible (T - c • LinearMap.id) →
+      1 ≤ finrank ℝ (Module.End.eigenspace T c) := by
+    intro c hc
+    rw [Section_3D.isInvertible_iff_injective rfl, ← LinearMap.ker_eq_bot] at hc
+    rw [Module.End.eigenspace_def, Module.End.one_eq_id]
+    exact Nat.one_le_iff_ne_zero.mpr fun h0 =>
+      hc (Submodule.finrank_eq_zero.mp h0)
+  have hE2 := hker 2 (by convert h2 using 3; ext x; simp)
+  have hE6 := hker 6 (by convert h6 using 3; ext x; simp)
+  -- but then the sum of dimensions of the eigenspaces would exceed 5, contradiction.
+  have hinj : Function.Injective (![8, 2, 6] : Fin 3 → ℝ) := by
+    intro i j hij
+    fin_cases i <;> fin_cases j <;> first | rfl | norm_num at hij
+  have hsum : finrank ℝ (Module.End.eigenspace T 8) +
+      finrank ℝ (Module.End.eigenspace T 2) +
+      finrank ℝ (Module.End.eigenspace T 6) ≤ 5 := by
+    have h3 := sum_finrank_eigenspaces_le T hinj
+    rw [Fin.sum_univ_three, Module.finrank_fin_fun] at h3
+    exact h3
+  omega
 
 /-- 5D.7 -/
 theorem exercise_5D_7 (T : V →ₗ[F] V) (hT : IsInvertible T) (γ : F)
     (hγ : γ ≠ 0) :
     Module.End.eigenspace T γ = Module.End.eigenspace hT.inv γ⁻¹ := by
-  sorry
+  -- unfold the definition of eigenspace
+  -- Module.End.eigenspace T γ = {v | T v = γ • v}
+  ext v
+  rw [Module.End.mem_eigenspace_iff, Module.End.mem_eigenspace_iff]
+  have hST : ∀ x, hT.inv (T x) = x := fun x => LinearMap.congr_fun hT.inv_comp x
+  have hTS : ∀ x, T (hT.inv x) = x := fun x => LinearMap.congr_fun hT.comp_inv x
+  -- apply T^-1 to both sides and divide by γ to get to the
+  -- condition for the eigenspace of hT.inv γ⁻¹
+  constructor
+  · intro h
+    have h1 := congrArg hT.inv h
+    rw [hST, map_smul] at h1
+    calc hT.inv v = γ⁻¹ • (γ • hT.inv v) := by
+          rw [smul_smul, inv_mul_cancel₀ hγ, one_smul]
+      _ = γ⁻¹ • v := by rw [← h1]
+  · -- (conversely, apply T to both sides and multiply by γ)
+    intro h
+    have h1 := congrArg T h
+    rw [hTS, map_smul] at h1
+    calc T v = γ • (γ⁻¹ • T v) := by
+          rw [smul_smul, mul_inv_cancel₀ hγ, one_smul]
+      _ = γ • v := by rw [← h1]
 
 /-- 5D.8 -/
 theorem exercise_5D_8 [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
@@ -1114,7 +1458,22 @@ theorem exercise_5D_8 [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
     (hnz : ∀ k, lam k ≠ 0) :
     ∑ k, finrank F (Module.End.eigenspace T (lam k)) ≤
       finrank F (range T) := by
-  sorry
+  -- we shown that eigenvalues corresponding to distinct λ are linearly independent
+  -- take a basis for each eigen space and combine them to get a linearly independent set
+  -- (the span of that set is {lit}`E(λ₁, T) + ⋯ + E(λₘ, T)`, a direct sum
+  -- (5.54), whose dimension is the sum of the dimensions)
+  have hdim := finrank_biSup_eq_sum _ (eigenspaces_iSupIndep' T hlam)
+    Finset.univ
+  rw [biSup_univ_eq] at hdim
+  -- the span of that set is a subspace of the range of T
+  -- each eigenvector is in range of T (since T (1/lambda) v = v)
+  have hle : (⨆ k, Module.End.eigenspace T (lam k)) ≤ range T :=
+    iSup_le fun k v hv => ⟨(lam k)⁻¹ • v, by
+      rw [map_smul, Module.End.mem_eigenspace_iff.mp hv, smul_smul,
+        inv_mul_cancel₀ (hnz k), one_smul]⟩
+  -- and by LI, the dim of the span equals the sum of the dimensions of the eigenspaces.
+  rw [← hdim]
+  exact Submodule.finrank_mono hle
 
 /-- 5D.9 -/
 theorem exercise_5D_9 [CharZero F] (R T : (Fin 3 → F) →ₗ[F] (Fin 3 → F))
@@ -1122,7 +1481,107 @@ theorem exercise_5D_9 [CharZero F] (R T : (Fin 3 → F) →ₗ[F] (Fin 3 → F))
     (hT : ∀ γ : F, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) :
     ∃ (S : (Fin 3 → F) →ₗ[F] (Fin 3 → F)) (hS : IsInvertible S),
       R = hS.inv ∘ₗ T ∘ₗ S := by
-  sorry
+  classical
+  set lam : Fin 3 → F := ![2, 6, 7] with hlam_def
+  have hinj : Function.Injective lam := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> first | rfl | norm_num [lam] at h
+  -- since they have dim V unique eigenvalues, they are both diagonalizable to the same diagonal matrix
+  -- there is basis v and w the does that for each
+  -- (as in 5.58: eigenvectors for distinct eigenvalues are linearly
+  -- independent (5.11), and {lit}`dim V` of them form a basis (2.38))
+  have heig : ∀ U : (Fin 3 → F) →ₗ[F] (Fin 3 → F),
+      (∀ γ : F, HasEigenvalue U γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) →
+      ∃ v : Fin 3 → (Fin 3 → F), IsBasis F v ∧ ∀ k, U (v k) = lam k • v k := by
+    intro U hU
+    have hev : ∀ k, HasEigenvalue U (lam k) := fun k =>
+      (hU _).mpr (by fin_cases k <;> simp [lam])
+    simp only [Module.End.hasEigenvalue_iff_exists] at hev
+    choose v hv_ne hv_eq using hev
+    have hli : LinearIndependent F v :=
+      eigenvectors_linearIndependent U lam hinj v
+        fun k => Module.End.hasEigenvector_iff_and.mpr ⟨hv_ne k, hv_eq k⟩
+    exact ⟨v, isBasis_of_linearIndependent_of_card_eq v hli (by simp), hv_eq⟩
+  obtain ⟨v, hv, hRv⟩ := heig R hR
+  obtain ⟨w, hw, hTw⟩ := heig T hT
+  -- Take S to be the change of basis matrix that sends v to w.
+  let S := hv.toModuleBasis.constr F w
+  let S' := hw.toModuleBasis.constr F v
+  have hSv : ∀ k, S (v k) = w k := fun k => by
+    rw [← hv.toModuleBasis_apply k]
+    exact hv.toModuleBasis.constr_basis F w k
+  have hS'w : ∀ k, S' (w k) = v k := fun k => by
+    rw [← hw.toModuleBasis_apply k]
+    exact hw.toModuleBasis.constr_basis F v k
+  -- (S is invertible, with inverse the map sending w to v)
+  have hS : IsInvertible S :=
+    ⟨S', hv.toModuleBasis.ext fun k => by simp [hSv, hS'w],
+      hw.toModuleBasis.ext fun k => by simp [hSv, hS'w]⟩
+  refine ⟨S, hS, ?_⟩
+  -- (on the basis v: S R v_k = λ_k w_k = T S v_k, so S R = T S)
+  have hcomm : S ∘ₗ R = T ∘ₗ S :=
+    hv.toModuleBasis.ext fun k => by simp [hRv, hSv, hTw]
+  calc R = (hS.inv ∘ₗ S) ∘ₗ R := by rw [hS.inv_comp]; rfl
+    _ = hS.inv ∘ₗ (S ∘ₗ R) := rfl
+    _ = hS.inv ∘ₗ T ∘ₗ S := by rw [hcomm]
+
+/-- Conjugating by an invertible {lit}`S` does not change eigenspace
+dimensions: {lit}`S` maps {lit}`E(λ, S⁻¹TS)` isomorphically onto
+{lit}`E(λ, T)`. -/
+theorem finrank_eigenspace_conj (T : V →ₗ[F] V) {S : V →ₗ[F] V}
+    (hS : IsInvertible S) (γ : F) :
+    finrank F (Module.End.eigenspace (hS.inv ∘ₗ T ∘ₗ S) γ) =
+      finrank F (Module.End.eigenspace T γ) := by
+  have hTS : ∀ x, S (hS.inv x) = x := fun x => LinearMap.congr_fun hS.comp_inv x
+  have hmap : (Module.End.eigenspace (hS.inv ∘ₗ T ∘ₗ S) γ).map
+      (hS.toLinearEquiv : V →ₗ[F] V) = Module.End.eigenspace T γ := by
+    ext x
+    simp only [Submodule.mem_map, Module.End.mem_eigenspace_iff,
+      LinearMap.comp_apply]
+    constructor
+    · rintro ⟨v, hv, rfl⟩
+      have h := congrArg S hv
+      rw [hTS, map_smul] at h
+      exact h
+    · intro hx
+      refine ⟨hS.inv x, ?_, hTS x⟩
+      rw [hTS, hx, map_smul]
+  rw [← hmap, LinearEquiv.finrank_map_eq]
+
+/-- The diagonal operator {lit}`x ↦ (d₀x₀, …, dₙ₋₁xₙ₋₁)` on {lit}`𝐅ⁿ`. -/
+noncomputable def diagOp_5D_10 {n : ℕ} (d : Fin n → F) :
+    (Fin n → F) →ₗ[F] (Fin n → F) where
+  toFun x i := d i * x i
+  map_add' x y := by funext i; simp [mul_add]
+  map_smul' c x := by funext i; simp; ring
+
+theorem diagOp_5D_10_single {n : ℕ} (d : Fin n → F) (j : Fin n) :
+    diagOp_5D_10 d (Pi.single j 1) = d j • (Pi.single j 1 : Fin n → F) := by
+  funext k
+  by_cases hk : k = j
+  · subst hk; simp [diagOp_5D_10]
+  · simp [diagOp_5D_10, hk]
+
+/-- The eigenvalues of a diagonal operator are its diagonal entries. -/
+theorem hasEigenvalue_diagOp_5D_10 {n : ℕ} (d : Fin n → F) (γ : F) :
+    HasEigenvalue (diagOp_5D_10 d) γ ↔ ∃ i, d i = γ := by
+  constructor
+  · intro hev
+    obtain ⟨w, hw0, hw⟩ := Module.End.hasEigenvalue_iff_exists.mp hev
+    obtain ⟨i, hi⟩ : ∃ i, w i ≠ 0 := by
+      by_contra h
+      push Not at h
+      exact hw0 (funext h)
+    refine ⟨i, mul_right_cancel₀ hi ?_⟩
+    simpa [diagOp_5D_10] using congrFun hw i
+  · rintro ⟨i, rfl⟩
+    refine Module.End.hasEigenvalue_iff_exists.mpr ⟨Pi.single i 1, ?_, ?_⟩
+    · intro h
+      simpa using congrFun h i
+    · funext j
+      by_cases h : j = i
+      · subst h; simp [diagOp_5D_10]
+      · simp [diagOp_5D_10, h]
 
 /-- 5D.10 -/
 theorem exercise_5D_10 [CharZero F] :
@@ -1131,20 +1590,118 @@ theorem exercise_5D_10 [CharZero F] :
       (∀ γ : F, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) ∧
       ¬ ∃ (S : (Fin 4 → F) →ₗ[F] (Fin 4 → F)) (hS : IsInvertible S),
         R = hS.inv ∘ₗ T ∘ₗ S := by
-  sorry
+  -- take T to be diag(2,6,7,2) and R to be diag(2,6,7,7)
+  refine ⟨diagOp_5D_10 ![2, 6, 7, 7], diagOp_5D_10 ![2, 6, 7, 2], ?_, ?_, ?_⟩
+  · intro γ
+    rw [hasEigenvalue_diagOp_5D_10]
+    simp [Fin.exists_fin_succ, eq_comm]
+  · intro γ
+    rw [hasEigenvalue_diagOp_5D_10]
+    simp [Fin.exists_fin_succ, eq_comm]
+    tauto
+  -- if R = S⁻¹ T S, then dim E(7, R) = dim E(7, T)
+  rintro ⟨S, hS, hRST⟩
+  have hdim : finrank F
+        (Module.End.eigenspace (diagOp_5D_10 ![(2 : F), 6, 7, 7]) 7) =
+      finrank F (Module.End.eigenspace (diagOp_5D_10 ![(2 : F), 6, 7, 2]) 7) := by
+    have h := finrank_eigenspace_conj (diagOp_5D_10 ![(2 : F), 6, 7, 2]) hS 7
+    rw [← hRST] at h
+    exact h
+  -- but E(7, R) ⊇ span(e₂, e₃) has dimension ≥ 2
+  have hR : 2 ≤ finrank F
+      (Module.End.eigenspace (diagOp_5D_10 ![(2 : F), 6, 7, 7]) 7) := by
+    let w : Fin 2 → Module.End.eigenspace (diagOp_5D_10 ![(2 : F), 6, 7, 7]) 7 :=
+      ![⟨Pi.single 2 1, Module.End.mem_eigenspace_iff.mpr
+          (by rw [diagOp_5D_10_single]; simp)⟩,
+        ⟨Pi.single 3 1, Module.End.mem_eigenspace_iff.mpr
+          (by rw [diagOp_5D_10_single]; simp)⟩]
+    have hw : LinearIndependent F w := by
+      apply LinearIndependent.of_comp (Submodule.subtype _)
+      have h := (Pi.basisFun F (Fin 4)).linearIndependent.comp ![2, 3]
+        (by intro i j h; fin_cases i <;> fin_cases j <;> simp_all)
+      convert h using 1
+      funext k
+      fin_cases k <;> simp [w]
+    simpa using hw.fintype_card_le_finrank
+  -- while E(7, T) ⊆ span(e₂) has dimension ≤ 1
+  have hT : finrank F
+      (Module.End.eigenspace (diagOp_5D_10 ![(2 : F), 6, 7, 2]) 7) ≤ 1 := by
+    have hle : Module.End.eigenspace (diagOp_5D_10 ![(2 : F), 6, 7, 2]) 7 ≤
+        F ∙ (Pi.single 2 1 : Fin 4 → F) := by
+      intro x hx
+      have hx' := Module.End.mem_eigenspace_iff.mp hx
+      refine Submodule.mem_span_singleton.mpr ⟨x 2, ?_⟩
+      funext i
+      have hi := congrFun hx' i
+      simp only [diagOp_5D_10, LinearMap.coe_mk, AddHom.coe_mk,
+        Pi.smul_apply, smul_eq_mul] at hi
+      fin_cases i <;> simp at hi ⊢ <;> exact hi.symm
+    calc _ ≤ finrank F (F ∙ (Pi.single 2 1 : Fin 4 → F)) :=
+          Submodule.finrank_mono hle
+      _ = 1 := finrank_span_singleton (by simp)
+  omega
 
 /-- 5D.11 -/
 theorem exercise_5D_11 :
     ∃ T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ),
       HasEigenvalue T 6 ∧ HasEigenvalue T 7 ∧ ¬ IsDiagonalizable T := by
-  sorry
+  -- use matrix that has min.poly (z - 6)^6 * (z - 7),
+  -- by earlier characterization, this matrix will not be diagonalizable
+  -- (we can either use the companion matrix of the minimal polynomial)
+  -- or Example 5.61 already provides one: {lit}`T_5_61` has minimal polynomial
+  -- {lit}`(z − 6)²(z − 7)` and is not diagonalizable.)
+  refine ⟨T_5_61, ?_, ?_, not_isDiagonalizable_T_5_61⟩
+  · exact Module.End.hasEigenvalue_iff_exists.mpr ⟨![1, 0, 0],
+      by intro h; have := congrFun h 0; simp at this,
+      by funext i; fin_cases i <;> simp [T_5_61]⟩
+  · exact Module.End.hasEigenvalue_iff_exists.mpr ⟨![10, 2, 1],
+      by intro h; have := congrFun h 2; simp at this,
+      by funext i; fin_cases i <;> simp [T_5_61]; all_goals norm_num⟩
 
 /-- 5D.12 -/
 theorem exercise_5D_12 (T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
     (h6 : HasEigenvalue T 6) (h7 : HasEigenvalue T 7)
     (hnd : ¬ IsDiagonalizable T) :
     ∃ z : Fin 3 → ℂ, T z = ![6 + 8 * z 0, 7 + 8 * z 1, 13 + 8 * z 2] := by
-  sorry
+  -- not diagonalizable, means min.poly has repeated root
+  -- since we had 2 - 6 and 7, one repetition gives us all eigenvalues
+  -- notably 8can't be an eigenvalue
+  -- (shortcut: if 8 were an eigenvalue, then 6, 7, 8 would be dim V = 3
+  -- distinct eigenvalues, so T would be diagonalizable by 5.58)
+  have h8 : ¬ HasEigenvalue T 8 := by
+    intro h8
+    apply hnd
+    have hr : finrank ℂ (Fin 3 → ℂ) = 3 := by simp
+    have hinj3 : Function.Injective (![6, 7, 8] : Fin 3 → ℂ) := by
+      intro i j h
+      fin_cases i <;> fin_cases j <;> first | rfl | norm_num at h
+    have hev3 : ∀ k : Fin 3, HasEigenvalue T (![6, 7, 8] k) := by
+      intro k
+      fin_cases k
+      · exact h6
+      · exact h7
+      · exact h8
+    exact isDiagonalizable_of_card_eigenvalues T
+      (fun k => ![6, 7, 8] (Fin.cast hr k))
+      (hinj3.comp (Fin.cast_injective hr)) (fun k => hev3 _)
+  -- so T - 8 I is invertable, since kernel is empty.
+  have hinj : Function.Injective
+      (T - (8 : ℂ) • (LinearMap.id : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))) := by
+    have hbot : Module.End.eigenspace T 8 = ⊥ := by
+      by_contra h
+      exact h8 (Module.End.hasEigenvalue_iff.mpr h)
+    rw [Module.End.eigenspace_def, Module.End.one_eq_id] at hbot
+    exact LinearMap.ker_eq_bot.mp hbot
+  -- so for any v, there is a preimage under T - 8 I, notably (6,7,13)
+  have hsurj := (Section_3D.isInvertible_iff_surjective rfl _).mp
+    ((Section_3D.isInvertible_iff_injective rfl _).mpr hinj)
+  obtain ⟨z, hz⟩ := hsurj ![6, 7, 13]
+  refine ⟨z, ?_⟩
+  funext i
+  have h := congrFun hz i
+  simp only [LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply,
+    Pi.sub_apply, Pi.smul_apply, smul_eq_mul] at h
+  fin_cases i <;> simp at h ⊢ <;> linear_combination h
 
 /-- 5D.13 -/
 theorem exercise_5D_13 {n : ℕ} (A B : Matrix (Fin n) (Fin n) F)
