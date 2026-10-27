@@ -1116,16 +1116,12 @@ noncomputable def T_5D_1c : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ) where
   map_add' x y := by funext i; fin_cases i <;> simp
   map_smul' c x := by funext i; fin_cases i <;> simp
 
-/-- 5D.1 (c) But {lit}`T⁴ = T²` does not. -/
-theorem exercise_5D_1c :
-    ∃ T : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ),
-      T ^ 4 = T ^ 2 ∧ ¬ IsDiagonalizable T := by
-  -- use T = [[0, 1], [0, 0]] which satisfies T^4 = T^2 = 0,
-  have hsq : T_5D_1c ^ 2 = 0 := by
-    apply LinearMap.ext; intro x; funext i
-    fin_cases i <;> simp [T_5D_1c, sq, Module.End.mul_apply]
-  refine ⟨T_5D_1c, ?_, ?_⟩
-  · rw [hsq, show (4 : ℕ) = 2 + 2 from rfl, pow_add, hsq, mul_zero]
+theorem T_5D_1c_sq : T_5D_1c ^ 2 = 0 := by
+  apply LinearMap.ext; intro x; funext i
+  fin_cases i <;> simp [T_5D_1c, sq, Module.End.mul_apply]
+
+theorem not_isDiagonalizable_T_5D_1c : ¬ IsDiagonalizable T_5D_1c := by
+  have hsq := T_5D_1c_sq
   -- but has min.poly = z^2 (since T^2 = 0, and only O matrix has min.poly = z)
   have hne : T_5D_1c ≠ 0 := by
     intro h0
@@ -1155,6 +1151,15 @@ theorem exercise_5D_1c :
   rw [← hroots] at this
   rw [two_nsmul] at this
   simp at this
+
+/-- 5D.1 (c) But {lit}`T⁴ = T²` does not. -/
+theorem exercise_5D_1c :
+    ∃ T : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ),
+      T ^ 4 = T ^ 2 ∧ ¬ IsDiagonalizable T := by
+  -- use T = [[0, 1], [0, 0]] which satisfies T^4 = T^2 = 0,
+  -- (the rest of the argument is {name}`not_isDiagonalizable_T_5D_1c`)
+  refine ⟨T_5D_1c, ?_, not_isDiagonalizable_T_5D_1c⟩
+  rw [T_5D_1c_sq, show (4 : ℕ) = 2 + 2 from rfl, pow_add, T_5D_1c_sq, mul_zero]
 
 /-- 5D.2 If {lit}`T` has a diagonal matrix {lit}`A` with respect to some
 basis, then {lit}`λ` appears on the diagonal of {lit}`A` exactly
@@ -1229,6 +1234,7 @@ theorem exercise_5D_2 [Finite F V] {n : ℕ} {v : Fin n → V}
 /-- 5D.3 -/
 theorem exercise_5D_3 [Finite F V] (T : V →ₗ[F] V)
     (hT : IsDiagonalizable T) : IsCompl (ker T) (range T) := by
+  classical
   -- assume v_i is the basis that diagonalizes T
   obtain ⟨n, v, hv, hA⟩ := hT
   set b := hv.toModuleBasis with hb_def
@@ -1707,7 +1713,39 @@ theorem exercise_5D_12 (T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
 theorem exercise_5D_13 {n : ℕ} (A B : Matrix (Fin n) (Fin n) F)
     (hA : A.IsDiag) (hdist : Function.Injective fun k => A k k) :
     A * B = B * A ↔ B.IsDiag := by
-  sorry
+  -- if A is diag A * B - is multiplying column i of B by A_ii
+  have hAB : ∀ i j, (A * B) i j = A i i * B i j := by
+    intro i j
+    rw [Matrix.mul_apply, Finset.sum_eq_single i]
+    · intro k _ hki
+      rw [hA (Ne.symm hki), zero_mul]
+    · intro h
+      exact absurd (Finset.mem_univ i) h
+  -- B * A - is multiplying row i of B by A_ii
+  have hBA : ∀ i j, (B * A) i j = B i j * A j j := by
+    intro i j
+    rw [Matrix.mul_apply, Finset.sum_eq_single j]
+    · intro k _ hkj
+      rw [hA hkj, mul_zero]
+    · intro h
+      exact absurd (Finset.mem_univ j) h
+  constructor
+  · -- so A * B = B * A means for each i ≠ j, A_ii * B_ij = A_jj * B_ij
+    intro h i j hij
+    have hij' := congrFun (congrFun h i) j
+    rw [hAB, hBA] at hij'
+    -- since A_ii ≠ A_jj for i ≠ j by injectivity, this implies B_ij = 0 for i ≠ j
+    have hne : A i i - A j j ≠ 0 := sub_ne_zero.mpr fun h' => hij (hdist h')
+    have : (A i i - A j j) * B i j = 0 := by linear_combination hij'
+    -- hence B must be diagonal
+    exact (mul_eq_zero.mp this).resolve_left hne
+  · -- (conversely, diagonal matrices commute)
+    intro hB
+    ext i j
+    rw [hAB, hBA]
+    by_cases hij : i = j
+    · subst hij; ring
+    · rw [hB hij, mul_zero, zero_mul]
 
 /-- 5D.14 (a) The vector space is part of the example: exhibit *some*
 finite-dimensional complex vector space with an operator {lit}`T` such that
@@ -1716,7 +1754,15 @@ theorem exercise_5D_14a :
     ∃ (V : Type) (_ : AddCommGroup V) (_ : Module ℂ V) (_ : Module.Finite ℂ V)
       (T : V →ₗ[ℂ] V),
       IsDiagonalizable (T ∘ₗ T) ∧ ¬ IsDiagonalizable T := by
-  sorry
+  -- use T = [0 1; 0 0], T^2 = 0 diagonalizable
+  -- (T itself is not diagonalizable, see 5D.1 (c))
+  refine ⟨Fin 2 → ℂ, inferInstance, inferInstance, inferInstance, T_5D_1c,
+    ?_, not_isDiagonalizable_T_5D_1c⟩
+  have h0 : T_5D_1c ∘ₗ T_5D_1c = 0 := by
+    rw [← Module.End.mul_eq_comp, ← sq, T_5D_1c_sq]
+  rw [h0]
+  obtain ⟨n, v, hv⟩ := exists_basis (F := ℂ) (V := Fin 2 → ℂ)
+  exact ⟨n, v, hv, isDiag_matrixOf_of_eigenvectors hv _ fun j => ⟨0, by simp⟩⟩
 
 /-- 5D.14 (b) For invertible {lit}`T` on a complex vector space:
 {lit}`T` is diagonalizable iff {lit}`Tᵏ` is. -/
@@ -1724,7 +1770,63 @@ theorem exercise_5D_14b {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) (hT : IsInvertible T) (k : ℕ)
     (hk : 0 < k) :
     IsDiagonalizable T ↔ IsDiagonalizable (T ^ k) := by
-  sorry
+  classical
+  constructor
+  · -- => is true without any assumption, just look at the matrix of T
+    -- and compute the matrix of T^k in that basis, which will have Tii^k in ii position.
+    rintro ⟨n, v, hv, hA⟩
+    refine ⟨n, v, hv, isDiag_matrixOf_of_eigenvectors hv _ fun j =>
+      ⟨matrixOf hv hv T j j ^ k, ?_⟩⟩
+    clear hk
+    induction k with
+    | zero => simp
+    | succ m ih =>
+      rw [pow_succ', Module.End.mul_apply, ih, map_smul,
+        apply_eq_smul_of_isDiag hv T hA j, smul_smul, pow_succ]
+  · -- <= if T^k is diag, it has a minpoly Π z - λi
+    intro hdiag
+    obtain ⟨s, hs⟩ := (isDiagonalizable_iff_minpoly_eq_prod_distinct _).mp hdiag
+    -- and since invertable, no λi is zero
+    have hinj : Function.Injective (T ^ k) := by
+      have hT1 : Function.Injective T := fun x y hxy => by
+        have h := congrArg hT.inv hxy
+        rwa [← LinearMap.comp_apply, ← LinearMap.comp_apply, hT.inv_comp] at h
+      rw [Module.End.coe_pow]
+      exact hT1.iterate k
+    have h0 : ∀ a ∈ s, a ≠ 0 := by
+      rintro a ha rfl
+      have hroot : (minpoly ℂ (T ^ k)).IsRoot 0 := by
+        rw [hs, Polynomial.IsRoot.def, Polynomial.eval_prod]
+        exact Finset.prod_eq_zero ha (by simp)
+      obtain ⟨v, hv0, hv⟩ := Module.End.hasEigenvalue_iff_exists.mp
+        ((isEigenvalue_iff_isRoot _ 0).mpr hroot)
+      exact hv0 (hinj (by rw [hv, zero_smul, map_zero]))
+    -- thus 0 = Π T^k - λi = Π Π(T - ζj i) where ζji is the j-th k-th roots of λi.
+    have hq : aeval T (∏ a ∈ s, (Polynomial.X ^ k - Polynomial.C a)) = 0 := by
+      have h : (∏ a ∈ s, (Polynomial.X ^ k - Polynomial.C a)) =
+          (∏ a ∈ s, (Polynomial.X - Polynomial.C a)).comp (Polynomial.X ^ k) := by
+        rw [Polynomial.prod_comp]
+        simp [Polynomial.sub_comp]
+      rw [h, Polynomial.aeval_comp, map_pow, Polynomial.aeval_X, ← hs,
+        minpoly.aeval]
+    -- min poly T divides that, and since all root are distint
+    -- their k-th roots are also distinct, so the minimal polynomial of T has distinct roots, hence T is diagonalizable.
+    -- (i.e. the product is separable: each {lit}`zᵏ − λ` with {lit}`λ ≠ 0`
+    -- has distinct roots, and the factors for different {lit}`λ` are coprime)
+    have hsep : (∏ a ∈ s, (Polynomial.X ^ k - Polynomial.C a)).Separable := by
+      apply Polynomial.separable_prod'
+      · intro a _ b _ hab
+        have hba : b - a ≠ 0 := sub_ne_zero.mpr (Ne.symm hab)
+        refine ⟨Polynomial.C (b - a)⁻¹, -Polynomial.C (b - a)⁻¹, ?_⟩
+        calc Polynomial.C (b - a)⁻¹ * (Polynomial.X ^ k - Polynomial.C a) +
+              -Polynomial.C (b - a)⁻¹ * (Polynomial.X ^ k - Polynomial.C b)
+            = Polynomial.C ((b - a)⁻¹ * (b - a)) := by
+              simp only [map_mul, map_sub]; ring
+          _ = 1 := by rw [inv_mul_cancel₀ hba, map_one]
+      · intro a ha
+        exact Polynomial.separable_X_pow_sub_C a (by exact_mod_cast hk.ne')
+          (h0 a ha)
+    exact isDiagonalizable_of_separable_aeval T _ hsep hq
 
 /-- 5D.15 Diagonalizability via the minimal polynomial and its
 derivative. -/
@@ -1735,7 +1837,73 @@ theorem exercise_5D_15 {V : Type*} [AddCommGroup V] [Module ℂ V]
       ∀ γ : ℂ, ¬ ((minpoly ℂ T).IsRoot γ ∧
         (minpoly ℂ T).derivative.IsRoot γ),
       IsCoprime (minpoly ℂ T) (minpoly ℂ T).derivative].TFAE := by
-  sorry
+  classical
+  have hmp0 : minpoly ℂ T ≠ 0 := minpoly.ne_zero (Algebra.IsIntegral.isIntegral T)
+  -- 1 ↔ 2: diag iff minpoly splits (true over C) and has distinct roots
+  -- distinct roots equivalent to can't have (x - a)^2 dividing
+  tfae_have 1 → 2 := by
+    rintro hT ⟨γ, hsq⟩
+    obtain ⟨s, hs⟩ := (isDiagonalizable_iff_minpoly_eq_prod_distinct T).mp hT
+    have h2 : 2 ≤ (minpoly ℂ T).roots.count γ := by
+      rw [Polynomial.count_roots]
+      exact (Polynomial.le_rootMultiplicity_iff hmp0).mpr hsq
+    rw [hs, Polynomial.roots_prod_X_sub_C] at h2
+    have h1 := Multiset.nodup_iff_count_le_one.mp s.nodup γ
+    omega
+  tfae_have 2 → 1 := by
+    intro h
+    have hnodup : (minpoly ℂ T).roots.Nodup :=
+      Multiset.nodup_iff_count_le_one.mpr fun γ => by
+        rw [Polynomial.count_roots]
+        by_contra hlt
+        exact h ⟨γ, (Polynomial.le_rootMultiplicity_iff hmp0 (a := γ) (n := 2)).mp
+          (by omega)⟩
+    apply isDiagonalizable_of_minpoly_dvd_prod T (minpoly ℂ T).roots.toFinset
+    rw [Finset.prod_eq_multiset_prod, Multiset.toFinset_val,
+      Multiset.dedup_eq_self.mpr hnodup]
+    have hsplit := Polynomial.C_leadingCoeff_mul_prod_multiset_X_sub_C
+      (p := minpoly ℂ T)
+      (Polynomial.splits_iff_card_roots.mp (IsAlgClosed.splits _))
+    rw [(minpoly.monic (Algebra.IsIntegral.isIntegral T)).leadingCoeff,
+      Polynomial.C_1, one_mul] at hsplit
+    rw [hsplit]
+  -- 2 ↔ 3: => quick computation a divides both p and p'
+  tfae_have 3 → 2 := by
+    rintro h ⟨γ, r, hr⟩
+    apply h γ
+    constructor
+    · rw [Polynomial.IsRoot.def, hr]
+      simp
+    · rw [Polynomial.IsRoot.def, hr]
+      simp [Polynomial.derivative_mul, Polynomial.derivative_pow]
+  -- <= write p as split product of factors, p' vanishes on a root
+  -- only if the factor repeats.
+  -- (p = (z - a) q gives p' = q + (z - a) q', so p'(a) = q(a))
+  tfae_have 2 → 3 := by
+    rintro h γ ⟨hr, hdr⟩
+    obtain ⟨q, hq⟩ := Polynomial.dvd_iff_isRoot.mpr hr
+    rw [Polynomial.IsRoot.def, hq] at hdr
+    simp [Polynomial.derivative_mul] at hdr
+    obtain ⟨r, hr'⟩ := Polynomial.dvd_iff_isRoot.mpr hdr
+    exact h ⟨γ, r, by rw [hq, hr']; ring⟩
+  -- 3 ↔ 4: (contrapositive version) => (x-a) divides both p and p'
+  tfae_have 4 → 3 := by
+    rintro ⟨u, v, huv⟩ γ ⟨hr, hdr⟩
+    have h := congrArg (Polynomial.eval γ) huv
+    simp [Polynomial.eval_add, Polynomial.eval_mul, hr.eq_zero,
+      hdr.eq_zero] at h
+  -- <= if q divides both p and p', take a factor (x-a) of q
+  -- then a is a root of both p and p', hence q has a repeated root.
+  tfae_have 3 → 4 := by
+    intro h
+    apply EuclideanDomain.isCoprime_of_dvd
+    · rintro ⟨h0, -⟩
+      exact hmp0 h0
+    · intro z hz hz0 hzp hzp'
+      obtain ⟨a, ha⟩ := IsAlgClosed.exists_root z
+        (Polynomial.degree_pos_of_ne_zero_of_nonunit hz0 hz).ne'
+      exact h a ⟨ha.dvd hzp, ha.dvd hzp'⟩
+  tfae_finish
 
 /-- 5D.16 For diagonalizable {lit}`T` with distinct eigenvalues
 {lit}`λ₁, …, λₘ`: a subspace {lit}`U` is invariant under {lit}`T` iff there
@@ -1750,7 +1918,47 @@ theorem exercise_5D_16 [Finite F V] (T : V →ₗ[F] V)
       ∃ W : Fin m → Submodule F V,
         (∀ k, W k ≤ Module.End.eigenspace T (lam k)) ∧
         IsDirectSum W ∧ U = ⨆ k, W k := by
-  sorry
+  constructor
+  · -- => we proved that if invariant T|U is diag too
+    intro hU
+    obtain ⟨n, u, hu, hA⟩ := isDiagonalizable_restrict T hT U hU
+    -- one can show that E(T|U, λi) = E(T, λi) ∩ U
+    -- take those as Ui and by theorem 5C.13, their direct sum gives U.
+    refine ⟨fun k => Module.End.eigenspace T (lam k) ⊓ U, fun k => inf_le_left,
+      ?_, ?_⟩
+    · -- (a sum of vectors from distinct eigenspaces is 0 only if each is 0)
+      rw [Section_1C.isDirectSum_iff]
+      intro w
+      constructor
+      · intro hw
+        have h := eq_zero_of_sum_eq_zero_of_mem_eigenspaces T hlam
+          (fun i => (w i : V)) (fun i => (w i).2.1) hw
+        funext i
+        exact Subtype.ext (h i)
+      · rintro rfl
+        simp
+    · -- (each vector of an eigenvector basis of T|U lies in some E(T, λi) ∩ U)
+      apply le_antisymm
+      · refine le_trans (le_of_eq (span_coe_basis hu).symm) ?_
+        rw [Submodule.span_le]
+        rintro _ ⟨j, rfl⟩
+        have hTu : T (u j) = matrixOf hu hu hU.restrict j j • (u j : V) :=
+          congrArg Subtype.val (apply_eq_smul_of_isDiag hu _ hA j)
+        have hev : HasEigenvalue T (matrixOf hu hu hU.restrict j j) :=
+          Module.End.hasEigenvalue_iff_exists.mpr
+            ⟨u j, fun h => hu.1.ne_zero j (Subtype.ext h), hTu⟩
+        obtain ⟨k, hk⟩ := (hall _).mp hev
+        exact Submodule.mem_iSup_of_mem k
+          ⟨Module.End.mem_eigenspace_iff.mpr (by rw [hk]; exact hTu), (u j).2⟩
+      · exact iSup_le fun k => inf_le_right
+  · -- <= Since Ui ≤ E(T, λi), Tv = λi v for v ∈ Ui, so each Ui is invariant under T
+    -- and sum of invariant subspaces is invariant (lemma)
+    rintro ⟨W, hW, -, rfl⟩
+    rw [Section_5A.invariantUnder_iff_map_le, Submodule.map_iSup]
+    refine iSup_mono fun k => ?_
+    rintro _ ⟨v, hv, rfl⟩
+    rw [Module.End.mem_eigenspace_iff.mp (hW k hv)]
+    exact (W k).smul_mem _ hv
 
 /-- 5D.17 {lit}`ℒ(V)` has a basis consisting of diagonalizable
 operators. -/
