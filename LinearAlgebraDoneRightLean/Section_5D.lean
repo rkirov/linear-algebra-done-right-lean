@@ -1965,7 +1965,111 @@ operators. -/
 theorem exercise_5D_17 [Finite F V] :
     ∃ (N : ℕ) (E : Fin N → (V →ₗ[F] V)) (_ : IsBasis F E),
       ∀ i, IsDiagonalizable (E i) := by
-  sorry
+  classical
+  -- pick a basis v_1, …, v_n for V and explicitly construct n^2
+  -- diagonalizable operators that span L(V)
+  obtain ⟨n, v, hv⟩ := exists_basis (F := F) (V := V)
+  set b := hv.toModuleBasis with hb_def
+  have hb : ∀ i, b i = v i := hv.toModuleBasis_apply
+  have hfin : finrank F V = n := (Section_2C.isBasis_card_eq_finrank v hv).symm
+  -- Eij = the operator v_k ↦ δ_jk v_i, whose matrix has a single 1 at (i, j)
+  let e : Fin n → Fin n → (V →ₗ[F] V) := fun i j => (b.coord j).smulRight (b i)
+  have he : ∀ i j k, e i j (b k) = if k = j then b i else 0 := by
+    intro i j k
+    by_cases h : k = j
+    · subst h; simp [e]
+    · simp [e, h]
+  -- We want Eij to be the solution, but only Eii are diagonalizable
+  -- but if we define E'ii = Eii and E'ij = Eii + Eij when i ≠ j, we show:
+  -- (1) the E'ij span L(V), so (being n^2 of them) they form a basis
+  -- (2) each E'ij is diagonalizable
+  let G : Fin n × Fin n → (V →ₗ[F] V) := fun p =>
+    if p.1 = p.2 then e p.1 p.1 else e p.1 p.1 + e p.1 p.2
+  let E : Fin (n * n) → (V →ₗ[F] V) := fun m => G (finProdFinEquiv.symm m)
+  -- (1) the E'ij span L(V)
+  have hspan : Spans F E := by
+    show Submodule.span F (Set.range (G ∘ finProdFinEquiv.symm)) = ⊤
+    rw [Set.range_comp, Equiv.range_eq_univ, Set.image_univ, eq_top_iff]
+    have hG : ∀ p, G p ∈ Submodule.span F (Set.range G) := fun p =>
+      Submodule.subset_span ⟨p, rfl⟩
+    -- every Eij is in their span: Eii = E'ii and Eij = E'ij - E'ii
+    have hemem : ∀ i j, e i j ∈ Submodule.span F (Set.range G) := by
+      intro i j
+      by_cases hij : i = j
+      · subst hij; simpa [G] using hG (i, i)
+      · have h1 := hG (i, j)
+        have h2 := hG (i, i)
+        simp only [G, if_neg hij, if_pos rfl] at h1 h2
+        simpa using Submodule.sub_mem _ h1 h2
+    -- and every T is a combination of the Eij: T = Σ A_ij Eij, where
+    -- A_ij is the i-th coordinate of T v_j (check on the basis v)
+    intro T _
+    have hT : T = ∑ i, ∑ j, b.repr (T (b j)) i • e i j := by
+      apply b.ext
+      intro k
+      simp [LinearMap.sum_apply, he]
+    rw [hT]
+    exact Submodule.sum_mem _ fun i _ => Submodule.sum_mem _ fun j _ =>
+      Submodule.smul_mem _ _ (hemem i j)
+  -- We have n^2 operators spanning L(V), and dim L(V) = n^2, so by
+  -- dimension this is a basis (2.42).
+  have hcard : n * n = finrank F (V →ₗ[F] V) := by
+    rw [Module.finrank_linearMap, hfin]
+  have hE := Section_2C.isBasis_of_spans_of_card_eq E hspan hcard
+  refine ⟨n * n, E, hE, fun m => ?_⟩
+  -- (2) each E'ij is diagonalizable
+  show IsDiagonalizable (G (finProdFinEquiv.symm m))
+  generalize finProdFinEquiv.symm m = p
+  obtain ⟨i, j⟩ := p
+  by_cases hij : i = j
+  · -- E'ii = Eii is already diagonal w.r.t. v: Eii v_k = δ_ik v_k
+    subst hij
+    simp only [G, if_pos rfl]
+    refine ⟨n, v, hv, isDiag_matrixOf_of_eigenvectors hv _ fun k =>
+      ⟨if k = i then 1 else 0, ?_⟩⟩
+    rw [← hb k, he]
+    by_cases hk : k = i
+    · subst hk; simp
+    · simp [hk]
+  · -- E'ij = Eii + Eij (i ≠ j) has 0 and 1 as eigenvalues (it is upper or
+    -- lower triangular with diagonal entries 0 and 1):
+    -- E (E'ij, 0) contains v_k for k ≠ i, j, plus v_j - v_i (n - 1 vectors)
+    -- E (E'ij, 1) contains v_i
+    -- these n vectors w_1, …, w_n form a basis of eigenvectors, so E'ij is diag
+    simp only [G, if_neg hij]
+    let w : Fin n → V := fun k => if k = j then v j - v i else v k
+    -- w spans V (v_j = w_j + w_i, and v_k = w_k otherwise), and has n
+    -- vectors, so it is a basis
+    have hw_spans : Spans F w := by
+      show Submodule.span F (Set.range w) = ⊤
+      rw [eq_top_iff, ← hv.2, Submodule.span_le]
+      rintro _ ⟨k, rfl⟩
+      by_cases hk : k = j
+      · subst hk
+        have hvk : v k = w k + w i := by simp [w, hij]
+        rw [hvk]
+        exact add_mem (Submodule.subset_span ⟨k, rfl⟩)
+          (Submodule.subset_span ⟨i, rfl⟩)
+      · exact Submodule.subset_span ⟨k, by simp [w, hk]⟩
+    have hw := Section_2C.isBasis_of_spans_of_card_eq w hw_spans hfin.symm
+    refine ⟨n, w, hw, isDiag_matrixOf_of_eigenvectors hw _ fun k => ?_⟩
+    by_cases hkj : k = j
+    · -- E'ij (v_j - v_i) = v_i - v_i = 0
+      refine ⟨0, ?_⟩
+      subst hkj
+      simp only [w, if_pos rfl, map_sub, LinearMap.add_apply, ← hb, he,
+        if_neg hij, if_neg (Ne.symm hij), zero_smul]
+      simp
+    · by_cases hki : k = i
+      · -- E'ij v_i = v_i
+        refine ⟨1, ?_⟩
+        subst hki
+        simp only [w, if_neg hkj, LinearMap.add_apply, ← hb, he, one_smul]
+        simp
+      · -- E'ij v_k = 0 for k ≠ i, j
+        refine ⟨0, ?_⟩
+        simp only [w, if_neg hkj, LinearMap.add_apply, ← hb, he, zero_smul]
+        simp [hki]
 
 /-- 5D.18 If {lit}`T` is diagonalizable and {lit}`U` is invariant under
 {lit}`T`, then the quotient operator {lit}`T/U` is diagonalizable. -/
@@ -1973,7 +2077,23 @@ theorem exercise_5D_18 [Finite F V] (T : V →ₗ[F] V)
     (hT : IsDiagonalizable T) (U : Submodule F V)
     (hU : InvariantUnder T U) :
     IsDiagonalizable (exercise_5A_38_quotient_op T U hU) := by
-  sorry
+  -- use the minimal polynomial description
+  obtain ⟨s, hs⟩ := (isDiagonalizable_iff_minpoly_eq_prod_distinct T).mp hT
+  -- we proved earlier that quotient operators has min poly that divides
+  -- the minimal polynomial of T/U divides the minimal polynomial of T
+  -- (p(T/U)(v + U) = p(T)v + U, so (minpoly T)(T/U) = 0, then 5.29)
+  have hq : exercise_5A_38_quotient_op T U hU = Section_5B.quotOp T U hU := rfl
+  have hdvd : minpoly F (exercise_5A_38_quotient_op T U hU) ∣ minpoly F T := by
+    apply (aeval_eq_zero_iff_minpoly_dvd _ _).mp
+    apply LinearMap.ext
+    intro x
+    obtain ⟨v, rfl⟩ := Submodule.mkQ_surjective U x
+    rw [hq, Section_5B.aeval_quotOp_mkQ, minpoly.aeval, LinearMap.zero_apply,
+      map_zero, LinearMap.zero_apply]
+  -- and since the minimal polynomial of T is a product of distinct linear
+  -- factors, so is any monic divisor of it, hence T/U is diagonalizable
+  rw [hs] at hdvd
+  exact isDiagonalizable_of_minpoly_dvd_prod _ s hdvd
 
 /-- 5D.19 Prove or give a counterexample: for a finite-dimensional complex
 vector space {lit}`V`, if {lit}`T ∈ ℒ(V)` has an invariant subspace {lit}`U`
@@ -1985,14 +2105,51 @@ def exercise_5D_19 :
       IsDiagonalizable hU.restrict →
       IsDiagonalizable (exercise_5A_38_quotient_op T U hU) →
       IsDiagonalizable T) := by
-  -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  -- false: we proved that minpoly T divides minpoly T|U * minpoly (T/U),
+  -- but the product can repeat a factor, so minpoly T need not be a product
+  -- of distinct linear factors.
+  apply isFalse
+  push Not
+  -- counterexample: T(x, y) = (y, 0) (matrix [0 1; 0 0])
+  -- with U = range T = span(e₁)
+  -- T|U = 0 and T/U = 0 are diagonalizable (minimal polynomial z),
+  -- but T is not ({name}`not_isDiagonalizable_T_5D_1c`)
+  have hU : InvariantUnder T_5D_1c (LinearMap.range T_5D_1c) :=
+    fun u _ => LinearMap.mem_range_self _ u
+  -- an operator S = 0 is diagonalizable, since minpoly S ∣ z
+  have hzero : ∀ {W : Type} [AddCommGroup W] [Module ℂ W] [Module.Finite ℂ W]
+      (S : W →ₗ[ℂ] W), S = 0 → IsDiagonalizable S := by
+    intro W _ _ _ S hS
+    apply isDiagonalizable_of_minpoly_dvd_prod S {0}
+    apply (aeval_eq_zero_iff_minpoly_dvd _ _).mp
+    simp [hS]
+  refine ⟨Fin 2 → ℂ, inferInstance, inferInstance, inferInstance, T_5D_1c,
+    LinearMap.range T_5D_1c, hU, ?_, ?_, not_isDiagonalizable_T_5D_1c⟩
+  · -- T|U = 0 since T(Tw) = T²w = 0
+    apply hzero
+    apply LinearMap.ext
+    rintro ⟨_, w, rfl⟩
+    apply Subtype.ext
+    change T_5D_1c (T_5D_1c w) = 0
+    rw [← Module.End.mul_apply, ← sq, T_5D_1c_sq, LinearMap.zero_apply]
+  · -- T/U = 0 since Tv ∈ U
+    apply hzero
+    apply LinearMap.ext
+    intro x
+    obtain ⟨v, rfl⟩ := Submodule.mkQ_surjective _ x
+    change Section_5B.quotOp _ _ hU _ = 0
+    rw [Section_5B.quotOp_mkQ, Submodule.mkQ_apply,
+      Submodule.Quotient.mk_eq_zero]
+    exact LinearMap.mem_range_self _ v
 
 /-- 5D.20 {lit}`T` is diagonalizable iff the dual operator {lit}`T′` is
 diagonalizable. -/
 theorem exercise_5D_20 [Finite F V] (T : V →ₗ[F] V) :
     IsDiagonalizable T ↔ IsDiagonalizable T.dualMap := by
-  sorry
+  -- we proved minpoly T' = minpoly T, so T is diagonalizable iff T' is diagonalizable
+  rw [isDiagonalizable_iff_minpoly_eq_prod_distinct,
+    isDiagonalizable_iff_minpoly_eq_prod_distinct,
+    Section_5B.exercise_5B_28]
 
 /-! 5D.21 The Fibonacci sequence and the operator
 {lit}`T(x, y) = (y, x + y)` on {lit}`ℝ²`. We use mathlib's
@@ -2016,37 +2173,140 @@ noncomputable def T_fib : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
 /-- 5D.21 (a) {lit}`Tⁿ(0, 1) = (Fₙ, F_{n+1})`. -/
 theorem exercise_5D_21a (n : ℕ) :
     (T_fib ^ n) ![0, 1] = ![(Nat.fib n : ℝ), (Nat.fib (n + 1) : ℝ)] := by
-  sorry
+  -- trivial by induction on n
+  induction n with
+  | zero => funext i; fin_cases i <;> simp
+  | succ n ih =>
+    rw [pow_succ', Module.End.mul_apply, ih]
+    funext i
+    fin_cases i
+    · simp [T_fib]
+    · simp [T_fib, Nat.fib_add_two]
+
+/-- The roots of {lit}`γ² = γ + 1` are {lit}`(1 ± √5)/2`. -/
+theorem sq_eq_add_one_iff_5D_21 (γ : ℝ) :
+    γ ^ 2 = γ + 1 ↔ γ = (1 + Real.sqrt 5) / 2 ∨ γ = (1 - Real.sqrt 5) / 2 := by
+  have h5 : Real.sqrt 5 ^ 2 = 5 := Real.sq_sqrt (by norm_num)
+  -- γ² - γ - 1 = (γ - (1 + √5)/2)(γ - (1 - √5)/2)
+  have hfac : γ ^ 2 - γ - 1 =
+      (γ - (1 + Real.sqrt 5) / 2) * (γ - (1 - Real.sqrt 5) / 2) := by
+    linear_combination (1 / 4 : ℝ) * h5
+  rw [← sub_eq_zero, show γ ^ 2 - (γ + 1) = γ ^ 2 - γ - 1 by ring, hfac,
+    mul_eq_zero, sub_eq_zero, sub_eq_zero]
+
+/-- If {lit}`γ² = γ + 1`, then {lit}`(1, γ)` is an eigenvector of
+{lit}`T` with eigenvalue {lit}`γ`. -/
+theorem T_fib_eigvec {γ : ℝ} (h : γ ^ 2 = γ + 1) :
+    HasEigenvector T_fib γ ![1, γ] := by
+  rw [Module.End.hasEigenvector_iff, Module.End.mem_eigenspace_iff]
+  refine ⟨?_, fun h0 => by simpa using congrFun h0 0⟩
+  funext i
+  fin_cases i
+  · simp [T_fib]
+  · simp [T_fib]
+    linear_combination -h
 
 /-- 5D.21 (b) The set of eigenvalues to be found. -/
-def eigenvalues_5D_21b : Set ℝ := sorry
+noncomputable def eigenvalues_5D_21b : Set ℝ := {(1 + Real.sqrt 5) / 2, (1 - Real.sqrt 5) / 2}
 
 /-- 5D.21 (b) Find the eigenvalues of {lit}`T`. -/
 theorem exercise_5D_21b (γ : ℝ) :
     HasEigenvalue T_fib γ ↔ γ ∈ eigenvalues_5D_21b := by
-  sorry
+  -- solve directly, (0 1; 1 1) (x y) = γ (x y)
+  -- gives the characteristic equation γ² - γ - 1 = 0, whose roots are (1 ± √5)/2
+  rw [eigenvalues_5D_21b, Set.mem_insert_iff, Set.mem_singleton_iff,
+    ← sq_eq_add_one_iff_5D_21]
+  constructor
+  · rintro hγ
+    obtain ⟨v, hv0, hv⟩ := Module.End.hasEigenvalue_iff_exists.mp hγ
+    -- y = γx and x + y = γy
+    have h0 := congrFun hv 0
+    have h1 := congrFun hv 1
+    simp [T_fib] at h0 h1
+    -- x ≠ 0, since otherwise y = γx = 0 too
+    have hx : v 0 ≠ 0 := by
+      intro hx
+      apply hv0
+      funext i
+      fin_cases i
+      · exact hx
+      · simp [h0, hx]
+    -- so x + γx = γ²x, i.e. γ² = γ + 1
+    apply mul_right_cancel₀ hx
+    linear_combination -h1 + (1 - γ) * h0
+  · intro h
+    exact Module.End.hasEigenvalue_of_hasEigenvector (T_fib_eigvec h)
 
 /-- 5D.21 (c) The basis to be found. -/
-def basis_5D_21c : Fin 2 → (Fin 2 → ℝ) := sorry
+noncomputable def basis_5D_21c : Fin 2 → (Fin 2 → ℝ) := ![![1, (1 + Real.sqrt 5) / 2], ![1, (1 - Real.sqrt 5) / 2]]
 
 /-- 5D.21 (c) Find a basis of {lit}`ℝ²` consisting of eigenvectors of
 {lit}`T`. -/
 theorem exercise_5D_21c :
     IsBasis ℝ basis_5D_21c ∧
       ∀ i, ∃ γ : ℝ, HasEigenvector T_fib γ (basis_5D_21c i) := by
-  sorry
+  -- solve directly
+  have h5 : Real.sqrt 5 ^ 2 = 5 := Real.sq_sqrt (by norm_num)
+  have hs : Real.sqrt 5 ≠ 0 := by positivity
+  constructor
+  · -- determinant 1·(1 - √5)/2 - (1 + √5)/2·1 = -√5 ≠ 0
+    apply LADR.Section_2B.isBasis_pair
+    intro h
+    apply hs
+    linarith
+  · intro i
+    fin_cases i
+    · exact ⟨_, T_fib_eigvec ((sq_eq_add_one_iff_5D_21 _).mpr (Or.inl rfl))⟩
+    · exact ⟨_, T_fib_eigvec ((sq_eq_add_one_iff_5D_21 _).mpr (Or.inr rfl))⟩
 
 /-- 5D.21 (d) Binet's formula. -/
 theorem exercise_5D_21d (n : ℕ) :
     (Nat.fib n : ℝ) = (((1 + Real.sqrt 5) / 2) ^ n -
       ((1 - Real.sqrt 5) / 2) ^ n) / Real.sqrt 5 := by
-  sorry
+  -- write (0 1) as a linear combination of the eigenvectors = a v1 + b v2
+  -- then T^n (0 1) = (λ1^n * a) v1 + (λ2^n * b) v2, where v1 and v2 are the eigenvectors
+  have h5 : Real.sqrt 5 ^ 2 = 5 := Real.sq_sqrt (by norm_num)
+  have hs : Real.sqrt 5 ≠ 0 := by positivity
+  set φ := (1 + Real.sqrt 5) / 2
+  set ψ := (1 - Real.sqrt 5) / 2
+  have hφ := T_fib_eigvec ((sq_eq_add_one_iff_5D_21 φ).mpr (Or.inl rfl))
+  have hψ := T_fib_eigvec ((sq_eq_add_one_iff_5D_21 ψ).mpr (Or.inr rfl))
+  -- v1 - v2 = (0, √5), so (0, 1) = (1/√5) v1 - (1/√5) v2
+  have hcomb : (![0, 1] : Fin 2 → ℝ) =
+      (1 / Real.sqrt 5) • ![1, φ] - (1 / Real.sqrt 5) • ![1, ψ] := by
+    funext i
+    fin_cases i
+    · simp
+    · simp only [Fin.mk_one, Matrix.cons_val_one, Matrix.cons_val_zero,
+        Pi.sub_apply, Pi.smul_apply, smul_eq_mul, φ, ψ]
+      field_simp
+      ring
+  -- compare first coordinates, using (a): Fₙ is the first coordinate of Tⁿ(0, 1)
+  have h := congrFun (exercise_5D_21a n) 0
+  rw [hcomb, map_sub, map_smul, map_smul, hφ.pow_apply, hψ.pow_apply] at h
+  simp at h
+  rw [← h]
+  field_simp
 
 /-- 5D.21 (e) {lit}`Fₙ` is the integer nearest to
 {lit}`(1/√5)·((1 + √5)/2)ⁿ`. -/
 theorem exercise_5D_21e (n : ℕ) :
     |(Nat.fib n : ℝ) - ((1 + Real.sqrt 5) / 2) ^ n / Real.sqrt 5| < 1 / 2 := by
-  sorry
+  -- since 1/√5 * ((1 - Real.sqrt 5)/2)^ n is < 1/2 for all n ≥ 0
+  -- this follows from d)
+  have h5 : Real.sqrt 5 ^ 2 = 5 := Real.sq_sqrt (by norm_num)
+  have hs : 2 < Real.sqrt 5 := by nlinarith [Real.sqrt_nonneg 5]
+  have hs3 : Real.sqrt 5 < 3 := by nlinarith [Real.sqrt_nonneg 5]
+  -- by (d), the difference is -(1/√5)·((1 - √5)/2)ⁿ
+  rw [exercise_5D_21d n, ← sub_div, sub_sub_cancel_left, neg_div, abs_neg,
+    abs_div, abs_of_pos (by linarith : (0 : ℝ) < Real.sqrt 5), abs_pow,
+    div_lt_iff₀ (by linarith)]
+  -- |(1 - √5)/2| < 1, so its powers are ≤ 1 < √5/2
+  have hψ : |(1 - Real.sqrt 5) / 2| ≤ 1 := by
+    rw [abs_le]
+    constructor <;> linarith
+  calc |(1 - Real.sqrt 5) / 2| ^ n ≤ 1 := pow_le_one₀ (abs_nonneg _) hψ
+    _ < 1 / 2 * Real.sqrt 5 := by linarith
 
 /-- 5D.22 Diagonally dominant matrices give invertible operators. -/
 theorem exercise_5D_22 {V : Type*} [AddCommGroup V] [Module ℂ V]
@@ -2055,7 +2315,21 @@ theorem exercise_5D_22 {V : Type*} [AddCommGroup V] [Module ℂ V]
     (h : ∀ j, ∑ k ∈ Finset.univ.erase j, ‖matrixOf hv hv T j k‖ <
       ‖matrixOf hv hv T j j‖) :
     IsInvertible T := by
-  sorry
+  -- invertable is same as not having zero as eigenvalue.
+  -- by contra with gershgorin disk theorem if h is true.
+  have h0 : ¬ HasEigenvalue T 0 := by
+    intro h0
+    obtain ⟨j, hj⟩ := gershgorin hv T h0
+    rw [gershgorinDisk, Set.mem_setOf_eq, zero_sub, norm_neg] at hj
+    exact absurd (h j) (not_lt.mpr hj)
+  -- 0 not an eigenvalue means null T = {0}, so T is injective, hence
+  -- invertible (3.65)
+  apply (Section_3D.isInvertible_iff_injective rfl T).mpr
+  have hbot : Module.End.eigenspace T 0 = ⊥ := by
+    by_contra h
+    exact h0 (Module.End.hasEigenvalue_iff.mpr h)
+  rw [Module.End.eigenspace_zero] at hbot
+  exact LinearMap.ker_eq_bot.mp hbot
 
 /-- 5D.23 The Gershgorin disk theorem holds with column sums in place of
 row sums. -/
@@ -2064,6 +2338,20 @@ theorem exercise_5D_23 {V : Type*} [AddCommGroup V] [Module ℂ V]
     (T : V →ₗ[ℂ] V) {lam : ℂ} (hlam : HasEigenvalue T lam) :
     ∃ j, ‖lam - matrixOf hv hv T j j‖ ≤
       ∑ k ∈ Finset.univ.erase j, ‖matrixOf hv hv T k j‖ := by
-  sorry
+  -- eigenvalues of T' are same as T, but matrix of T' is transpose T
+  -- so rows become columns, apply Gershgorin theorem to the transpose matrix.
+  have hd := Section_3F.isBasis_dualBasis v hv
+  have hb : hd.toModuleBasis = hv.toModuleBasis.dualBasis :=
+    Module.Basis.eq_of_apply_eq fun i => by simp
+  -- the matrix of T' in the dual basis is the transpose (3.132)
+  have hM : matrixOf hd hd T.dualMap = (matrixOf hv hv T).transpose := by
+    rw [matrixOf, matrixOf, hb]
+    exact Section_3F.toMatrix_dualMap_eq_transpose v v hv hv T
+  -- lam is an eigenvalue of T' (5A.15)
+  obtain ⟨j, hj⟩ := gershgorin hd T.dualMap
+    ((Section_5A.exercise_5A_15 T lam).mp hlam)
+  refine ⟨j, ?_⟩
+  rw [gershgorinDisk, Set.mem_setOf_eq, hM] at hj
+  simpa only [Matrix.transpose_apply] using hj
 
 end LADR.Section_5D
