@@ -1009,7 +1009,8 @@ theorem exercise_4_10b (p : Polynomial ℝ) :
 /-- 4.11 (setup) The candidate polynomial {lit}`q = p · p̄`, where
 {lit}`p̄ = p.map conj` conjugates the coefficients, satisfies
 {lit}`q.eval z = p(z) · conj (p(conj z))` — i.e. it realizes Axler's
-{lit}`q(z) = p(z) · conj (p(conj z))` as an honest polynomial. -/
+{lit}`q(z) = p(z) · conj (p(conj z))` as an honest polynomial.
+This solves the first part of exercise 4.11, showing the function is a polynomial. -/
 lemma exercise_4_11_eval (p : Polynomial ℂ) (z : ℂ) :
     p.eval z * conj (p.eval (conj z)) = (p * p.map conj).eval z := by
   sorry
