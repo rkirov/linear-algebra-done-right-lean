@@ -998,8 +998,12 @@ theorem exercise_4_9 (p : Polynomial ℝ) (hp : Odd p.natDegree) :
 function; mathlib representation is left to the solver. -/
 noncomputable def exercise_4_10_T : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ := sorry
 
-theorem exercise_4_10 (p : Polynomial ℝ) (x : ℝ) (hx : x ≠ 3) :
+theorem exercise_4_10a (p : Polynomial ℝ) (x : ℝ) (hx : x ≠ 3) :
     (exercise_4_10_T p).eval x = (p.eval x - p.eval 3) / (x - 3) := by
+  sorry
+
+theorem exercise_4_10b (p : Polynomial ℝ) :
+    (exercise_4_10_T p).eval 3 = p.derivative.eval 3 := by
   sorry
 
 /-- 4.11 (setup) The candidate polynomial {lit}`q = p · p̄`, where

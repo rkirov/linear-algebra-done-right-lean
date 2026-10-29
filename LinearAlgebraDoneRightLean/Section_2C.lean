@@ -844,7 +844,7 @@ noncomputable def U_2C_6_extension (F : Type*) [Field F] :
 
 /-- 2C.6 (b): appending the extension to the basis of {lit}`U_2C_6` gives a
 basis of {lit}`P₄(F)`. -/
-theorem exercise_2C_6b [CharZero F] :
+theorem exercise_2C_6b :
     IsBasis F (Fin.append (fun i => ((U_2C_6_basis F i : Polynomial.degreeLT F 5)))
       (U_2C_6_extension F)) := by
   sorry

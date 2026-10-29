@@ -885,7 +885,7 @@ theorem exercise_5A_33b (T : V →ₗ[F] V) (m : ℕ+) :
   sorry
 
 /-- 5A.34 -/
-theorem exercise_5A_34 [Finite F V] {m : ℕ} (v : Fin m → V) :
+theorem exercise_5A_34 [CharZero F] [Finite F V] {m : ℕ} (v : Fin m → V) :
     LinearIndependent F v ↔
       ∃ (T : V →ₗ[F] V) (γ : Fin m → F), Function.Injective γ ∧
         ∀ k, HasEigenvector T (γ k) (v k) := by
@@ -931,7 +931,7 @@ theorem exercise_5A_38b [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
 theorem exercise_5A_39 [Finite F V] (T : V →ₗ[F] V) :
     (∃ γ : F, HasEigenvalue T γ) ↔
       ∃ U : Submodule F V, InvariantUnder T U ∧
-        finrank F U = finrank F V - 1 := by
+        finrank F U + 1 = finrank F V := by
   sorry
 
 /-- 5A.40 -/

@@ -1030,19 +1030,19 @@ theorem exercise_5D_8 [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
   sorry
 
 /-- 5D.9 -/
-theorem exercise_5D_9 (R T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
-    (hR : ∀ γ : ℂ, HasEigenvalue R γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7)
-    (hT : ∀ γ : ℂ, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) :
-    ∃ (S : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ)) (hS : IsInvertible S),
+theorem exercise_5D_9 [CharZero F] (R T : (Fin 3 → F) →ₗ[F] (Fin 3 → F))
+    (hR : ∀ γ : F, HasEigenvalue R γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7)
+    (hT : ∀ γ : F, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) :
+    ∃ (S : (Fin 3 → F) →ₗ[F] (Fin 3 → F)) (hS : IsInvertible S),
       R = hS.inv ∘ₗ T ∘ₗ S := by
   sorry
 
 /-- 5D.10 -/
-theorem exercise_5D_10 :
-    ∃ R T : (Fin 4 → ℂ) →ₗ[ℂ] (Fin 4 → ℂ),
-      (∀ γ : ℂ, HasEigenvalue R γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) ∧
-      (∀ γ : ℂ, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) ∧
-      ¬ ∃ (S : (Fin 4 → ℂ) →ₗ[ℂ] (Fin 4 → ℂ)) (hS : IsInvertible S),
+theorem exercise_5D_10 [CharZero F] :
+    ∃ R T : (Fin 4 → F) →ₗ[F] (Fin 4 → F),
+      (∀ γ : F, HasEigenvalue R γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) ∧
+      (∀ γ : F, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) ∧
+      ¬ ∃ (S : (Fin 4 → F) →ₗ[F] (Fin 4 → F)) (hS : IsInvertible S),
         R = hS.inv ∘ₗ T ∘ₗ S := by
   sorry
 
