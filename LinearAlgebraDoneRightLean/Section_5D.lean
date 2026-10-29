@@ -443,7 +443,7 @@ theorem hasEigenvalue_T_5_57 (lam : F) :
       fin_cases i <;> simp [T_5_57]
 
 -- {lit}`E(0, T)` consists exactly of the vectors {lit}`(a, 0, 0)`.
-example (x : Fin 3 → F) :
+theorem mem_eigenspace_T_5_57 (x : Fin 3 → F) :
     x ∈ Module.End.eigenspace (T_5_57 (F := F)) 0 ↔ x 1 = 0 ∧ x 2 = 0 := by
   rw [Module.End.mem_eigenspace_iff]
   constructor
@@ -456,28 +456,27 @@ example (x : Fin 3 → F) :
     funext i
     fin_cases i <;> simp [T_5_57, h1, h2]
 
--- Since {lit}`0` is the only eigenvalue but {lit}`T ≠ 0`, {lit}`T` is not
--- diagonalizable (a diagonalizable operator whose only eigenvalue is
--- {lit}`0` would be the zero operator).
+-- Hence condition (c) of 5.55 fails: with {lit}`0` the only eigenvalue,
+-- {lit}`E(0, T) ≠ F³` since {lit}`(0, 1, 0) ∉ E(0, T)`. Thus condition (a)
+-- also fails, and {lit}`T` is not diagonalizable.
 theorem not_isDiagonalizable_T_5_57 :
     ¬ IsDiagonalizable (T_5_57 (F := F)) := by
-  rintro ⟨n, v, hv, hA⟩
-  have hzero : T_5_57 (F := F) = 0 := by
-    apply hv.toModuleBasis.ext
-    intro j
-    rw [hv.toModuleBasis_apply]
-    have hev : HasEigenvalue (T_5_57 (F := F)) (matrixOf hv hv T_5_57 j j) :=
-      Module.End.hasEigenvalue_iff_exists.mpr
-        ⟨v j, hv.1.ne_zero j, apply_eq_smul_of_isDiag hv T_5_57 hA j⟩
-    have hjj : matrixOf hv hv T_5_57 j j = 0 :=
-      (hasEigenvalue_T_5_57 _).mp hev
-    rw [apply_eq_smul_of_isDiag hv T_5_57 hA j, hjj, zero_smul,
-      LinearMap.zero_apply]
-  have hne : T_5_57 (F := F) ![0, 1, 0] ≠ 0 := by
-    intro h
-    have := congrFun h 0
-    simp [T_5_57] at this
-  exact hne (by rw [hzero]; rfl)
+  have hall : ∀ mu : F, HasEigenvalue (T_5_57 (F := F)) mu ↔
+      ∃ k : Fin 1, (fun _ => (0 : F)) k = mu := by
+    intro mu
+    rw [hasEigenvalue_T_5_57]
+    exact ⟨fun h => ⟨0, h.symm⟩, fun ⟨_, h⟩ => h.symm⟩
+  have h := (tfae_isDiagonalizable (T_5_57 (F := F))
+    (fun _ : Fin 1 => (0 : F)) (Function.injective_of_subsingleton _)
+    hall).out 0 2
+  intro hdiag
+  have htop := h.mp hdiag
+  have hmem : (![0, 1, 0] : Fin 3 → F) ∈
+      Module.End.eigenspace (T_5_57 (F := F)) 0 := by
+    rw [← ciSup_const (ι := Fin 1)
+      (a := Module.End.eigenspace (T_5_57 (F := F)) 0), htop]
+    exact Submodule.mem_top
+  exact absurd ((mem_eigenspace_T_5_57 _).mp hmem).1 (by simp)
 
 /-! 5.58 Enough eigenvalues implies diagonalizability: an operator with
 {lit}`dim V` distinct eigenvalues is diagonalizable. -/
@@ -588,32 +587,118 @@ private lemma aeval_X_sub_C_eq (T : V →ₗ[F] V) (a : F) :
       T - algebraMap F (Module.End F V) a := by
   rw [map_sub, Polynomial.aeval_X, Polynomial.aeval_C]
 
-/-- Kernel decomposition for a product of distinct linear factors:
-{lit}`null q(T) = ⊕ E(λ, T)` over the zeros {lit}`λ` of {lit}`q`. -/
-private lemma ker_aeval_prod_X_sub_C (T : V →ₗ[F] V) (s : Finset F) :
-    ker (aeval T (∏ a ∈ s, (Polynomial.X - Polynomial.C a))) =
-      ⨆ a ∈ s, Module.End.eigenspace T a := by
+/-- A basis of a subspace {lit}`U`, viewed in {lit}`V`, spans {lit}`U`. -/
+private lemma span_coe_basis {U : Submodule F V} {n : ℕ} {u : Fin n → U}
+    (hu : IsBasis F u) :
+    Submodule.span F (Set.range fun i => (u i : V)) = U := by
+  have h : Submodule.span F (Set.range fun i => (u i : V)) =
+      (Submodule.span F (Set.range u)).map U.subtype := by
+    rw [Submodule.map_span, ← Set.range_comp]
+    rfl
+  rw [h, hu.2, Submodule.map_subtype_top]
+
+/-- The reverse direction of 5.62, by induction on {lit}`m` as in the book:
+if {lit}`(T − λ₁I)⋯(T − λₘI) = 0` (5.63) for distinct {lit}`λ₁, …, λₘ`, then
+{lit}`T` is diagonalizable. The induction is over the finite set
+{lit}`{λ₁, …, λₘ}`, with {lit}`λₘ` the newly inserted element. -/
+private lemma isDiagonalizable_of_aeval_prod_X_sub_C [Finite F V]
+    (T : V →ₗ[F] V) (s : Finset F)
+    (hT : aeval T (∏ a ∈ s, (Polynomial.X - Polynomial.C a)) = 0) :
+    IsDiagonalizable T := by
   classical
-  induction s using Finset.induction_on with
+  induction s using Finset.induction_on generalizing V with
   | empty =>
-    rw [show (⨆ a ∈ (∅ : Finset F), Module.End.eigenspace T a) = ⊥ by simp]
-    rw [Finset.prod_empty, map_one, Module.End.one_eq_id]
-    exact LinearMap.ker_id
+    -- The empty product is {lit}`1`, so {lit}`I = 0` and {lit}`V = {0}`:
+    -- any basis consists of eigenvectors. (The book's base case
+    -- {lit}`m = 1` is covered by the inductive step.)
+    have h0 : ∀ x : V, x = 0 := fun x => by
+      simpa using LinearMap.congr_fun hT x
+    obtain ⟨n, v, hv⟩ := exists_basis (F := F) (V := V)
+    exact ⟨n, v, hv, isDiag_matrixOf_of_eigenvectors hv T fun j =>
+      ⟨0, by rw [h0 (v j)]; simp⟩⟩
   | insert a s ha ih =>
-    rw [Finset.prod_insert ha]
-    have hcop : IsCoprime (Polynomial.X - Polynomial.C a)
-        (∏ b ∈ s, (Polynomial.X - Polynomial.C b)) := by
-      apply IsCoprime.prod_right
-      intro b hb
-      exact Polynomial.pairwise_coprime_X_sub_C Function.injective_id
-        (fun h => ha (h ▸ hb))
-    rw [← Polynomial.sup_ker_aeval_eq_ker_aeval_mul_of_coprime T hcop]
-    rw [ih]
-    rw [aeval_X_sub_C_eq, Algebra.algebraMap_eq_smul_one]
-    have heig : Module.End.eigenspace T a =
-        ker (T - a • (1 : V →ₗ[F] V)) := Module.End.eigenspace_def
-    rw [← heig]
-    exact (Finset.iSup_insert a s _).symm
+    rw [Finset.prod_insert ha] at hT
+    set p := ∏ b ∈ s, (Polynomial.X - Polynomial.C b) with hp_def
+    set N := aeval T (Polynomial.X - Polynomial.C a) with hN_def
+    -- {lit}`range(T − λₘI)` is invariant under {lit}`T` (5.18).
+    have hR : InvariantUnder T (range N) :=
+      Section_5A.range_aeval_invariant T _
+    -- 5.64: {lit}`(T − λ₁I)⋯(T − λₘ₋₁I)u = 0` for {lit}`u ∈ range(T − λₘI)`.
+    have hpN : ∀ v, aeval T p (N v) = 0 := by
+      intro v
+      rw [hN_def, ← LinearMap.comp_apply, ← aeval_mul_eq_comp, mul_comm, hT,
+        LinearMap.zero_apply]
+    -- Nonzero vectors of {lit}`null(T − λₘI)` are eigenvectors for {lit}`λₘ`.
+    have hker : ∀ y, N y = 0 → T y = a • y := by
+      intro y hy
+      rw [hN_def, aeval_X_sub_C_eq, LinearMap.sub_apply,
+        Module.algebraMap_end_apply, sub_eq_zero] at hy
+      exact hy
+    -- Hence (by the induction hypothesis) {lit}`T|_{range(T − λₘI)}` is
+    -- diagonalizable.
+    have hpR : aeval hR.restrict p = 0 := by
+      apply LinearMap.ext
+      rintro ⟨_, v, rfl⟩
+      apply Subtype.ext
+      rw [Section_5B.aeval_restrict_coe, LinearMap.zero_apply, Submodule.coe_zero]
+      exact hpN v
+    obtain ⟨n, u, hu, hdu⟩ := ih hR.restrict hpR
+    -- {lit}`range(T − λₘI) ∩ null(T − λₘI) = {0}`: for such {lit}`u`,
+    -- {lit}`0 = (λₘ − λ₁)⋯(λₘ − λₘ₋₁)u` and the scalar is nonzero.
+    have hinf : range N ⊓ ker N = ⊥ := by
+      rw [eq_bot_iff]
+      rintro x ⟨⟨v, rfl⟩, hx⟩
+      rw [SetLike.mem_coe, LinearMap.mem_ker] at hx
+      rw [Submodule.mem_bot]
+      by_contra hne
+      have hev : HasEigenvector T a (N v) := by
+        exact Module.End.hasEigenvector_iff_and.mpr ⟨hne, hker _ hx⟩
+      have h := hpN v
+      rw [Module.End.aeval_apply_of_hasEigenvector hev, smul_eq_zero] at h
+      refine h.elim (fun hp0 => ?_) hne
+      rw [hp_def, Polynomial.eval_prod, Finset.prod_eq_zero_iff] at hp0
+      obtain ⟨b, hb, hb0⟩ := hp0
+      rw [Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C,
+        sub_eq_zero] at hb0
+      exact ha (hb0 ▸ hb)
+    -- So {lit}`range(T − λₘI) ⊕ null(T − λₘI) = V`, by dimensions (3.21).
+    have hdim := Section_2C.finrank_sup_add_finrank_inf_eq (range N) (ker N)
+    have hfund := Section_3B.finrank_ker_add_finrank_range N
+    rw [hinf, finrank_bot] at hdim
+    have hsup : range N ⊔ ker N = ⊤ :=
+      Section_2C.subspace_eq_top_of_finrank_eq _ (by omega)
+    -- Adjoin to the eigenvector basis of the range a basis of the null
+    -- space; this gives a basis of {lit}`V` consisting of eigenvectors.
+    obtain ⟨k, w, hw⟩ := exists_basis (F := F) (V := ker N)
+    set z : Fin (n + k) → V :=
+      Fin.append (fun i => (u i : V)) (fun i => (w i : V)) with hz_def
+    have hz_spans : Spans F z := by
+      show Submodule.span F (Set.range z) = ⊤
+      rw [eq_top_iff, ← hsup]
+      refine sup_le ?_ ?_
+      · rw [← span_coe_basis hu]
+        apply Submodule.span_mono
+        rintro _ ⟨i, rfl⟩
+        exact ⟨Fin.castAdd k i, by simp [hz_def]⟩
+      · rw [← span_coe_basis hw]
+        apply Submodule.span_mono
+        rintro _ ⟨i, rfl⟩
+        exact ⟨Fin.natAdd n i, by simp [hz_def]⟩
+    have hcard : n + k = finrank F V := by
+      rw [Section_2C.isBasis_card_eq_finrank u hu,
+        Section_2C.isBasis_card_eq_finrank w hw]
+      omega
+    have hz := Section_2C.isBasis_of_spans_of_card_eq z hz_spans hcard
+    refine ⟨n + k, z, hz, isDiag_matrixOf_of_eigenvectors hz T fun j => ?_⟩
+    induction j using Fin.addCases with
+    | left i =>
+      refine ⟨matrixOf hu hu hR.restrict i i, ?_⟩
+      simp only [hz_def, Fin.append_left]
+      exact congrArg Subtype.val (apply_eq_smul_of_isDiag hu _ hdu i)
+    | right i =>
+      refine ⟨a, ?_⟩
+      simp only [hz_def, Fin.append_right]
+      exact hker _ (LinearMap.mem_ker.mp (w i).2)
 
 theorem isDiagonalizable_iff_minpoly_eq_prod_distinct [Finite F V]
     (T : V →ₗ[F] V) :
@@ -670,17 +755,11 @@ theorem isDiagonalizable_iff_minpoly_eq_prod_distinct [Finite F V]
     exact Polynomial.eq_of_monic_of_associated
       (minpoly.monic (Algebra.IsIntegral.isIntegral T)) hq_monic
       (associated_of_dvd_dvd h1 h2)
-  · -- Conversely, the kernel decomposition for the product of distinct
-    -- linear factors shows that the eigenspaces fill up {lit}`V`.
+  · -- Conversely, {lit}`(T − λ₁I)⋯(T − λₘI) = 0` (5.63); induct on
+    -- {lit}`m`.
     rintro ⟨s, hfact⟩
-    have htop : (⨆ a ∈ s, Module.End.eigenspace T a) = ⊤ := by
-      rw [← ker_aeval_prod_X_sub_C T s, ← hfact, minpoly.aeval,
-        LinearMap.ker_zero]
-    apply isDiagonalizable_of_iSup_eigenspace_eq_top T
-      (fun k : Fin s.card => (s.equivFin.symm k : F))
-    rw [← htop, iSup_subtype']
-    exact Equiv.iSup_comp (g := fun a : {x // x ∈ s} =>
-      Module.End.eigenspace T (a : F)) s.equivFin.symm
+    exact isDiagonalizable_of_aeval_prod_X_sub_C T s
+      (hfact ▸ minpoly.aeval F T)
 
 /-- The engine behind Examples 5.60/5.61: over an algebraically closed field,
 if {lit}`T` is annihilated by a *separable* polynomial (one with distinct
@@ -834,15 +913,16 @@ subspace is diagonalizable: the minimal polynomial of {lit}`T|_U` divides
 the minimal polynomial of {lit}`T` (5.31), hence is also a product of
 distinct linear factors, and 5.62 applies. -/
 
-theorem isDiagonalizable_restrict [Finite F V] (T : V →ₗ[F] V)
-    (hT : IsDiagonalizable T) (U : Submodule F V)
-    (hU : InvariantUnder T U) : IsDiagonalizable hU.restrict := by
+/-- If the minimal polynomial of {lit}`T` divides a product of distinct
+linear factors, then it is itself such a product (its zeros are distinct), so
+{lit}`T` is diagonalizable by 5.62. -/
+theorem isDiagonalizable_of_minpoly_dvd_prod [Finite F V] (T : V →ₗ[F] V)
+    (s : Finset F)
+    (hdvd : minpoly F T ∣ ∏ a ∈ s, (Polynomial.X - Polynomial.C a)) :
+    IsDiagonalizable T := by
   classical
-  obtain ⟨s, hs⟩ := (isDiagonalizable_iff_minpoly_eq_prod_distinct T).mp hT
   rw [isDiagonalizable_iff_minpoly_eq_prod_distinct]
-  set q := minpoly F hU.restrict with hq_def
-  have hdvd : q ∣ minpoly F T := minpoly_restrict_dvd T U hU
-  rw [hs] at hdvd
+  set q := minpoly F T with hq_def
   have hq_monic : q.Monic := minpoly.monic (Algebra.IsIntegral.isIntegral _)
   have hprod_ne : (∏ a ∈ s, (Polynomial.X - Polynomial.C a)) ≠ 0 :=
     Finset.prod_ne_zero_iff.mpr fun a _ => Polynomial.X_sub_C_ne_zero a
@@ -866,6 +946,13 @@ theorem isDiagonalizable_restrict [Finite F V] (T : V →ₗ[F] V)
   rw [Finset.prod_eq_multiset_prod, Multiset.toFinset_val,
     Multiset.dedup_eq_self.mpr hnodup]
   exact h.symm
+
+theorem isDiagonalizable_restrict [Finite F V] (T : V →ₗ[F] V)
+    (hT : IsDiagonalizable T) (U : Submodule F V)
+    (hU : InvariantUnder T U) : IsDiagonalizable hU.restrict := by
+  obtain ⟨s, hs⟩ := (isDiagonalizable_iff_minpoly_eq_prod_distinct T).mp hT
+  exact isDiagonalizable_of_minpoly_dvd_prod _ s
+    (hs ▸ minpoly_restrict_dvd T U hU)
 
 /-! Gershgorin Disk Theorem -/
 
