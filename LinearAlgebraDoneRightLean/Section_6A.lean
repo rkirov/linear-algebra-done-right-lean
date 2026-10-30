@@ -445,11 +445,25 @@ example (f : C(ℝ, ℝ)) :
 
 Suppose {lit}`v ∈ V`. -/
 
-/-- (a) {lit}`‖v‖ = 0` if and only if {lit}`v = 0`. -/
-example (v : V) : ‖v‖ = 0 ↔ v = 0 := norm_eq_zero
+/-- (a) {lit}`‖v‖ = 0` if and only if {lit}`v = 0`: {lit}`‖v‖ = 0` iff
+{lit}`⟨v, v⟩ = 0`, iff {lit}`v = 0` by definiteness. -/
+example (v : V) : ‖v‖ = 0 ↔ v = 0 := by
+  have h : ⟪v, v⟫_𝕜 = 0 ↔ v = 0 := inner_self_eq_zero
+  rw [inner_self_eq_norm_sq_to_K] at h
+  rw [← h]
+  constructor
+  · intro h0; rw [h0]; simp
+  · intro h0; exact_mod_cast (pow_eq_zero_iff two_ne_zero).mp h0
 
-/-- (b) {lit}`‖λv‖ = |λ| ‖v‖` for all {lit}`λ ∈ 𝕜`. -/
-example (v : V) (r : 𝕜) : ‖r • v‖ = ‖r‖ * ‖v‖ := norm_smul r v
+/-- (b) {lit}`‖λv‖ = |λ| ‖v‖` for all {lit}`λ ∈ 𝕜`: both sides are nonnegative
+and {lit}`‖λv‖² = ⟨λv, λv⟩ = λλ̄⟨v, v⟩ = |λ|²‖v‖²`. -/
+example (v : V) (r : 𝕜) : ‖r • v‖ = ‖r‖ * ‖v‖ := by
+  have h : ((‖r • v‖ ^ 2 : ℝ) : 𝕜) = (((‖r‖ * ‖v‖) ^ 2 : ℝ) : 𝕜) := by
+    push_cast
+    rw [← inner_self_eq_norm_sq_to_K, inner_smul_left, inner_smul_right,
+      inner_self_eq_norm_sq_to_K, ← mul_assoc, RCLike.conj_mul]
+    ring
+  exact (pow_left_inj₀ (norm_nonneg _) (by positivity) two_ne_zero).mp (by exact_mod_cast h)
 
 /-! 6.10 Definition: orthogonal
 
@@ -475,10 +489,34 @@ theorem orthogonal_self_iff (v : V) : Orthogonal (𝕜 := 𝕜) v v ↔ v = 0 :=
 
 If {lit}`u` and {lit}`v` are orthogonal, then {lit}`‖u + v‖² = ‖u‖² + ‖v‖²`. -/
 
+/-- The computation behind 6.12, 6.17 and 6.21:
+{lit}`‖u + v‖² = ⟨u + v, u + v⟩ = ‖u‖² + ‖v‖² + ⟨u, v⟩ + ⟨v, u⟩`, and
+{lit}`⟨u, v⟩ + ⟨v, u⟩ = ⟨u, v⟩ + conj ⟨u, v⟩ = 2 Re ⟨u, v⟩`. -/
+@[avoiding norm_add_sq]
+theorem norm_add_sq_expand (u v : V) :
+    ‖u + v‖ ^ 2 = ‖u‖ ^ 2 + ‖v‖ ^ 2 + 2 * RCLike.re ⟪u, v⟫_𝕜 := by
+  have h : ((‖u + v‖ ^ 2 : ℝ) : 𝕜) = ⟪u, u⟫_𝕜 + ⟪v, v⟫_𝕜 + (⟪u, v⟫_𝕜 + ⟪v, u⟫_𝕜) := by
+    push_cast
+    rw [← inner_self_eq_norm_sq_to_K, inner_add_left, inner_add_right, inner_add_right]
+    ring
+  have h' := congrArg RCLike.re h
+  rw [RCLike.ofReal_re, map_add, map_add, map_add, inner_re_symm (𝕜 := 𝕜) v u] at h'
+  rw [h', ← norm_sq_eq_re_inner (𝕜 := 𝕜) u, ← norm_sq_eq_re_inner (𝕜 := 𝕜) v]
+  ring
+
+/-- The same computation with {lit}`−v`:
+{lit}`‖u − v‖² = ‖u‖² + ‖v‖² − 2 Re ⟨u, v⟩`. -/
+@[avoiding norm_sub_sq]
+theorem norm_sub_sq_expand (u v : V) :
+    ‖u - v‖ ^ 2 = ‖u‖ ^ 2 + ‖v‖ ^ 2 - 2 * RCLike.re ⟪u, v⟫_𝕜 := by
+  rw [sub_eq_add_neg, norm_add_sq_expand (𝕜 := 𝕜), norm_neg, inner_neg_right, map_neg]
+  ring
+
+@[avoiding norm_add_sq_eq_norm_sq_add_norm_sq_of_inner_eq_zero]
 theorem pythagorean (u v : V) (h : Orthogonal (𝕜 := 𝕜) u v) :
     ‖u + v‖ ^ 2 = ‖u‖ ^ 2 + ‖v‖ ^ 2 := by
-  have := norm_add_sq_eq_norm_sq_add_norm_sq_of_inner_eq_zero u v h
-  rw [sq, sq, sq]; linarith
+  -- `‖u + v‖² = ‖u‖² + ‖v‖² + 2 Re ⟨u, v⟩` and `⟨u, v⟩ = 0`
+  rw [norm_add_sq_expand (𝕜 := 𝕜), show ⟪u, v⟫_𝕜 = 0 from h, map_zero, mul_zero, add_zero]
 
 /-! 6.13 An orthogonal decomposition
 
@@ -498,10 +536,40 @@ theorem orthogonal_decomposition (u v : V) (hv : v ≠ 0) :
 For {lit}`u, v ∈ V`, {lit}`|⟨u, v⟩| ≤ ‖u‖ ‖v‖`, with equality if and only if one
 of {lit}`u, v` is a scalar multiple of the other. -/
 
-theorem cauchy_schwarz (u v : V) : ‖⟪u, v⟫_𝕜‖ ≤ ‖u‖ * ‖v‖ := norm_inner_le_norm u v
+/-- The heart of Axler's proof of 6.14. Write {lit}`u = cv + w` with
+{lit}`w` orthogonal to {lit}`v` (6.13). By the Pythagorean theorem
+{lit}`‖u‖² = |c|²‖v‖² + ‖w‖²`, and {lit}`⟨u, v⟩ = c‖v‖²`; multiplying the first
+equation by {lit}`‖v‖²` gives {lit}`‖u‖²‖v‖² = |⟨u, v⟩|² + ‖w‖²‖v‖²`. -/
+theorem cauchy_schwarz_aux {u v w : V} {c : 𝕜} (hu : u = c • v + w)
+    (hw : Orthogonal (𝕜 := 𝕜) v w) :
+    ‖u‖ ^ 2 * ‖v‖ ^ 2 = ‖⟪u, v⟫_𝕜‖ ^ 2 + ‖w‖ ^ 2 * ‖v‖ ^ 2 := by
+  have hcvw : Orthogonal (𝕜 := 𝕜) (c • v) w := by
+    unfold Orthogonal at hw ⊢
+    rw [inner_smul_left, hw, mul_zero]
+  have hpyth : ‖u‖ ^ 2 = ‖c‖ ^ 2 * ‖v‖ ^ 2 + ‖w‖ ^ 2 := by
+    rw [hu, pythagorean _ _ hcvw, norm_smul, mul_pow]
+  have hinner : ⟪u, v⟫_𝕜 = conj c * ((‖v‖ : 𝕜) ^ 2) := by
+    have hwv : ⟪w, v⟫_𝕜 = 0 := (orthogonal_comm v w).mp hw
+    rw [hu, inner_add_left, inner_smul_left, hwv, add_zero, inner_self_eq_norm_sq_to_K]
+  rw [hpyth, hinner, norm_mul, RCLike.norm_conj, norm_pow, RCLike.norm_ofReal, abs_norm]
+  ring
+
+@[avoiding norm_inner_le_norm]
+theorem cauchy_schwarz (u v : V) : ‖⟪u, v⟫_𝕜‖ ≤ ‖u‖ * ‖v‖ := by
+  -- if `v = 0`, both sides are `0`
+  rcases eq_or_ne v 0 with hv | hv
+  · rw [hv, inner_zero_right, norm_zero, norm_zero, mul_zero]
+  -- otherwise decompose `u = cv + w` with `w ⟂ v`, so `‖u‖²‖v‖² ≥ |⟨u, v⟩|²`
+  obtain ⟨c, w, hu, hw⟩ := orthogonal_decomposition (𝕜 := 𝕜) u v hv
+  have h := cauchy_schwarz_aux hu hw
+  have hsq : ‖⟪u, v⟫_𝕜‖ ^ 2 ≤ (‖u‖ * ‖v‖) ^ 2 := by
+    rw [mul_pow, h]
+    nlinarith [sq_nonneg ‖w‖, sq_nonneg ‖v‖]
+  exact (pow_le_pow_iff_left₀ (norm_nonneg _) (by positivity) two_ne_zero).mp hsq
 
 /-- The equality case (stated, as in mathlib, for nonzero vectors; the case where
 one vector is {lit}`0` makes both sides {lit}`0`). -/
+@[avoiding norm_inner_eq_norm_iff]
 theorem cauchy_schwarz_eq_iff {u v : V} :
     ‖⟪u, v⟫_𝕜‖ = ‖u‖ * ‖v‖ ↔ ∃ r : 𝕜, v = r • u ∨ u = r • v := by
   constructor
@@ -510,8 +578,15 @@ theorem cauchy_schwarz_eq_iff {u v : V} :
     · exact ⟨0, Or.inr (by rw [hu, zero_smul])⟩
     · rcases eq_or_ne v 0 with hv | hv
       · exact ⟨0, Or.inl (by rw [hv, zero_smul])⟩
-      · obtain ⟨r, _, hr⟩ := (norm_inner_eq_norm_iff hu hv).mp h
-        exact ⟨r, Or.inl hr⟩
+      · -- equality forces `‖w‖²‖v‖² = 0` in the decomposition `u = cv + w`, so `w = 0`
+        obtain ⟨c, w, hcw, hw⟩ := orthogonal_decomposition (𝕜 := 𝕜) u v hv
+        have haux := cauchy_schwarz_aux hcw hw
+        rw [← mul_pow, ← h, left_eq_add] at haux
+        have hw0 : w = 0 := by
+          have hv2 : ‖v‖ ^ 2 ≠ 0 := by positivity
+          have hw2 : ‖w‖ ^ 2 = 0 := (mul_eq_zero.mp haux).resolve_right hv2
+          exact norm_eq_zero.mp (pow_eq_zero_iff two_ne_zero |>.mp hw2)
+        exact ⟨c, Or.inr (by rw [hcw, hw0, add_zero])⟩
   · rintro ⟨r, hr | hr⟩
     · subst hr
       rw [inner_smul_right, norm_mul, norm_smul, inner_self_eq_norm_sq_to_K, norm_pow,
@@ -590,26 +665,85 @@ end
 {lit}`‖u + v‖ ≤ ‖u‖ + ‖v‖`, with equality if and only if one of {lit}`u, v` is a
 nonnegative real multiple of the other. -/
 
-theorem triangle_inequality (u v : V) : ‖u + v‖ ≤ ‖u‖ + ‖v‖ := norm_add_le u v
+include 𝕜 in
+@[avoiding norm_add_le]
+theorem triangle_inequality (u v : V) : ‖u + v‖ ≤ ‖u‖ + ‖v‖ := by
+  -- `‖u + v‖² = ‖u‖² + ‖v‖² + 2 Re ⟨u, v⟩ ≤ ‖u‖² + ‖v‖² + 2|⟨u, v⟩|
+  --   ≤ ‖u‖² + ‖v‖² + 2‖u‖‖v‖ = (‖u‖ + ‖v‖)²`, using Cauchy–Schwarz
+  have hsq : ‖u + v‖ ^ 2 ≤ (‖u‖ + ‖v‖) ^ 2 := by
+    rw [norm_add_sq_expand (𝕜 := 𝕜)]
+    nlinarith [RCLike.re_le_norm ⟪u, v⟫_𝕜, cauchy_schwarz (𝕜 := 𝕜) u v]
+  exact (pow_le_pow_iff_left₀ (norm_nonneg _) (by positivity) two_ne_zero).mp hsq
 
 /-- The equality case: {lit}`‖u + v‖ = ‖u‖ + ‖v‖` if and only if {lit}`u` and
 {lit}`v` point in the same direction, i.e. one is a nonnegative real multiple of the
-other. mathlib packages "same direction" as {name}`SameRay` over {lit}`ℝ`, and
-(real) inner product spaces are strictly convex, so this is
-{name}`sameRay_iff_norm_add`. -/
+other. mathlib packages "same direction" as {name}`SameRay` over {lit}`ℝ`. We state
+it for real inner product spaces, where {lit}`Re ⟨u, v⟩ = ⟨u, v⟩`. Following the
+book, equality holds iff both inequalities in the proof above are equalities,
+i.e. iff {lit}`⟨u, v⟩ = ‖u‖‖v‖`; by the equality case of Cauchy–Schwarz that
+happens iff one vector is a multiple of the other, and the multiple must then be
+nonnegative. -/
+@[avoiding sameRay_iff_norm_add]
 theorem triangle_inequality_eq_iff {V : Type*} [NormedAddCommGroup V]
     [InnerProductSpace ℝ V] (u v : V) :
-    ‖u + v‖ = ‖u‖ + ‖v‖ ↔ SameRay ℝ u v :=
-  sameRay_iff_norm_add.symm
+    ‖u + v‖ = ‖u‖ + ‖v‖ ↔ SameRay ℝ u v := by
+  -- `‖u + v‖ = ‖u‖ + ‖v‖` iff `⟨u, v⟩ = ‖u‖‖v‖`
+  have hexp := norm_add_sq_expand (𝕜 := ℝ) u v
+  rw [RCLike.re_to_real] at hexp
+  have h618 : ‖u + v‖ = ‖u‖ + ‖v‖ ↔ ⟪u, v⟫_ℝ = ‖u‖ * ‖v‖ := by
+    rw [← pow_left_inj₀ (norm_nonneg _) (by positivity) two_ne_zero, hexp]
+    constructor <;> intro h <;> linarith
+  rw [h618]
+  constructor
+  · intro h
+    -- equality in Cauchy–Schwarz, so one vector is a multiple of the other
+    have hcs : ‖⟪u, v⟫_ℝ‖ = ‖u‖ * ‖v‖ := by
+      rw [h, Real.norm_eq_abs, abs_of_nonneg (by positivity)]
+    obtain ⟨r, hr | hr⟩ := (cauchy_schwarz_eq_iff (𝕜 := ℝ)).mp hcs
+    · -- `v = ru`: then `r‖u‖² = |r|‖u‖²`, so `r ≥ 0` (or `u = 0`)
+      rcases eq_or_ne u 0 with hu | hu
+      · rw [hu]; exact SameRay.zero_left v
+      subst hr
+      rw [real_inner_smul_right, real_inner_self_eq_norm_sq, norm_smul,
+        Real.norm_eq_abs] at h
+      have hu2 : 0 < ‖u‖ ^ 2 := by positivity
+      have hr0 : 0 ≤ r := by
+        have : r = |r| := by nlinarith
+        rw [this]; exact abs_nonneg r
+      exact SameRay.sameRay_nonneg_smul_right u hr0
+    · -- `u = rv`: symmetric
+      rcases eq_or_ne v 0 with hv | hv
+      · rw [hv]; exact SameRay.zero_right u
+      subst hr
+      rw [real_inner_smul_left, real_inner_self_eq_norm_sq, norm_smul,
+        Real.norm_eq_abs] at h
+      have hv2 : 0 < ‖v‖ ^ 2 := by positivity
+      have hr0 : 0 ≤ r := by
+        have : r = |r| := by nlinarith
+        rw [this]; exact abs_nonneg r
+      exact SameRay.sameRay_nonneg_smul_left v hr0
+  · intro h
+    -- conversely, if `v = ru` with `r > 0`, then `⟨u, v⟩ = r‖u‖² = ‖u‖‖v‖`
+    rcases eq_or_ne u 0 with hu | hu
+    · rw [hu, inner_zero_left, norm_zero, zero_mul]
+    rcases eq_or_ne v 0 with hv | hv
+    · rw [hv, inner_zero_right, norm_zero, mul_zero]
+    obtain ⟨r, hr, rfl⟩ := h.exists_pos_left hu hv
+    rw [real_inner_smul_right, real_inner_self_eq_norm_sq, norm_smul, Real.norm_eq_abs,
+      abs_of_pos hr]
+    ring
 
 /-! 6.21 Parallelogram equality
 
 {lit}`‖u + v‖² + ‖u − v‖² = 2(‖u‖² + ‖v‖²)`. -/
 
+@[avoiding parallelogram_law_with_norm]
 theorem parallelogram {𝕜 : Type*} [RCLike 𝕜] {V : Type*} [NormedAddCommGroup V]
     [InnerProductSpace 𝕜 V] (u v : V) :
-    ‖u + v‖ ^ 2 + ‖u - v‖ ^ 2 = 2 * (‖u‖ ^ 2 + ‖v‖ ^ 2) :=
-  parallelogram_law_with_norm 𝕜 u v
+    ‖u + v‖ ^ 2 + ‖u - v‖ ^ 2 = 2 * (‖u‖ ^ 2 + ‖v‖ ^ 2) := by
+  -- expand `⟨u + v, u + v⟩ + ⟨u − v, u − v⟩`; the cross terms cancel
+  rw [norm_add_sq_expand (𝕜 := 𝕜), norm_sub_sq_expand (𝕜 := 𝕜)]
+  ring
 
 /-! # Exercises 6A -/
 
