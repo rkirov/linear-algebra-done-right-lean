@@ -175,14 +175,18 @@ theorem setOrthogonal_zero : setOrthogonal ({0} : Set V) = (⊤ : Submodule 𝕜
   ext v
   simp
 
-theorem bot_orthogonal : (⊥ : Submodule 𝕜 V)ᗮ = ⊤ := Submodule.bot_orthogonal_eq_top
+@[avoiding Submodule.bot_orthogonal_eq_top]
+theorem bot_orthogonal : (⊥ : Submodule 𝕜 V)ᗮ = ⊤ := by
+  rw [← setOrthogonal_coe, Submodule.bot_coe, setOrthogonal_zero]
 
 /-- (c) {lit}`V⟂ = {0}`. -/
 theorem setOrthogonal_univ : setOrthogonal (Set.univ : Set V) = (⊥ : Submodule 𝕜 V) := by
   rw [Submodule.eq_bot_iff]
   exact fun v hv => inner_self_eq_zero.mp (hv v (Set.mem_univ v))
 
-theorem top_orthogonal : (⊤ : Submodule 𝕜 V)ᗮ = ⊥ := Submodule.top_orthogonal_eq_bot
+@[avoiding Submodule.top_orthogonal_eq_bot]
+theorem top_orthogonal : (⊤ : Submodule 𝕜 V)ᗮ = ⊥ := by
+  rw [← setOrthogonal_coe, Submodule.top_coe, setOrthogonal_univ]
 
 /-- (d) If {lit}`U` is a subset of {lit}`V`, then {lit}`U ∩ U⟂ ⊆ {0}` (only
 {lit}`⊆`, since {lit}`0` need not belong to {lit}`U`). -/
@@ -203,8 +207,9 @@ theorem setOrthogonal_le {G H : Set V} (h : G ⊆ H) :
     setOrthogonal (𝕜 := 𝕜) H ≤ setOrthogonal (𝕜 := 𝕜) G :=
   fun _ hv u hu => hv u (h hu)
 
+@[avoiding Submodule.orthogonal_le]
 theorem orthogonal_le {G H : Submodule 𝕜 V} (h : G ≤ H) : Hᗮ ≤ Gᗮ :=
-  Submodule.orthogonal_le h
+  setOrthogonal_le (𝕜 := 𝕜) (G := (G : Set V)) (H := (H : Set V)) h
 
 /-! 6.49 Direct sum of a subspace and its orthogonal complement
 
@@ -269,11 +274,14 @@ theorem isCompl_orthogonal (U : Submodule 𝕜 V) [FiniteDimensional 𝕜 U] :
 
 /-! 6.51 Dimension of orthogonal complement
 
-If {lit}`V` is finite-dimensional, then {lit}`dim U⟂ = dim V − dim U`. -/
+If {lit}`V` is finite-dimensional, then {lit}`dim U⟂ = dim V − dim U`. As in the
+book, this follows from {lit}`V = U ⊕ U⟂` (6.49): the dimension of a direct sum
+is the sum of the dimensions. -/
 
+@[avoiding Submodule.finrank_add_finrank_orthogonal]
 theorem finrank_orthogonal [FiniteDimensional 𝕜 V] (U : Submodule 𝕜 V) :
     finrank 𝕜 Uᗮ = finrank 𝕜 V - finrank 𝕜 U := by
-  have := U.finrank_add_finrank_orthogonal (𝕜 := 𝕜)
+  have := Submodule.finrank_add_eq_of_isCompl (isCompl_orthogonal U)
   omega
 
 /-! 6.52 Orthogonal complement of the orthogonal complement
@@ -307,11 +315,19 @@ theorem orthogonal_orthogonal (U : Submodule 𝕜 V) [FiniteDimensional 𝕜 U] 
   rw [hzero, add_zero]
   exact huU
 
-/-! 6.54 {lit}`U⟂ = {0} ⟺ U = V` (for a finite-dimensional subspace). -/
+/-! 6.54 {lit}`U⟂ = {0} ⟺ U = V` (for a finite-dimensional subspace).
 
+If {lit}`U⟂ = {0}`, then {lit}`U = (U⟂)⟂ = {0}⟂ = V` by 6.52 and 6.48(b).
+Conversely, if {lit}`U = V` then {lit}`U⟂ = V⟂ = {0}` by 6.48(c). -/
+
+@[avoiding Submodule.orthogonal_eq_bot_iff]
 theorem orthogonal_eq_bot_iff (U : Submodule 𝕜 V) [FiniteDimensional 𝕜 U] :
-    Uᗮ = ⊥ ↔ U = ⊤ :=
-  U.orthogonal_eq_bot_iff
+    Uᗮ = ⊥ ↔ U = ⊤ := by
+  constructor
+  · intro h
+    rw [← orthogonal_orthogonal U, h, bot_orthogonal]
+  · intro h
+    rw [h, top_orthogonal]
 
 /-! # Orthogonal projection -/
 
@@ -327,13 +343,45 @@ example (U : Submodule 𝕜 V) [U.HasOrthogonalProjection] (v : V) :
     U.starProjection v ∈ U :=
   U.starProjection_apply_mem v
 
+/-- …and {lit}`v − P_U v ∈ U⟂`. These two facts are the definition: they say
+{lit}`v = P_U v + (v − P_U v)` is the decomposition of 6.49. -/
+example (U : Submodule 𝕜 V) [U.HasOrthogonalProjection] (v : V) :
+    v - U.starProjection v ∈ Uᗮ :=
+  U.sub_starProjection_mem_orthogonal v
+
+/-- The decomposition {lit}`v = u + w` with {lit}`u ∈ U`, {lit}`w ∈ U⟂` is unique,
+so whenever {lit}`u ∈ U` and {lit}`v − u ∈ U⟂` we have {lit}`P_U v = u`: the
+difference {lit}`P_U v − u = (v − u) − (v − P_U v)` lies in
+{lit}`U ∩ U⟂ = {0}` (6.48(d)). -/
+@[avoiding Submodule.eq_starProjection_of_mem_orthogonal]
+theorem starProjection_eq_of_mem (U : Submodule 𝕜 V) [U.HasOrthogonalProjection]
+    {v u : V} (hu : u ∈ U) (hvu : v - u ∈ Uᗮ) : U.starProjection v = u := by
+  have h1 : U.starProjection v - u ∈ U := U.sub_mem (U.starProjection_apply_mem v) hu
+  have h2 : U.starProjection v - u ∈ Uᗮ := by
+    have heq : U.starProjection v - u = (v - u) - (v - U.starProjection v) := by abel
+    rw [heq]
+    exact Uᗮ.sub_mem hvu (U.sub_starProjection_mem_orthogonal v)
+  have hbot := inf_orthogonal_eq_bot U
+  rw [Submodule.eq_bot_iff] at hbot
+  exact sub_eq_zero.mp (hbot _ ⟨h1, h2⟩)
+
 /-! 6.56 Example: orthogonal projection onto a one-dimensional subspace.
 For {lit}`u ≠ 0` and {lit}`U = span(u)`, {lit}`P_U v = (⟨v, u⟩ / ‖u‖²) u`
-(reading Axler's {lit}`⟨v, u⟩` as mathlib's {lit}`⟪u, v⟫`). -/
+(reading Axler's {lit}`⟨v, u⟩` as mathlib's {lit}`⟪u, v⟫`). As in the book,
+this is the decomposition {lit}`v = (⟨v, u⟩/‖u‖²) u + (v − (⟨v, u⟩/‖u‖²) u)` of
+6.13: the first term lies in {lit}`span(u)` and the second is orthogonal to
+{lit}`u`, hence to {lit}`span(u)`. (For {lit}`u = 0` both sides are {lit}`0`.) -/
 
+@[avoiding Submodule.starProjection_singleton]
 example (u v : V) :
-    (𝕜 ∙ u).starProjection v = (⟪u, v⟫_𝕜 / ((‖u‖ ^ 2 : ℝ) : 𝕜)) • u :=
-  Submodule.starProjection_singleton 𝕜 v
+    (𝕜 ∙ u).starProjection v = (⟪u, v⟫_𝕜 / ((‖u‖ ^ 2 : ℝ) : 𝕜)) • u := by
+  refine starProjection_eq_of_mem _
+    (Submodule.smul_mem _ _ (Submodule.mem_span_singleton_self u)) ?_
+  rw [Submodule.mem_orthogonal_singleton_iff_inner_right, inner_sub_right, inner_smul_right]
+  rcases eq_or_ne u 0 with hu | hu
+  · rw [hu, inner_zero_left, inner_zero_left, mul_zero, sub_zero]
+  · rw [inner_self_eq_norm_sq_to_K, ← RCLike.ofReal_pow,
+      div_mul_cancel₀ _ (by simpa using hu), sub_self]
 
 /-! 6.57 Properties of orthogonal projection {lit}`P_U`
 
@@ -345,23 +393,44 @@ variable (U : Submodule 𝕜 V) [U.HasOrthogonalProjection]
 {lit}`V` — in mathlib it is by construction a (continuous) linear map. -/
 noncomputable example : V →L[𝕜] V := U.starProjection
 
-/-- (b) {lit}`P_U u = u` for {lit}`u ∈ U`; and more precisely {lit}`P_U v = v ↔
-v ∈ U`. -/
-theorem starProjection_eq_self_iff (v : V) : U.starProjection v = v ↔ v ∈ U :=
-  Submodule.starProjection_eq_self_iff
+/-- (b) {lit}`P_U u = u` for {lit}`u ∈ U` — write {lit}`u = u + 0` with
+{lit}`0 ∈ U⟂`; and more precisely {lit}`P_U v = v ↔ v ∈ U`, since
+{lit}`P_U v ∈ U`. -/
+@[avoiding Submodule.starProjection_eq_self_iff]
+theorem starProjection_eq_self_iff (v : V) : U.starProjection v = v ↔ v ∈ U := by
+  constructor
+  · intro h
+    rw [← h]
+    exact U.starProjection_apply_mem v
+  · intro hv
+    exact starProjection_eq_of_mem U hv (by rw [sub_self]; exact Uᗮ.zero_mem)
 
-/-- (f) {lit}`v − P_U v ∈ U⟂` for every {lit}`v`. -/
+/-- (f) {lit}`v − P_U v ∈ U⟂` for every {lit}`v` — this is the definition of
+{lit}`P_U`. -/
 theorem sub_starProjection_mem_orthogonal (v : V) :
     v - U.starProjection v ∈ Uᗮ :=
   U.sub_starProjection_mem_orthogonal v
 
-/-- (g) {lit}`P_U² = P_U`. -/
-theorem starProjection_idem : U.starProjection ∘L U.starProjection = U.starProjection :=
-  (Submodule.isIdempotentElem_starProjection U)
+/-- (g) {lit}`P_U² = P_U`: {lit}`P_U v ∈ U`, so {lit}`P_U (P_U v) = P_U v` by (b). -/
+@[avoiding Submodule.isIdempotentElem_starProjection]
+theorem starProjection_idem : U.starProjection ∘L U.starProjection = U.starProjection := by
+  ext v
+  exact (starProjection_eq_self_iff U _).mpr (U.starProjection_apply_mem v)
 
-/-- (h) {lit}`‖P_U v‖ ≤ ‖v‖` for every {lit}`v`. -/
-theorem norm_starProjection_le (v : V) : ‖U.starProjection v‖ ≤ ‖v‖ :=
-  U.norm_starProjection_apply_le v
+/-- (h) {lit}`‖P_U v‖ ≤ ‖v‖` for every {lit}`v`: by the Pythagorean theorem
+{lit}`‖v‖² = ‖P_U v‖² + ‖v − P_U v‖² ≥ ‖P_U v‖²`, the two terms being
+orthogonal by (f). -/
+@[avoiding Submodule.norm_starProjection_apply_le]
+theorem norm_starProjection_le (v : V) : ‖U.starProjection v‖ ≤ ‖v‖ := by
+  have horth : ⟪U.starProjection v, v - U.starProjection v⟫_𝕜 = 0 :=
+    (Submodule.mem_orthogonal U _).mp (U.sub_starProjection_mem_orthogonal v) _
+      (U.starProjection_apply_mem v)
+  have hpyth : ‖v‖ * ‖v‖ = ‖U.starProjection v‖ * ‖U.starProjection v‖ +
+      ‖v - U.starProjection v‖ * ‖v - U.starProjection v‖ := by
+    conv_lhs => rw [show v = U.starProjection v + (v - U.starProjection v) by abel]
+    exact norm_add_sq_eq_norm_sq_add_norm_sq_of_inner_eq_zero _ _ horth
+  nlinarith [norm_nonneg v, norm_nonneg (U.starProjection v),
+    mul_self_nonneg ‖v - U.starProjection v‖]
 
 variable {U}
 
@@ -399,7 +468,7 @@ theorem ker_starProjection : LinearMap.ker (U.starProjection : V →ₗ[𝕜] V)
 {lit}`U`-summand of the decomposition 6.50. -/
 theorem starProjection_eq_sum_inner {ι : Type*} [Fintype ι] (b : OrthonormalBasis ι 𝕜 U)
     (v : V) : U.starProjection v = ∑ k, ⟪(b k : V), v⟫_𝕜 • (b k : V) :=
-  Submodule.eq_starProjection_of_mem_orthogonal (sum_inner_smul_mem U b v)
+  starProjection_eq_of_mem U (sum_inner_smul_mem U b v)
     (sub_sum_inner_smul_mem_orthogonal U b v)
 
 /-! 6.58 Riesz representation theorem, revisited
@@ -587,13 +656,13 @@ theorem restr_injective (T : V →ₗ[𝕜] W) : Function.Injective (restr T) :=
   rw [LinearMap.mem_ker] at hx
   have hx0 : T (x : V) = 0 := by have := congrArg (Subtype.val) hx; simpa using this
   have : (x : V) ∈ LinearMap.ker T ⊓ (Submodule.orthogonal (LinearMap.ker T)) := ⟨hx0, x.2⟩
-  rw [Submodule.inf_orthogonal_eq_bot] at this
+  rw [inf_orthogonal_eq_bot] at this
   ext; simpa using this
 
 theorem restr_surjective (T : V →ₗ[𝕜] W) : Function.Surjective (restr T) := by
   rintro ⟨w, v, rfl⟩
   have hsup : (LinearMap.ker T) ⊔ (Submodule.orthogonal (LinearMap.ker T)) = ⊤ :=
-    ((LinearMap.ker T).isCompl_orthogonal_of_hasOrthogonalProjection).sup_eq_top
+    (isCompl_orthogonal (LinearMap.ker T)).sup_eq_top
   have hv : v ∈ (LinearMap.ker T) ⊔ (Submodule.orthogonal (LinearMap.ker T)) := hsup ▸ Submodule.mem_top
   rw [Submodule.mem_sup] at hv
   obtain ⟨u, hu, x, hx, rfl⟩ := hv
@@ -625,7 +694,7 @@ theorem pinv_eq_symm (e : V ≃ₗ[𝕜] W) : (e : V →ₗ[𝕜] W)† = (e.sym
   ext w
   -- `(null T)⟂ = V`, so `e.symm w` lies in it
   have hmem : e.symm w ∈ Submodule.orthogonal (LinearMap.ker (e : V →ₗ[𝕜] W)) := by
-    rw [LinearMap.ker_eq_bot.mpr e.injective, Submodule.bot_orthogonal_eq_top]
+    rw [LinearMap.ker_eq_bot.mpr e.injective, bot_orthogonal]
     exact Submodule.mem_top
   -- `range T = W`, so `P_(range T)` fixes `w`
   have hw : w ∈ LinearMap.range (e : V →ₗ[𝕜] W) := ⟨e.symm w, by simp⟩
