@@ -42,7 +42,6 @@ open LADR.Section_3D (IsInvertible)
 open Module.End (HasEigenvalue HasEigenvector)
 open LADR.Section_5A (InvariantUnder
   exercise_5A_38_quotient_op)
-open LADR.Section_5B (quotOp quotOp_mkQ)
 open LADR.Section_5C (IsUpperTriangular tfae_upperTriangular
   isEigenvalue_iff_diag)
 open LADR.Section_5D (IsDiagonalizable isDiagonalizable_restrict
@@ -302,25 +301,28 @@ example (c : ℂ) (hc : c ≠ 0) :
     exact ⟨Module.End.mem_eigenspace_iff.mpr (by simp), by simpa using hc⟩
 
 /-! 5.80 Commuting operators are simultaneously upper triangularizable
-(over {lit}`ℂ`). Proof by induction on {lit}`dim V`, using a common
-eigenvector (5.78) and the quotient by its span. -/
+(over {lit}`ℂ`). Proof by induction on {lit}`dim V`, following the book: take
+a common eigenvector {lit}`v₁` (5.78), a complement {lit}`W` with
+{lit}`V = span(v₁) ⊕ W` (2.33), the projection {lit}`P : V → W` along
+{lit}`span(v₁)`, and apply the induction hypothesis to the commuting operators
+{lit}`Ŝ = P S|_W` and {lit}`T̂ = P T|_W`. -/
 
 private lemma simul_upperTriangular_aux :
-    ∀ (N : ℕ) (W : Type u) (_ : AddCommGroup W),
-      ∀ (_ : Module ℂ W) (_ : Module.Finite ℂ W), finrank ℂ W = N →
-      ∀ S T : W →ₗ[ℂ] W, Commute S T →
-      ∃ (n : ℕ) (v : Fin n → W) (hv : IsBasis ℂ v),
+    ∀ (N : ℕ) (V : Type u) (_ : AddCommGroup V),
+      ∀ (_ : Module ℂ V) (_ : Module.Finite ℂ V), finrank ℂ V = N →
+      ∀ S T : V →ₗ[ℂ] V, Commute S T →
+      ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis ℂ v),
         IsUpperTriangular (matrixOf hv hv S) ∧
           IsUpperTriangular (matrixOf hv hv T) := by
   intro N
   induction N using Nat.strong_induction_on with
   | _ N ih =>
-    intro W _ _ _ hW S T hcomm
+    intro V _ _ _ hV S T hcomm
     rcases Nat.eq_zero_or_pos N with rfl | hN
-    · -- {lit}`W = {0}`: the empty basis works.
-      have hsub : Subsingleton W := by
+    · -- {lit}`V = {0}`: the empty basis works.
+      have hsub : Subsingleton V := by
         rw [← Module.finrank_zero_iff (R := ℂ)]
-        exact hW
+        exact hV
       refine ⟨0, Fin.elim0, ⟨linearIndependent_empty_type, ?_⟩, ?_, ?_⟩
       · show Submodule.span ℂ (Set.range Fin.elim0) = ⊤
         rw [Set.range_eq_empty, Submodule.span_empty, eq_top_iff]
@@ -331,14 +333,16 @@ private lemma simul_upperTriangular_aux :
         exact j.elim0
       · intro j _ _
         exact j.elim0
-    · have : Nontrivial W :=
+    · have : Nontrivial V :=
         Module.nontrivial_of_finrank_pos (R := ℂ) (by omega)
+      -- Let {lit}`v₁` be any common eigenvector of {lit}`S` and {lit}`T`
+      -- (5.78). Hence {lit}`Sv₁, Tv₁ ∈ span(v₁)`.
       obtain ⟨v₁, ⟨lamS, hSv⟩, ⟨lamT, hTv⟩⟩ :=
         exists_common_eigenvector S T hcomm
       have hv₁_ne : v₁ ≠ 0 := hSv.2
       have hlamS : S v₁ = lamS • v₁ := Module.End.mem_eigenspace_iff.mp hSv.1
       have hlamT : T v₁ = lamT • v₁ := Module.End.mem_eigenspace_iff.mp hTv.1
-      set U : Submodule ℂ W := Submodule.span ℂ {v₁} with hU_def
+      set U : Submodule ℂ V := Submodule.span ℂ {v₁} with hU_def
       have hU_rank : finrank ℂ U = 1 := finrank_span_singleton hv₁_ne
       have hUS_inv : InvariantUnder S U := by
         intro x hx
@@ -350,46 +354,65 @@ private lemma simul_upperTriangular_aux :
         obtain ⟨a, rfl⟩ := Submodule.mem_span_singleton.mp hx
         rw [map_smul, hlamT, smul_smul]
         exact Submodule.mem_span_singleton.mpr ⟨a * lamT, rfl⟩
-      -- The quotient operators commute, and {lit}`dim(W/U) = N − 1`.
-      have hcomm_q : quotOp S U hUS_inv ∘ₗ quotOp T U hUT_inv =
-          quotOp T U hUT_inv ∘ₗ quotOp S U hUS_inv := by
-        apply LinearMap.ext
-        intro x
-        obtain ⟨y, rfl⟩ := U.mkQ_surjective x
-        rw [LinearMap.comp_apply, LinearMap.comp_apply, quotOp_mkQ,
-          quotOp_mkQ, quotOp_mkQ, quotOp_mkQ]
-        have h := LinearMap.congr_fun hcomm y
-        simp only [Module.End.mul_apply] at h
-        rw [h]
-      have hquot_rank : finrank ℂ (W ⧸ U) = N - 1 := by
-        rw [LADR.Section_3E.finrank_quotient U, hW, hU_rank]
-      obtain ⟨M, wq, hwq, hAS, hAT⟩ := ih (N - 1) (by omega) (W ⧸ U)
-        inferInstance inferInstance inferInstance hquot_rank
-        (quotOp S U hUS_inv) (quotOp T U hUT_inv) hcomm_q
-      -- Lift the quotient basis and prepend the common eigenvector.
-      choose wl hwl using fun i => U.mkQ_surjective (wq i)
-      set v : Fin (M + 1) → W := Fin.cons v₁ wl with hv_def
+      -- Let {lit}`W` be a subspace with {lit}`V = span(v₁) ⊕ W` (2.33), and
+      -- {lit}`P : V → W` the projection {lit}`P(a v₁ + w) = w`.
+      obtain ⟨W, hUW⟩ := LADR.Section_2B.exists_isCompl U
+      set P : V →ₗ[ℂ] W := W.linearProjOfIsCompl U hUW.symm with hP_def
+      have hPw : ∀ w : W, P w = w := W.linearProjOfIsCompl_apply_left hUW.symm
+      have hPv₁ : P v₁ = 0 := W.linearProjOfIsCompl_apply_right' hUW.symm _
+        (Submodule.mem_span_singleton_self v₁)
+      -- {lit}`x − P x ∈ span(v₁)`, i.e. {lit}`x = a v₁ + P x`.
+      have hdecomp : ∀ x : V, x - (P x : V) ∈ U := fun x =>
+        (W.linearProjOfIsCompl_apply_eq_zero_iff hUW.symm).mp
+          (by rw [map_sub, hPw, sub_self])
+      -- If {lit}`R(span v₁) ⊆ span v₁`, then {lit}`P(R(P x)) = P(R x)`,
+      -- because {lit}`R(x − P x) ∈ span(v₁)` and {lit}`P v₁ = 0`.
+      have hPR : ∀ R : V →ₗ[ℂ] V, InvariantUnder R U → ∀ x, P (R (P x)) = P (R x) := by
+        intro R hR x
+        have h : R x - R (P x) ∈ U := by
+          rw [← map_sub]
+          exact hR _ (hdecomp x)
+        rw [← sub_eq_zero, ← map_sub,
+          W.linearProjOfIsCompl_apply_eq_zero_iff hUW.symm]
+        rw [← neg_mem_iff, neg_sub]
+        exact h
+      -- Define {lit}`Ŝ w = P(S w)` and {lit}`T̂ w = P(T w)`; they commute,
+      -- since {lit}`(Ŝ T̂) w = P((ST) w)` and {lit}`(T̂ Ŝ) w = P((TS) w)`.
+      let hat : (V →ₗ[ℂ] V) → (W →ₗ[ℂ] W) := fun R => P ∘ₗ R ∘ₗ W.subtype
+      have hcomm_hat : Commute (hat S) (hat T) := by
+        show hat S * hat T = hat T * hat S
+        refine LinearMap.ext fun w => ?_
+        show P (S (P (T w))) = P (T (P (S w)))
+        rw [hPR S hUS_inv, hPR T hUT_inv]
+        exact congrArg P (LinearMap.congr_fun hcomm (w : V))
+      have hW_rank : finrank ℂ W = N - 1 := by
+        have := Submodule.finrank_add_eq_of_isCompl hUW
+        omega
+      -- By induction, a basis {lit}`v₂, …, vₙ` of {lit}`W` makes {lit}`Ŝ, T̂`
+      -- upper triangular.
+      obtain ⟨M, wl, hwl, hAS, hAT⟩ := ih (N - 1) (by omega) W
+        inferInstance inferInstance inferInstance hW_rank
+        (hat S) (hat T) hcomm_hat
+      -- The list {lit}`v₁, …, vₙ` is a basis of {lit}`V`.
+      set v : Fin (M + 1) → V := Fin.cons v₁ fun i => (wl i : V) with hv_def
       have hM : M = N - 1 := by
-        rw [← hquot_rank]
-        exact isBasis_card_eq_finrank wq hwq
-      have hmkQ_v₁ : U.mkQ v₁ = 0 :=
-        (Submodule.Quotient.mk_eq_zero U).mpr
-          (Submodule.mem_span_singleton_self v₁)
+        rw [← hW_rank]
+        exact isBasis_card_eq_finrank wl hwl
       have hv_li : LinearIndependent ℂ v := by
         rw [Fintype.linearIndependent_iff]
         intro g hg
-        have hg' : g 0 • v₁ + ∑ i : Fin M, g i.succ • wl i = 0 := by
+        have hg' : g 0 • v₁ + ∑ i : Fin M, g i.succ • (wl i : V) = 0 := by
           rw [Fin.sum_univ_succ] at hg
           exact hg
-        -- Push to the quotient: the {lit}`wq` coefficients vanish.
-        have hq : ∑ i : Fin M, g i.succ • wq i = 0 := by
-          have h1 := congrArg U.mkQ hg'
-          rw [map_add, map_smul, hmkQ_v₁, smul_zero, zero_add, map_sum,
+        -- Apply {lit}`P`: the {lit}`wl` coefficients vanish.
+        have hq : ∑ i : Fin M, g i.succ • wl i = 0 := by
+          have h1 := congrArg P hg'
+          rw [map_add, map_smul, hPv₁, smul_zero, zero_add, map_sum,
             map_zero] at h1
           rw [← h1]
-          exact Finset.sum_congr rfl fun i _ => by rw [map_smul, hwl i]
+          exact Finset.sum_congr rfl fun i _ => by rw [map_smul, hPw]
         have hzero_succ : ∀ i : Fin M, g i.succ = 0 :=
-          Fintype.linearIndependent_iff.mp hwq.1 _ hq
+          Fintype.linearIndependent_iff.mp hwl.1 _ hq
         have hzero_0 : g 0 = 0 := by
           rw [Finset.sum_eq_zero (fun i _ => by
             rw [hzero_succ i, zero_smul]), add_zero] at hg'
@@ -403,11 +426,11 @@ private lemma simul_upperTriangular_aux :
       have hv_basis : IsBasis ℂ v :=
         isBasis_of_linearIndependent_of_card_eq v hv_li (by omega)
       -- Verify condition 5.39(c) for both operators.
-      have hmain : ∀ (R : W →ₗ[ℂ] W) (hR_inv : InvariantUnder R U)
+      have hmain : ∀ (R : V →ₗ[ℂ] V) (_ : InvariantUnder R U)
           (lamR : ℂ) (_ : R v₁ = lamR • v₁)
-          (_ : IsUpperTriangular (matrixOf hwq hwq (quotOp R U hR_inv))),
+          (_ : IsUpperTriangular (matrixOf hwl hwl (hat R))),
           IsUpperTriangular (matrixOf hv_basis hv_basis R) := by
-        intro R hR_inv lamR hlamR hAR
+        intro R _ lamR hlamR hAR
         apply ((tfae_upperTriangular hv_basis R).out 2 0).mp
         intro k
         induction k using Fin.cases with
@@ -418,30 +441,21 @@ private lemma simul_upperTriangular_aux :
           exact Submodule.smul_mem _ _
             (Submodule.subset_span ⟨0, le_refl 0, h0⟩)
         | succ i =>
-          -- Use the upper-triangular structure of the quotient operator.
-          have hq30 := (tfae_upperTriangular hwq (quotOp R U hR_inv)).out 0 2
+          -- {lit}`R vₖ = a v₁ + R̂ vₖ` with {lit}`R̂ vₖ ∈ span(v₂, …, vₖ)`
+          -- (upper-triangularity of {lit}`R̂`).
+          have hq30 := (tfae_upperTriangular hwl (hat R)).out 0 2
           have hq3 := hq30.mp hAR i
           have hsucc : v i.succ = wl i := rfl
-          have hmkQ : U.mkQ (R (wl i)) ∈
-              Submodule.map U.mkQ
-                (Submodule.span ℂ (wl '' {j | j ≤ i})) := by
-            rw [Submodule.map_span]
-            have himg : ⇑U.mkQ '' (wl '' {j | j ≤ i}) =
-                wq '' {j | j ≤ i} := by
-              rw [← Set.image_comp]
-              exact Set.image_congr fun j _ => by
-                rw [Function.comp_apply, hwl j]
-            rw [himg]
-            have hRwl : U.mkQ (R (wl i)) =
-                quotOp R U hR_inv (wq i) := by
-              rw [← hwl i, quotOp_mkQ]
-            rw [hRwl]
-            exact hq3
-          have hcomap := Submodule.mem_comap.mpr hmkQ
-          rw [Submodule.comap_map_mkQ] at hcomap
+          have hmem : R (wl i : V) ∈
+              U ⊔ Submodule.span ℂ ((fun j => (wl j : V)) '' {j | j ≤ i}) := by
+            rw [← sub_add_cancel (R (wl i : V)) (P (R (wl i : V)) : V)]
+            refine Submodule.add_mem_sup (hdecomp _) ?_
+            have h := Submodule.mem_map_of_mem (f := W.subtype) hq3
+            rw [Submodule.map_span, ← Set.image_comp] at h
+            exact h
           rw [hsucc]
-          -- {lit}`U ⊔ span(wl '' {j ≤ i}) ⊆ span(v '' {j ≤ i+1})`.
-          have hle : U ⊔ Submodule.span ℂ (wl '' {j | j ≤ i}) ≤
+          -- {lit}`U ⊔ span(v₂, …, vₖ) ⊆ span(v₁, …, vₖ)`.
+          have hle : U ⊔ Submodule.span ℂ ((fun j => (wl j : V)) '' {j | j ≤ i}) ≤
               Submodule.span ℂ (v '' {j | j ≤ i.succ}) := by
             apply sup_le
             · rw [hU_def, Submodule.span_le]
@@ -452,7 +466,8 @@ private lemma simul_upperTriangular_aux :
               refine Submodule.subset_span ⟨j.succ, ?_, rfl⟩
               rw [Set.mem_setOf_eq]
               exact Fin.succ_le_succ_iff.mpr hj
-          exact hle hcomap
+          exact hle hmem
+      -- Thus {lit}`S` and {lit}`T` are upper triangular w.r.t. {lit}`v₁, …, vₙ`.
       exact ⟨M + 1, v, hv_basis,
         hmain S hUS_inv lamS hlamS hAS, hmain T hUT_inv lamT hlamT hAT⟩
 
