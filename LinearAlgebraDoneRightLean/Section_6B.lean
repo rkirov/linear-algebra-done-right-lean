@@ -6,6 +6,7 @@ import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Analysis.SpecialFunctions.Complex.Arg
 import LinearAlgebraDoneRightLean.Section_5C
+import LinearAlgebraDoneRightLean.Section_6A
 import LinearAlgebraDoneRightLean.L2Interval
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
@@ -109,31 +110,75 @@ function space as (d). -/
 If {lit}`e₁, …, eₘ` is orthonormal, then
 {lit}`‖a₁e₁ + ⋯ + aₘeₘ‖² = |a₁|² + ⋯ + |aₘ|²`. -/
 
+/-- 6.24 for a linear combination over any finite set {lit}`s` of indices. As in
+the book, apply the Pythagorean theorem (6.12) repeatedly: adding one more term
+{lit}`aⱼeⱼ`, it is orthogonal to the earlier ones, so the squared norms add. -/
+@[avoiding Orthonormal.inner_sum]
+theorem norm_sq_sum_orthonormal_finset {ι : Type*} {e : ι → V}
+    (he : Orthonormal 𝕜 e) (a : ι → 𝕜) (s : Finset ι) :
+    ‖∑ i ∈ s, a i • e i‖ ^ 2 = ∑ i ∈ s, ‖a i‖ ^ 2 := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert j s hj ih =>
+    rw [Finset.sum_insert hj, Finset.sum_insert hj]
+    -- `aⱼeⱼ` is orthogonal to `∑_{i ∈ s} aᵢeᵢ`
+    have horth : LADR.Section_6A.Orthogonal (𝕜 := 𝕜) (a j • e j) (∑ i ∈ s, a i • e i) := by
+      unfold LADR.Section_6A.Orthogonal
+      rw [inner_sum]
+      refine Finset.sum_eq_zero fun i hi => ?_
+      rw [inner_smul_left, inner_smul_right, he.2 (fun h : j = i => hj (h ▸ hi)), mul_zero, mul_zero]
+    rw [LADR.Section_6A.pythagorean _ _ horth, ih, norm_smul, he.1 j, mul_one]
+
 theorem norm_sq_sum_orthonormal {ι : Type*} [Fintype ι] {e : ι → V}
     (he : Orthonormal 𝕜 e) (a : ι → 𝕜) :
-    ‖∑ i, a i • e i‖ ^ 2 = ∑ i, ‖a i‖ ^ 2 := by
-  have key : (‖∑ i, a i • e i‖ : 𝕜) ^ 2 = ∑ i, (‖a i‖ : 𝕜) ^ 2 := by
-    rw [← inner_self_eq_norm_sq_to_K, he.inner_sum a a Finset.univ]
-    exact Finset.sum_congr rfl fun i _ => by simp [RCLike.conj_mul]
-  have := congrArg RCLike.re key
-  push_cast at this
-  simpa using this
+    ‖∑ i, a i • e i‖ ^ 2 = ∑ i, ‖a i‖ ^ 2 :=
+  norm_sq_sum_orthonormal_finset he a Finset.univ
 
-/-! 6.25 Orthonormal lists are linearly independent -/
+/-! 6.25 Orthonormal lists are linearly independent
 
+If {lit}`a₁e₁ + ⋯ + aₘeₘ = 0`, then {lit}`|a₁|² + ⋯ + |aₘ|² = 0` by 6.24, so
+every {lit}`aₖ = 0`. -/
+
+@[avoiding Orthonormal.linearIndependent]
 theorem orthonormal_linearIndependent {ι : Type*} {e : ι → V}
-    (he : Orthonormal 𝕜 e) : LinearIndependent 𝕜 e :=
-  he.linearIndependent
+    (he : Orthonormal 𝕜 e) : LinearIndependent 𝕜 e := by
+  rw [linearIndependent_iff']
+  intro s a hsum i hi
+  have h := norm_sq_sum_orthonormal_finset he a s
+  rw [hsum, norm_zero, sq, zero_mul, eq_comm,
+    Finset.sum_eq_zero_iff_of_nonneg (fun _ _ => sq_nonneg _)] at h
+  exact norm_eq_zero.mp (pow_eq_zero_iff two_ne_zero |>.mp (h i hi))
 
 /-! 6.26 Bessel's inequality
 
 If {lit}`e₁, …, eₘ` is orthonormal and {lit}`v ∈ V`, then
 {lit}`|⟨v, e₁⟩|² + ⋯ + |⟨v, eₘ⟩|² ≤ ‖v‖²` (recall {lit}`⟨v, eₖ⟩` is mathlib's
-{lit}`⟪eₖ, v⟫`). -/
+{lit}`⟪eₖ, v⟫`).
 
+Axler's proof: write {lit}`v = u + w` with
+{lit}`u = ⟨v, e₁⟩e₁ + ⋯ + ⟨v, eₘ⟩eₘ` and {lit}`w = v − u`. Then
+{lit}`⟨w, eₖ⟩ = ⟨v, eₖ⟩ − ⟨v, eₖ⟩ = 0` for each {lit}`k`, so {lit}`w` is
+orthogonal to {lit}`u`, and the Pythagorean theorem with 6.24 gives
+{lit}`‖v‖² = ‖u‖² + ‖w‖² ≥ ‖u‖² = |⟨v, e₁⟩|² + ⋯ + |⟨v, eₘ⟩|²`. -/
+
+@[avoiding Orthonormal.sum_inner_products_le]
 theorem bessel {ι : Type*} {e : ι → V} (he : Orthonormal 𝕜 e) (v : V)
-    (s : Finset ι) : ∑ i ∈ s, ‖⟪e i, v⟫_𝕜‖ ^ 2 ≤ ‖v‖ ^ 2 :=
-  he.sum_inner_products_le v
+    (s : Finset ι) : ∑ i ∈ s, ‖⟪e i, v⟫_𝕜‖ ^ 2 ≤ ‖v‖ ^ 2 := by
+  set u := ∑ i ∈ s, ⟪e i, v⟫_𝕜 • e i with hu
+  -- `w = v − u` is orthogonal to each `eₖ`, hence to `u`
+  have hwe : ∀ k ∈ s, ⟪e k, v - u⟫_𝕜 = 0 := by
+    intro k hk
+    rw [inner_sub_right, hu, he.inner_right_sum _ hk, sub_self]
+  have horth : LADR.Section_6A.Orthogonal (𝕜 := 𝕜) u (v - u) := by
+    unfold LADR.Section_6A.Orthogonal
+    rw [hu, sum_inner]
+    refine Finset.sum_eq_zero fun k hk => ?_
+    rw [inner_smul_left, hwe k hk, mul_zero]
+  have hpyth := LADR.Section_6A.pythagorean _ _ horth
+  rw [add_sub_cancel, hu, norm_sq_sum_orthonormal_finset he] at hpyth
+  rw [hpyth]
+  exact le_add_of_nonneg_right (sq_nonneg _)
 
 /-! # Orthonormal bases -/
 
@@ -149,16 +194,20 @@ noncomputable example {n : ℕ} : OrthonormalBasis (Fin n) 𝕜 (EuclideanSpace 
 /-! 6.28 Orthonormal lists of the right length are orthonormal bases
 
 If {lit}`V` is finite-dimensional, every orthonormal list of length {lit}`dim V`
-is an orthonormal basis. -/
+is an orthonormal basis: by 6.25 it is linearly independent, and a linearly
+independent list of length {lit}`dim V` is a basis (2.38). -/
 
+@[avoiding Orthonormal.exists_orthonormalBasis_extension_of_card_eq]
 theorem orthonormalBasis_of_length [FiniteDimensional 𝕜 V] {n : ℕ}
     (e : Fin n → V) (he : Orthonormal 𝕜 e) (hn : n = finrank 𝕜 V) :
     ∃ b : OrthonormalBasis (Fin n) 𝕜 V, ∀ i, b i = e i := by
-  have hcard : finrank 𝕜 V = Fintype.card (Fin n) := by rw [Fintype.card_fin]; exact hn.symm
-  have hv : Orthonormal 𝕜 (Set.univ.restrict e) :=
-    he.comp _ Subtype.val_injective
-  obtain ⟨b, hb⟩ := hv.exists_orthonormalBasis_extension_of_card_eq hcard
-  exact ⟨b, fun i => hb i (Set.mem_univ i)⟩
+  have hbasis : LADR.Section_2B.IsBasis 𝕜 e :=
+    LADR.Section_2C.isBasis_of_linearIndependent_of_card_eq e
+      (orthonormal_linearIndependent he) hn
+  have he' : Orthonormal 𝕜 hbasis.toModuleBasis := by
+    convert he
+    exact funext (LADR.Section_2B.IsBasis.toModuleBasis_apply hbasis)
+  exact ⟨hbasis.toModuleBasis.toOrthonormalBasis he', fun i => by simp⟩
 
 /-! 6.29 Example: an orthonormal basis of {lit}`𝔽⁴`. Besides the standard basis,
 the list
@@ -203,41 +252,164 @@ Suppose {lit}`e₁, …, eₙ` is an orthonormal basis and {lit}`u, v ∈ V`. Th
 (b) {lit}`‖v‖² = |⟨v, e₁⟩|² + ⋯ + |⟨v, eₙ⟩|²` (Parseval's identity);
 (c) {lit}`⟨u, v⟩ = ⟨u, e₁⟩⟨v, e₁⟩‾ + ⋯ + ⟨u, eₙ⟩⟨v, eₙ⟩‾`. Reading Axler's
 {lit}`⟨·, ·⟩` as mathlib's with the slots swapped, this is
-{lit}`⟪u, v⟫ = ∑ₖ ⟪u, eₖ⟫ ⟪eₖ, v⟫`. -/
+{lit}`⟪u, v⟫ = ∑ₖ ⟪u, eₖ⟫ ⟪eₖ, v⟫`.
 
+Axler's proof of (a): since {lit}`e₁, …, eₙ` is a basis,
+{lit}`v = a₁e₁ + ⋯ + aₙeₙ` for some scalars; taking the inner product with
+{lit}`eₖ` gives {lit}`⟨v, eₖ⟩ = aₖ`. Then (b) is 6.24 applied to (a), and (c)
+follows by taking the inner product of {lit}`u` with (a). -/
+
+@[avoiding OrthonormalBasis.sum_repr']
 theorem orthonormalBasis_repr {ι : Type*} [Fintype ι] (b : OrthonormalBasis ι 𝕜 V)
-    (v : V) : v = ∑ i, ⟪b i, v⟫_𝕜 • b i :=
-  (b.sum_repr' v).symm
+    (v : V) : v = ∑ i, ⟪b i, v⟫_𝕜 • b i := by
+  -- `v = ∑ aᵢ eᵢ` because `e` is a basis
+  set a := b.toBasis.repr v
+  have hv : v = ∑ i, a i • b i := by
+    conv_lhs => rw [← b.toBasis.sum_repr v]
+    simp only [OrthonormalBasis.coe_toBasis, a]
+  -- and `⟨v, eₖ⟩ = aₖ`
+  have ha : ∀ k, ⟪b k, v⟫_𝕜 = a k := by
+    intro k
+    rw [hv, b.orthonormal.inner_right_fintype]
+  simp_rw [ha]
+  exact hv
 
+@[avoiding OrthonormalBasis.sum_sq_norm_inner_right]
 theorem parseval {ι : Type*} [Fintype ι] (b : OrthonormalBasis ι 𝕜 V) (v : V) :
-    ‖v‖ ^ 2 = ∑ i, ‖⟪b i, v⟫_𝕜‖ ^ 2 :=
-  (b.sum_sq_norm_inner_right v).symm
+    ‖v‖ ^ 2 = ∑ i, ‖⟪b i, v⟫_𝕜‖ ^ 2 := by
+  conv_lhs => rw [orthonormalBasis_repr b v]
+  exact norm_sq_sum_orthonormal b.orthonormal _
 
+@[avoiding OrthonormalBasis.sum_inner_mul_inner]
 theorem inner_eq_sum_inner_mul_inner {ι : Type*} [Fintype ι]
     (b : OrthonormalBasis ι 𝕜 V) (u v : V) :
-    ⟪u, v⟫_𝕜 = ∑ i, ⟪u, b i⟫_𝕜 * ⟪b i, v⟫_𝕜 :=
-  (b.sum_inner_mul_inner u v).symm
+    ⟪u, v⟫_𝕜 = ∑ i, ⟪u, b i⟫_𝕜 * ⟪b i, v⟫_𝕜 := by
+  conv_lhs => rw [orthonormalBasis_repr b v]
+  rw [inner_sum]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [inner_smul_right, mul_comm]
 
 /-! 6.32 Gram–Schmidt procedure
 
 Given a linearly independent list {lit}`v₁, …, vₘ`, the Gram–Schmidt procedure
 produces an orthonormal list {lit}`e₁, …, eₘ` with the same span at each stage.
 mathlib's {name}`InnerProductSpace.gramSchmidtNormed` are the {lit}`eₖ`; they are
-orthonormal and preserve every initial span {lit}`span(v₁, …, vₖ)`. -/
+orthonormal and preserve every initial span {lit}`span(v₁, …, vₖ)`.
 
-open InnerProductSpace in
-theorem gram_schmidt_orthonormal {ι : Type*} [LinearOrder ι]
-    [LocallyFiniteOrderBot ι] [IsWellOrder ι (· < ·)] {f : ι → V}
-    (hf : LinearIndependent 𝕜 f) : Orthonormal 𝕜 (gramSchmidtNormed 𝕜 f) :=
-  InnerProductSpace.gramSchmidtNormed_orthonormal hf
+mathlib's {name}`InnerProductSpace.gramSchmidt` is the book's recursion before
+normalizing: {lit}`fₖ = vₖ − ∑_{j<k} P_{span(fⱼ)} vₖ` (6.56 computes each
+projection as {lit}`(⟨vₖ, fⱼ⟩/‖fⱼ‖²) fⱼ`), and {lit}`eₖ = fₖ/‖fₖ‖`. We take only
+that recursion ({name}`InnerProductSpace.gramSchmidt_def`) from mathlib and prove
+the properties by Axler's induction on {lit}`k`. -/
 
-open InnerProductSpace in
+section GramSchmidt
+
+open InnerProductSpace Submodule
+
+variable {ι : Type*} [LinearOrder ι] [LocallyFiniteOrderBot ι] [IsWellOrder ι (· < ·)]
+
+/-- Each {lit}`fₖ` is orthogonal to the earlier {lit}`fⱼ`: taking the inner
+product of {lit}`fⱼ` with the recursion, every projection term except the
+{lit}`j`-th vanishes by induction, and the {lit}`j`-th cancels {lit}`⟨fⱼ, vₖ⟩`. -/
+@[avoiding gramSchmidt_orthogonal]
+theorem gramSchmidt_orthogonal_of_lt (f : ι → V) {a b : ι} (h : a < b) :
+    ⟪gramSchmidt 𝕜 f a, gramSchmidt 𝕜 f b⟫_𝕜 = 0 := by
+  induction b using WellFoundedLT.induction generalizing a with | ind b ih
+  rw [gramSchmidt_def 𝕜 f b, inner_sub_right, inner_sum,
+    Finset.sum_eq_single_of_mem a (Finset.mem_Iio.mpr h)]
+  · -- the `a`-th projection term is `⟨fₐ, vᵦ⟩`
+    by_cases h0 : gramSchmidt 𝕜 f a = 0
+    · rw [h0, inner_zero_left, inner_zero_left, sub_zero]
+    · rw [starProjection_singleton, inner_smul_right, RCLike.ofReal_pow,
+        ← inner_self_eq_norm_sq_to_K, div_mul_cancel₀ _ (inner_self_ne_zero.mpr h0), sub_self]
+  · -- the others vanish by the induction hypothesis
+    intro i hi hia
+    rw [starProjection_singleton, inner_smul_right]
+    rcases hia.lt_or_gt with hlt | hgt
+    · rw [inner_eq_zero_symm.mp (ih a h hlt), mul_zero]
+    · rw [ih i (Finset.mem_Iio.mp hi) hgt, mul_zero]
+
+/-- {lit}`vᵢ ∈ span(f₁, …, fⱼ)` for {lit}`i ≤ j`: rearrange the recursion as
+{lit}`vᵢ = fᵢ + ∑_{l<i} (multiple of fₗ)`. -/
+@[avoiding mem_span_gramSchmidt]
+theorem mem_span_gramSchmidt_of_le (f : ι → V) {i j : ι} (hij : i ≤ j) :
+    f i ∈ span 𝕜 (gramSchmidt 𝕜 f '' Set.Iic j) := by
+  rw [gramSchmidt_def' 𝕜 f i]
+  refine add_mem (subset_span ⟨i, hij, rfl⟩) (sum_mem fun l hl => ?_)
+  rw [starProjection_singleton]
+  exact smul_mem _ _ (subset_span ⟨l, ((Finset.mem_Iio.mp hl).le.trans hij), rfl⟩)
+
+/-- {lit}`fᵢ ∈ span(v₁, …, vⱼ)` for {lit}`i ≤ j`, by induction on {lit}`i`: the
+recursion writes {lit}`fᵢ` as {lit}`vᵢ` minus multiples of earlier {lit}`fₗ`. -/
+@[avoiding gramSchmidt_mem_span]
+theorem gramSchmidt_mem_span_of_le (f : ι → V) {i j : ι} (hij : i ≤ j) :
+    gramSchmidt 𝕜 f i ∈ span 𝕜 (f '' Set.Iic j) := by
+  induction i using WellFoundedLT.induction generalizing j with | ind i ih
+  rw [gramSchmidt_def 𝕜 f i]
+  refine sub_mem (subset_span ⟨i, hij, rfl⟩) (sum_mem fun l hl => ?_)
+  rw [starProjection_singleton]
+  have hl : l < i := Finset.mem_Iio.mp hl
+  exact smul_mem _ _ (ih l hl (hl.le.trans hij))
+
+/-- If {lit}`v₁, …, vₖ` is linearly independent then {lit}`fₖ ≠ 0`: otherwise
+{lit}`vₖ` would lie in {lit}`span(f₁, …, fₖ₋₁) ⊆ span(v₁, …, vₖ₋₁)`. -/
+@[avoiding gramSchmidt_ne_zero]
+theorem gramSchmidt_ne_zero_of_linearIndependent {f : ι → V}
+    (hf : LinearIndependent 𝕜 f) (n : ι) : gramSchmidt 𝕜 f n ≠ 0 := by
+  intro h0
+  apply hf.notMem_span_image (s := Set.Iio n) Set.self_notMem_Iio
+  rw [gramSchmidt_def' 𝕜 f n, h0, zero_add]
+  refine sum_mem fun l hl => ?_
+  rw [starProjection_singleton]
+  have hl : l < n := Finset.mem_Iio.mp hl
+  exact smul_mem _ _ (span_mono (Set.image_mono (Set.Iic_subset_Iio.mpr hl))
+    (gramSchmidt_mem_span_of_le f le_rfl))
+
+/-- 6.32: normalizing, {lit}`eₖ = fₖ/‖fₖ‖` is an orthonormal list. -/
+@[avoiding gramSchmidtNormed_orthonormal]
+theorem gram_schmidt_orthonormal {f : ι → V}
+    (hf : LinearIndependent 𝕜 f) : Orthonormal 𝕜 (gramSchmidtNormed 𝕜 f) := by
+  refine ⟨fun i => ?_, fun i j hij => ?_⟩
+  · unfold gramSchmidtNormed
+    rw [norm_smul_inv_norm (gramSchmidt_ne_zero_of_linearIndependent hf i)]
+  · show ⟪gramSchmidtNormed 𝕜 f i, gramSchmidtNormed 𝕜 f j⟫_𝕜 = 0
+    unfold gramSchmidtNormed
+    rw [inner_smul_left, inner_smul_right]
+    rcases hij.lt_or_gt with hlt | hgt
+    · rw [gramSchmidt_orthogonal_of_lt f hlt, mul_zero, mul_zero]
+    · rw [inner_eq_zero_symm.mp (gramSchmidt_orthogonal_of_lt f hgt), mul_zero, mul_zero]
+
 /-- The Gram–Schmidt vectors span each initial segment of the original list. -/
-theorem span_gram_schmidt_initial {ι : Type*} [LinearOrder ι]
-    [LocallyFiniteOrderBot ι] [IsWellOrder ι (· < ·)] (f : ι → V) (k : ι) :
-    Submodule.span 𝕜 (gramSchmidt 𝕜 f '' Set.Iic k) =
-      Submodule.span 𝕜 (f '' Set.Iic k) :=
-  span_gramSchmidt_Iic 𝕜 f k
+@[avoiding span_gramSchmidt_Iic]
+theorem span_gram_schmidt_initial (f : ι → V) (k : ι) :
+    span 𝕜 (gramSchmidt 𝕜 f '' Set.Iic k) = span 𝕜 (f '' Set.Iic k) :=
+  le_antisymm
+    (span_le.mpr (Set.image_subset_iff.mpr fun _ hi => gramSchmidt_mem_span_of_le f hi))
+    (span_le.mpr (Set.image_subset_iff.mpr fun _ hi => mem_span_gramSchmidt_of_le f hi))
+
+/-- Gram–Schmidt leaves an orthogonal initial segment alone: if
+{lit}`v₁, …, vₖ` are pairwise orthogonal then {lit}`fₖ = vₖ`, since by induction
+every earlier {lit}`fⱼ = vⱼ` is orthogonal to {lit}`vₖ` and so every projection
+term vanishes. -/
+@[avoiding gramSchmidt_of_orthogonal]
+theorem gramSchmidt_eq_self_of_orthogonal (f : ι → V) (k : ι)
+    (horth : ∀ i j, i ≤ k → j ≤ k → i ≠ j → ⟪f i, f j⟫_𝕜 = 0) :
+    gramSchmidt 𝕜 f k = f k := by
+  induction k using WellFoundedLT.induction with | ind k ih
+  rw [gramSchmidt_def 𝕜 f k, sub_eq_self]
+  refine Finset.sum_eq_zero fun l hl => ?_
+  have hl : l < k := Finset.mem_Iio.mp hl
+  rw [ih l hl fun i j hi hj => horth i j (hi.trans hl.le) (hj.trans hl.le),
+    starProjection_singleton, horth l k hl.le le_rfl hl.ne, zero_div, zero_smul]
+
+/-- …so if {lit}`v₁, …, vₖ` is orthonormal, also {lit}`eₖ = vₖ`. -/
+theorem gramSchmidtNormed_eq_self_of_orthonormal (f : ι → V) (k : ι)
+    (horth : ∀ i j, i ≤ k → j ≤ k → i ≠ j → ⟪f i, f j⟫_𝕜 = 0) (hk : ‖f k‖ = 1) :
+    gramSchmidtNormed 𝕜 f k = f k := by
+  unfold gramSchmidtNormed
+  rw [gramSchmidt_eq_self_of_orthogonal f k horth, hk, RCLike.ofReal_one, inv_one, one_smul]
+
+end GramSchmidt
 
 /-! 6.34 Example: an orthonormal basis of {lit}`𝒫₂(ℝ)`. Applying Gram–Schmidt
 (6.32) to {lit}`1, x, x²` under {lit}`⟨p, q⟩ = ∫₋₁¹ pq` yields the (unnormalized)
@@ -307,21 +479,79 @@ end Example_6_34
 
 /-! 6.35 Existence of an orthonormal basis
 
-Every finite-dimensional inner product space has an orthonormal basis. -/
+Every finite-dimensional inner product space has an orthonormal basis. Axler's
+proof: apply Gram–Schmidt (6.32) to a basis of {lit}`V`; the result is an
+orthonormal list of length {lit}`dim V`, hence an orthonormal basis by 6.28. -/
 
-noncomputable example [FiniteDimensional 𝕜 V] :
-    OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V :=
-  stdOrthonormalBasis 𝕜 V
+@[avoiding stdOrthonormalBasis]
+theorem exists_orthonormalBasis [FiniteDimensional 𝕜 V] :
+    Nonempty (OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) := by
+  let v := Module.finBasis 𝕜 V
+  obtain ⟨b, -⟩ := orthonormalBasis_of_length (InnerProductSpace.gramSchmidtNormed 𝕜 v)
+    (gram_schmidt_orthonormal v.linearIndependent) rfl
+  exact ⟨b⟩
 
 /-! 6.36 Every orthonormal list extends to an orthonormal basis
 
 If {lit}`V` is finite-dimensional, every orthonormal list can be extended to an
-orthonormal basis. -/
+orthonormal basis.
 
+Axler's proof: the orthonormal list {lit}`e₁, …, eₘ` is linearly independent
+(6.25), so it extends to a basis {lit}`e₁, …, eₘ, v₁, …, vₙ` of {lit}`V` (2.32).
+Apply Gram–Schmidt (6.32) to that basis: the first {lit}`m` vectors are already
+orthonormal, so they are left unchanged, and the output is an orthonormal list
+of length {lit}`dim V`, hence an orthonormal basis (6.28). -/
+
+@[avoiding Orthonormal.exists_orthonormalBasis_extension]
 theorem orthonormal_extends [FiniteDimensional 𝕜 V] {s : Set V}
     (hs : Orthonormal 𝕜 ((↑) : s → V)) :
-    ∃ (u : Finset V) (b : OrthonormalBasis u 𝕜 V), s ⊆ u ∧ ⇑b = ((↑) : u → V) :=
-  hs.exists_orthonormalBasis_extension
+    ∃ (u : Finset V) (b : OrthonormalBasis u 𝕜 V), s ⊆ u ∧ ⇑b = ((↑) : u → V) := by
+  classical
+  -- list the (finitely many, by 6.25) vectors of `s` as `e₁, …, eₘ`
+  have hli := orthonormal_linearIndependent hs
+  haveI : Fintype s := @Fintype.ofFinite s hli.finite
+  set σ := Fintype.equivFin s
+  set e : Fin (Fintype.card s) → V := fun i => (σ.symm i : V) with he_def
+  have he : Orthonormal 𝕜 e := hs.comp _ σ.symm.injective
+  -- extend to a basis `w` (2.32), and apply Gram–Schmidt
+  obtain ⟨n, w, hmn, hw, hprefix⟩ :=
+    LADR.Section_2B.exists_basis_extending e (orthonormal_linearIndependent he)
+  set g := InnerProductSpace.gramSchmidtNormed 𝕜 w
+  have hg : Orthonormal 𝕜 g := gram_schmidt_orthonormal hw.1
+  obtain ⟨b', hb'⟩ := orthonormalBasis_of_length g hg
+    (LADR.Section_2C.isBasis_card_eq_finrank w hw)
+  -- the first `m` vectors are unchanged
+  have hfix : ∀ i, g (Fin.castLE hmn i) = e i := by
+    intro i
+    rw [← hprefix i]
+    have hlt : ∀ j : Fin n, j ≤ Fin.castLE hmn i → (j : ℕ) < Fintype.card s :=
+      fun j hj => lt_of_le_of_lt hj i.2
+    have hw_eq : ∀ j (hj : j ≤ Fin.castLE hmn i), w j = e ⟨j, hlt j hj⟩ := fun j hj => by
+      rw [← hprefix]; rfl
+    refine gramSchmidtNormed_eq_self_of_orthonormal w _ (fun j j' hj hj' hne => ?_) ?_
+    · rw [hw_eq j hj, hw_eq j' hj']
+      exact he.2 fun h => hne (Fin.ext (by simpa using congrArg Fin.val h))
+    · rw [hprefix]; exact he.1 i
+  -- `u` = the vectors of the Gram–Schmidt output
+  refine ⟨Finset.univ.image g, OrthonormalBasis.mk (v := ((↑) : Finset.univ.image g → V))
+    ?_ ?_, ?_, OrthonormalBasis.coe_mk _ _⟩
+  · refine ⟨?_, ?_⟩
+    · rintro ⟨x, hx⟩
+      obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp hx
+      exact hg.1 i
+    · rintro ⟨x, hx⟩ ⟨y, hy⟩ hxy
+      obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp hx
+      obtain ⟨j, -, rfl⟩ := Finset.mem_image.mp hy
+      exact hg.2 fun h => hxy (by subst h; rfl)
+  · -- it spans `V`, being the orthonormal basis `b'`
+    have hrange : Set.range ((↑) : Finset.univ.image g → V) = Set.range g := by
+      rw [Subtype.range_coe_subtype]; ext x; simp
+    rw [hrange, ← funext hb', ← b'.coe_toBasis, b'.toBasis.span_eq]
+  · intro x hx
+    rw [Finset.mem_coe, Finset.mem_image]
+    refine ⟨Fin.castLE hmn (σ ⟨x, hx⟩), Finset.mem_univ _, ?_⟩
+    rw [hfix, he_def]
+    simp
 
 /-! 6.37 / 6.38 Upper-triangular matrix with respect to an orthonormal basis,
 and Schur's theorem.
@@ -348,7 +578,7 @@ theorem exists_gramSchmidt_flag {n : ℕ} (v : Fin n → V) (hli : LinearIndepen
     ∃ e : OrthonormalBasis (Fin n) 𝕜 V,
       ∀ k, span 𝕜 (e '' {i | i ≤ k}) = span 𝕜 (v '' {i | i ≤ k}) := by
   classical
-  have hg_ne : ∀ i, gramSchmidt 𝕜 v i ≠ 0 := fun i => gramSchmidt_ne_zero i hli
+  have hg_ne : ∀ i, gramSchmidt 𝕜 v i ≠ 0 := gramSchmidt_ne_zero_of_linearIndependent hli
   have hne : ∀ i, gramSchmidtNormed 𝕜 v i ≠ 0 := by
     intro i
     rw [gramSchmidtNormed]
@@ -368,7 +598,7 @@ theorem exists_gramSchmidt_flag {n : ℕ} (v : Fin n → V) (hli : LinearIndepen
         rw [he_eq i, smul_smul, mul_inv_cancel₀
           (RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr (hg_ne i))), one_smul]
       rw [hgi]; exact smul_mem _ _ (subset_span ⟨i, hik, rfl⟩)
-  rw [hspan_e_g]; exact span_gramSchmidt_Iic (𝕜 := 𝕜) (f := v) (c := k)
+  rw [hspan_e_g]; exact span_gram_schmidt_initial v k
 
 omit [FiniteDimensional 𝕜 V] in
 /-- A flag {lit}`span(v₀, …, vₖ)` on which {lit}`T` acts triangularly is
@@ -486,22 +716,29 @@ conjugate-linear, not a linear functional), this is mathlib's conjugate-linear
 isometric isomorphism {name}`InnerProductSpace.toDual` between {lit}`V` and its
 (continuous) dual. -/
 
+/-- Axler's first proof. Existence: pick an orthonormal basis {lit}`e₁, …, eₙ`
+(6.35); by 6.30(a),
+{lit}`φ(u) = φ(⟨u, e₁⟩e₁ + ⋯ + ⟨u, eₙ⟩eₙ) = ⟨u, e₁⟩φ(e₁) + ⋯ + ⟨u, eₙ⟩φ(eₙ)
+= ⟨u, φ(e₁)‾e₁ + ⋯ + φ(eₙ)‾eₙ⟩`, so {lit}`v = φ(e₁)‾e₁ + ⋯ + φ(eₙ)‾eₙ` works.
+Uniqueness: if {lit}`⟨u, v₁⟩ = ⟨u, v₂⟩` for all {lit}`u`, then
+{lit}`⟨u, v₁ − v₂⟩ = 0` for all {lit}`u`; take {lit}`u = v₁ − v₂`. -/
+@[avoiding InnerProductSpace.toDual]
 theorem riesz_representation [FiniteDimensional 𝕜 V] (φ : V →ₗ[𝕜] 𝕜) :
     ∃! v : V, ∀ u : V, φ u = ⟪v, u⟫_𝕜 := by
-  haveI : CompleteSpace V := FiniteDimensional.complete 𝕜 V
-  -- On a finite-dimensional space every linear functional is continuous.
-  let φ' : V →L[𝕜] 𝕜 := ⟨φ, φ.continuous_of_finiteDimensional⟩
-  refine ⟨(InnerProductSpace.toDual 𝕜 V).symm φ', fun u => ?_, ?_⟩
-  · have := InnerProductSpace.toDual_apply_apply (𝕜 := 𝕜)
-      (x := (InnerProductSpace.toDual 𝕜 V).symm φ') (y := u)
-    rw [LinearIsometryEquiv.apply_symm_apply] at this
-    exact this
-  · intro w hw
-    apply (InnerProductSpace.toDual 𝕜 V).injective
-    rw [LinearIsometryEquiv.apply_symm_apply]
-    ext u
-    rw [InnerProductSpace.toDual_apply_apply]
-    exact (hw u).symm
+  obtain ⟨e⟩ := exists_orthonormalBasis (𝕜 := 𝕜) (V := V)
+  set v := ∑ k, conj (φ (e k)) • e k
+  -- expand `u` in the orthonormal basis
+  have hv : ∀ u : V, φ u = ⟪v, u⟫_𝕜 := by
+    intro u
+    conv_lhs => rw [orthonormalBasis_repr e u]
+    rw [map_sum, sum_inner]
+    refine Finset.sum_congr rfl fun k _ => ?_
+    rw [map_smul, smul_eq_mul, inner_smul_left, RCLike.conj_conj, mul_comm]
+  refine ⟨v, hv, fun w hw => ?_⟩
+  -- `⟨w − v, w − v⟩ = 0`
+  have hzero : ⟪w - v, w - v⟫_𝕜 = 0 := by
+    rw [inner_sub_left, ← hw, ← hv, sub_self]
+  exact sub_eq_zero.mp (inner_self_eq_zero.mp hzero)
 
 /-! 6.44 Example: computation illustrating the Riesz representation theorem.
 
