@@ -757,7 +757,15 @@ theorem parallelogram {𝕜 : Type*} [RCLike 𝕜] {V : Type*} [NormedAddCommGro
 {lit}`∑ⱼ ∑ₖ ⟨vⱼ, vₖ⟩ ≥ 0`. -/
 def exercise_6A_1 {m : ℕ} (v : Fin m → V) :
     Decidable (0 ≤ RCLike.re (∑ j, ∑ k, ⟪v j, v k⟫_𝕜)) := by
-  sorry
+  apply isTrue
+  -- use linearity to show ∑ j, ∑ k, ⟪v j, v k⟫ = ⟪∑ j, v j, ∑ k, v k⟫
+  have hlin : ∑ j, ∑ k, ⟪v j, v k⟫_𝕜 = ⟪∑ j, v j, ∑ k, v k⟫_𝕜 := by
+    rw [sum_inner]
+    refine Finset.sum_congr rfl fun j _ => ?_
+    rw [inner_sum]
+  -- equal to |∑ j, v j|² thus ≥ 0
+  rw [hlin, inner_self_eq_norm_sq_to_K, ← RCLike.ofReal_pow, RCLike.ofReal_re]
+  exact sq_nonneg _
 
 /-- 6A.2 For {lit}`S ∈ ℒ(V)`, the form {lit}`(u, v) ↦ ⟨Su, Sv⟩` is an inner
 product on {lit}`V` if and only if {lit}`S` is injective. Additivity and
