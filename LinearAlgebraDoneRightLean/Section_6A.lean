@@ -18,6 +18,8 @@ import Mathlib.Order.Interval.Set.Infinite
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import Mathlib.Tactic.Recall
+import LinearAlgebraDoneRightLean.Section_1B
+import LinearAlgebraDoneRightLean.HarmonicPolynomial
 import CompanionHelper
 
 /-!
@@ -48,6 +50,7 @@ never affects a statement; it only flips which slot carries the conjugate in the
 homogeneity axiom. -/
 
 open scoped InnerProductSpace RealInnerProductSpace ComplexConjugate
+open LADR.Section_1B (Complexification exercise_1B_8)
 
 variable {𝕜 : Type*} [RCLike 𝕜]
   {V : Type*} [NormedAddCommGroup V] [InnerProductSpace 𝕜 V]
@@ -778,15 +781,16 @@ def IsRealInnerProduct {n : ℕ} (f : (Fin n → ℝ) → (Fin n → ℝ) → �
 
 /-- The five axioms characterizing an inner product {lit}`f` on a {lit}`𝕜`-module
 {lit}`M`, in mathlib's convention (additivity and conjugate homogeneity in the
-first slot, conjugate symmetry, positivity, definiteness). Over {lit}`ℝ` the
-conjugation and real-part maps are the identity. -/
+first slot, conjugate symmetry, positivity, definiteness). Positivity
+{lit}`⟨v, v⟩ ≥ 0` means, as in the book, that {lit}`⟨v, v⟩` is real and nonnegative.
+Over {lit}`ℝ` the conjugation and real-part maps are the identity. -/
 def IsInnerProductForm {𝕜 : Type*} [RCLike 𝕜] {M : Type*} [AddCommGroup M]
     [Module 𝕜 M] (f : M → M → 𝕜) : Prop :=
   (∀ u v w : M, f (u + v) w = f u w + f v w) ∧
   (∀ (r : 𝕜) (u v : M), f (r • u) v = conj r * f u v) ∧
   (∀ u v : M, f u v = conj (f v u)) ∧
-  (∀ v : M, 0 ≤ RCLike.re (f v v)) ∧
-  (∀ v : M, f v v = 0 → v = 0)
+  (∀ v : M, RCLike.im (f v v) = 0 ∧ 0 ≤ RCLike.re (f v v)) ∧
+  (∀ v : M, f v v = 0 ↔ v = 0)
 
 /-- 6A.3 (a) The function {lit}`((x₁,x₂),(y₁,y₂)) ↦ |x₁y₁| + |x₂y₂|` is not an inner
 product on {lit}`ℝ²`: the absolute values break additivity and homogeneity in the
@@ -975,13 +979,12 @@ theorem exercise_6A_27 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ
   sorry
 
 /-- 6A.28 A norm satisfying the parallelogram equality comes from an inner product
-(Jordan–von Neumann): if the norm on a real vector space {lit}`U` satisfies
+(Jordan–von Neumann): if the norm on a vector space {lit}`U` over {lit}`𝐅` satisfies
 {lit}`‖u+v‖² + ‖u−v‖² = 2‖u‖² + 2‖v‖²`, then there is an inner product {lit}`f` on
-{lit}`U` — additive, homogeneous, and symmetric, with {lit}`f v v > 0` for
-{lit}`v ≠ 0` — whose associated norm is {lit}`‖u‖ = √(f u u)`. -/
-theorem exercise_6A_28 {U : Type*} [NormedAddCommGroup U] [NormedSpace ℝ U]
+{lit}`U` whose associated norm is {lit}`‖u‖ = √(f u u)`. -/
+theorem exercise_6A_28 {U : Type*} [NormedAddCommGroup U] [NormedSpace 𝕜 U]
     (hpar : ∀ u v : U, ‖u + v‖ ^ 2 + ‖u - v‖ ^ 2 = 2 * ‖u‖ ^ 2 + 2 * ‖v‖ ^ 2) :
-    ∃ f : U → U → ℝ, IsInnerProductForm f ∧ ∀ u, ‖u‖ = Real.sqrt (f u u) := by
+    ∃ f : U → U → 𝕜, IsInnerProductForm f ∧ ∀ u, ‖u‖ = Real.sqrt (RCLike.re (f u u)) := by
   sorry
 
 /-- 6A.29 If {lit}`V₁, …, Vₘ` are inner product spaces, then
@@ -994,31 +997,22 @@ theorem exercise_6A_29 {m : ℕ} (E : Fin m → Type*)
     IsInnerProductForm (fun u v : ∀ i, E i => ∑ i, ⟪u i, v i⟫_𝕜) := by
   sorry
 
-/-- 6A.30 The complexification {lit}`V_ℂ` of a real inner product space {lit}`V`,
-modeled as {lit}`V × V` with {lit}`(u, v)` standing for {lit}`u + iv`, carries the
-inner product {lit}`⟨u+iv, w+ix⟩ = ⟨u,w⟩ + ⟨v,x⟩ + (⟨v,w⟩ − ⟨u,x⟩)i`. -/
+/-- 6A.30 The complexification {lit}`V_ℂ` of a real inner product space {lit}`V`
+(the {name}`LADR.Section_1B.Complexification` of 1B.8, with {lit}`(u, v)` standing
+for {lit}`u + iv`) carries the inner product
+{lit}`⟨u+iv, w+ix⟩ = ⟨u,w⟩ + ⟨v,x⟩ + (⟨v,w⟩ − ⟨u,x⟩)i`. -/
 noncomputable def complexificationInner {V : Type*} [NormedAddCommGroup V]
-    [InnerProductSpace ℝ V] (p q : V × V) : ℂ :=
-  (⟪p.1, q.1⟫_ℝ : ℂ) + (⟪p.2, q.2⟫_ℝ : ℂ)
-    + ((⟪p.2, q.1⟫_ℝ : ℂ) - (⟪p.1, q.2⟫_ℝ : ℂ)) * Complex.I
+    [InnerProductSpace ℝ V] : Complexification V → Complexification V → ℂ
+  | (u, v), (w, x) => (⟪u, w⟫_ℝ : ℂ) + (⟪v, x⟫_ℝ : ℂ) + ((⟪v, w⟫_ℝ : ℂ) - (⟪u, x⟫_ℝ : ℂ)) * Complex.I
 
-/-- The complex scalar action on {lit}`V_ℂ = V × V`: {lit}`c • (u, v)` represents
-{lit}`c (u + iv) = (c.re · u − c.im · v) + i (c.im · u + c.re · v)`. -/
-def complexificationSmul {V : Type*} [AddCommGroup V] [Module ℝ V]
-    (c : ℂ) (p : V × V) : V × V :=
-  (c.re • p.1 - c.im • p.2, c.im • p.1 + c.re • p.2)
-
-/-- 6A.30 (a) The form above makes {lit}`V_ℂ` a complex inner product space (in
-Axler's convention — linear in the first slot): it is additive, homogeneous under
-the complex action, conjugate symmetric, positive, and definite. -/
+/-- 6A.30 (a) The form above makes {lit}`V_ℂ` (with the complex scalar
+multiplication of 1B.8) a complex inner product space. The book's form is linear
+in the first slot; {name}`IsInnerProductForm` uses mathlib's convention
+(conjugate-linear in the first slot), so it is applied to the form with its
+arguments swapped. -/
 theorem exercise_6A_30a {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] :
-    (∀ p q r : V × V, complexificationInner (p + q) r
-        = complexificationInner p r + complexificationInner q r) ∧
-      (∀ (c : ℂ) (p q : V × V), complexificationInner (complexificationSmul c p) q
-        = c * complexificationInner p q) ∧
-      (∀ p q : V × V, complexificationInner p q = conj (complexificationInner q p)) ∧
-      (∀ p : V × V, 0 ≤ (complexificationInner p p).re) ∧
-      (∀ p : V × V, complexificationInner p p = 0 → p = 0) := by
+    letI := exercise_1B_8 V
+    IsInnerProductForm (fun p q : Complexification V => complexificationInner q p) := by
   sorry
 
 /-- 6A.30 (b) For {lit}`u, v ∈ V`, the complexification inner product restricts to
@@ -1055,7 +1049,7 @@ theorem exercise_6A_33a {n : ℕ} (f g : ℝ → EuclideanSpace ℝ (Fin n)) (t 
 /-- 6A.33 (b) If {lit}`f : ℝ → ℝⁿ` is differentiable with constant norm
 {lit}`‖f(t)‖ = c`, then {lit}`⟨f′(t), f(t)⟩ = 0` for every {lit}`t`. -/
 theorem exercise_6A_33b {n : ℕ} (f : ℝ → EuclideanSpace ℝ (Fin n))
-    (hf : ∀ t, DifferentiableAt ℝ f t) (c : ℝ) (hc : 0 < c)
+    (hf : ∀ t, DifferentiableAt ℝ f t) (c : ℝ) (_hc : 0 < c)
     (hnorm : ∀ t, ‖f t‖ = c) (t : ℝ) :
     ⟪deriv f t, f t⟫_ℝ = 0 := by
   sorry
@@ -1070,7 +1064,10 @@ theorem exercise_6A_34 (u v : V) :
   sorry
 
 /-- 6A.35 Every polynomial {lit}`q` on {lit}`ℝⁿ` agrees on the unit sphere with a
-harmonic polynomial {lit}`p` (one whose Laplacian {lit}`∑ᵢ ∂²p/∂xᵢ²` vanishes). -/
+harmonic polynomial {lit}`p` (one whose Laplacian {lit}`∑ᵢ ∂²p/∂xᵢ²` vanishes).
+The one fact about harmonic functions the book allows you to use — a harmonic
+polynomial vanishing on the unit sphere is zero — is
+{name}`LADR.HarmonicPolynomial.eq_zero_of_harmonic`. -/
 theorem exercise_6A_35 {n : ℕ} (q : MvPolynomial (Fin n) ℝ) :
     ∃ p : MvPolynomial (Fin n) ℝ,
       (∑ i, MvPolynomial.pderiv i (MvPolynomial.pderiv i p) = 0) ∧
