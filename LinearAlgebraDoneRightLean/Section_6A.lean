@@ -2096,7 +2096,10 @@ theorem exercise_6A_34 (u v : V) :
 
 open LADR.HarmonicPolynomial MvPolynomial in
 /-- 6A.35 Every polynomial {lit}`q` on {lit}`ℝⁿ` agrees on the unit sphere with a
-harmonic polynomial {lit}`p` (one whose Laplacian {lit}`∑ᵢ ∂²p/∂xᵢ²` vanishes). -/
+harmonic polynomial {lit}`p` (one whose Laplacian {lit}`∑ᵢ ∂²p/∂xᵢ²` vanishes).
+The one fact about harmonic functions the book allows you to use — a harmonic
+polynomial vanishing on the unit sphere is zero — is
+{name}`LADR.HarmonicPolynomial.eq_zero_of_harmonic`. -/
 theorem exercise_6A_35 {n : ℕ} (q : MvPolynomial (Fin n) ℝ) :
     ∃ p : MvPolynomial (Fin n) ℝ,
       (∑ i, MvPolynomial.pderiv i (MvPolynomial.pderiv i p) = 0) ∧
