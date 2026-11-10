@@ -21,6 +21,7 @@ public import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
 public import Mathlib.MeasureTheory.Function.L2Space
 public import Mathlib.Tactic.Linarith
 public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Algebra.MvPolynomial.CommRing
 public import LinearAlgebraDoneRightLean.Section_1B
 public import LinearAlgebraDoneRightLean.HarmonicPolynomial
 public import CompanionHelper
@@ -944,7 +945,7 @@ theorem exercise_6A_7 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ 
 
 /-- Cauchy–Schwarz for {lit}`ℝⁿ` written in coordinates (6.16(a)), for functions
 {lit}`Fin n → ℝ`: {lit}`(∑ xᵢyᵢ)² ≤ (∑ xᵢ²)(∑ yᵢ²)`. -/
-private theorem sum_mul_sq_le {n : ℕ} (x y : Fin n → ℝ) :
+theorem sum_mul_sq_le {n : ℕ} (x y : Fin n → ℝ) :
     (∑ i, x i * y i) ^ 2 ≤ (∑ i, x i ^ 2) * (∑ i, y i ^ 2) := by
   set X : EuclideanSpace ℝ (Fin n) := WithLp.toLp 2 x
   set Y : EuclideanSpace ℝ (Fin n) := WithLp.toLp 2 y
@@ -1216,6 +1217,7 @@ private theorem integrableOn_inv_sq_Ici :
   rw [integrableOn_Ici_iff_integrableOn_Ioi]
   refine (integrableOn_Ioi_rpow_of_lt (by norm_num : (-2:ℝ) < -1) one_pos).congr_fun
     (fun x hx => ?_) measurableSet_Ioi
+  beta_reduce
   rw [Real.rpow_neg (by linarith [Set.mem_Ioi.mp hx]), Real.rpow_two, one_div, inv_pow]
 
 /-- …with {lit}`∫₁^∞ 1/x² = 1`. -/
