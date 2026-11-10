@@ -615,7 +615,8 @@ numeric {lit}`u` is Exercise 6C.18. -/
 section Example_6_63
 
 /-- Monomials {lit}`x^k` as elements of `C[-π,π]`. -/
-noncomputable def monoL2 (k : ℕ) : L2C (-Real.pi) Real.pi := ⟨fun x => (x : ℝ) ^ k, by fun_prop⟩
+noncomputable def monoL2 (k : ℕ) : L2C (-Real.pi) Real.pi :=
+  (⟨fun x => x ^ k, by fun_prop⟩ : C(ℝ, ℝ)).restrict _
 
 /-- The degree-{lit}`≤ 5` polynomial subspace {lit}`𝒫₅` of `C[-π,π]`. -/
 noncomputable def polyDegLE5 : Submodule ℝ (L2C (-Real.pi) Real.pi) :=
@@ -625,7 +626,8 @@ instance : FiniteDimensional ℝ polyDegLE5 :=
   FiniteDimensional.span_of_finite ℝ (Set.finite_range _)
 
 /-- {lit}`sin` as an element of `C[-π,π]`. -/
-noncomputable def sinL2 : L2C (-Real.pi) Real.pi := ⟨fun x => Real.sin x, by fun_prop⟩
+noncomputable def sinL2 : L2C (-Real.pi) Real.pi :=
+  (⟨Real.sin, Real.continuous_sin⟩ : C(ℝ, ℝ)).restrict _
 
 /-- 6.63: the orthogonal projection of {lit}`sin` onto {lit}`𝒫₅` is the best degree-{lit}`≤ 5`
 `L²`-approximation to {lit}`sin` on {lit}`[-π,π]`: for every polynomial {lit}`u ∈ 𝒫₅`,

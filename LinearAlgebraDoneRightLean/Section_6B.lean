@@ -95,15 +95,81 @@ example : Orthonormal 𝕜
 
 /-! (d) For each positive integer {lit}`n`, the {lit}`2n + 1` functions
 {lit}`1/√(2π)` and {lit}`(cos kx)/√π, (sin kx)/√π` for {lit}`k = 1, …, n` form an
-orthonormal list in {lit}`C[-π, π]` with {lit}`⟨f, g⟩ = ∫_{-π}^{π} fg` (Exercise 4).
-Deferred: it lives at the analysis edge (orthogonality is a family of trigonometric
-integral identities) rather than the finite-dimensional core of this section.
+orthonormal list in {lit}`C[-π, π]` with {lit}`⟨f, g⟩ = ∫_{-π}^{π} fg`. The book leaves
+this to Exercise 4; see {lit}`exercise_6B_4` below.
 
 (e) Dividing the standard basis {lit}`1, x, x²` of {lit}`𝒫₂(ℝ)` (with
 {lit}`⟨p, q⟩ = ∫_{-1}^{1} pq`) by norms gives {lit}`1/√2, √(3/2)·x, √(5/2)·x²`; this
-is *not* orthonormal, since the first and third vectors are not orthogonal
-({lit}`⟨1/√2, √(5/2)·x²⟩ = √5/3 ≠ 0`). Deferred: same integral inner product on a
-function space as (d). -/
+is *not* orthonormal, since the first and third vectors are not orthogonal:
+{lit}`⟨1/√2, √(5/2)·x²⟩ = √5/3 ≠ 0`. We model {lit}`𝒫₂(ℝ)` inside {lit}`C[-1,1]` with
+the {lit}`L²` inner product from the skippable {lit}`L2Interval.lean` infrastructure. -/
+
+section L2Bridge
+
+open MeasureTheory
+
+/-- Bridge for computing the `L²` inner product on {lit}`C[a,b]`: for continuous
+{lit}`f, g` on {lit}`ℝ`, the inner product of their restrictions to {lit}`[a,b]` is the
+ordinary interval integral {lit}`∫ₐᵇ f g`. -/
+theorem L2C_inner_restrict {a b : ℝ} [Fact (a < b)] (f g : C(ℝ, ℝ)) :
+    ⟪(show L2C a b from f.restrict _), (show L2C a b from g.restrict _)⟫_ℝ
+      = ∫ x in a..b, f x * g x := by
+  have hab : a ≤ b := le_of_lt Fact.out
+  calc _ = ∫ x : ↥(Set.Icc a b), (fun y => f y * g y) (x : ℝ) := rfl
+    _ = ∫ x in Set.Icc a b, f x * g x :=
+        integral_subtype_comap measurableSet_Icc (fun y => f y * g y)
+    _ = ∫ x in a..b, f x * g x := by
+        rw [integral_Icc_eq_integral_Ioc, intervalIntegral.integral_of_le hab]
+
+/-- The same bridge for functions that are only continuous on {lit}`[a,b]`. -/
+theorem L2C_inner_of_continuousOn {a b : ℝ} [Fact (a < b)] (f g : ℝ → ℝ)
+    (hf : ContinuousOn f (Set.Icc a b)) (hg : ContinuousOn g (Set.Icc a b)) :
+    ⟪(show L2C a b from (⟨(Set.Icc a b).restrict f, hf.restrict⟩ : C(Set.Icc a b, ℝ))),
+      (show L2C a b from (⟨(Set.Icc a b).restrict g, hg.restrict⟩ : C(Set.Icc a b, ℝ)))⟫_ℝ
+      = ∫ x in a..b, f x * g x := by
+  have hab : a ≤ b := le_of_lt Fact.out
+  calc _ = ∫ x : ↥(Set.Icc a b), (fun y => f y * g y) (x : ℝ) := rfl
+    _ = ∫ x in Set.Icc a b, f x * g x :=
+        integral_subtype_comap measurableSet_Icc (fun y => f y * g y)
+    _ = ∫ x in a..b, f x * g x := by
+        rw [integral_Icc_eq_integral_Ioc, intervalIntegral.integral_of_le hab]
+
+end L2Bridge
+
+/-- The interval {lit}`[-1,1]` is nondegenerate, so {lit}`C[-1,1]` carries the `L²` inner
+product (see `L2Interval.lean`). -/
+instance : Fact ((-1 : ℝ) < 1) := ⟨by norm_num⟩
+
+/-- 6.23(e): {lit}`⟨1/√2, √(5/2)·x²⟩ = ∫₋₁¹ (√5/2)x² = √5/3` in {lit}`C[-1,1]`. -/
+theorem example_6_23e_inner :
+    ⟪(show L2C (-1) 1 from (ContinuousMap.const ℝ (Real.sqrt 2)⁻¹).restrict _),
+      (show L2C (-1) 1 from
+        (⟨fun x => Real.sqrt (5 / 2) * x ^ 2, by fun_prop⟩ : C(ℝ, ℝ)).restrict _)⟫_ℝ
+      = Real.sqrt 5 / 3 := by
+  rw [L2C_inner_restrict]
+  simp only [ContinuousMap.const_apply, ContinuousMap.coe_mk]
+  simp_rw [← mul_assoc]
+  rw [intervalIntegral.integral_const_mul, integral_pow,
+    Real.sqrt_div' _ (by norm_num : (0:ℝ) ≤ 2)]
+  have h2 : Real.sqrt 2 ≠ 0 := by positivity
+  field_simp
+  norm_num
+
+/-- 6.23(e): hence the normalized list {lit}`1/√2, √(3/2)·x, √(5/2)·x²` is not
+orthonormal. -/
+theorem example_6_23e : ¬ Orthonormal ℝ
+    ![(show L2C (-1) 1 from (ContinuousMap.const ℝ (Real.sqrt 2)⁻¹).restrict _),
+      (show L2C (-1) 1 from
+        (⟨fun x => Real.sqrt (3 / 2) * x, by fun_prop⟩ : C(ℝ, ℝ)).restrict _),
+      (show L2C (-1) 1 from
+        (⟨fun x => Real.sqrt (5 / 2) * x ^ 2, by fun_prop⟩ : C(ℝ, ℝ)).restrict _)] := by
+  intro h
+  have h02 := h.2 (show (0 : Fin 3) ≠ 2 by decide)
+  simp only [Matrix.cons_val_zero, Matrix.cons_val_two, Matrix.tail_cons,
+    Matrix.head_cons] at h02
+  rw [example_6_23e_inner] at h02
+  have : 0 < Real.sqrt 5 := by positivity
+  linarith
 
 /-! 6.24 Norm of an orthonormal linear combination
 
@@ -215,35 +281,27 @@ the list
 is orthonormal; being an orthonormal list of length {lit}`4 = dim 𝔽⁴`, it is an
 orthonormal basis of {lit}`𝔽⁴` by 6.28. -/
 
-example : Orthonormal 𝕜
-    (![!₂[1/2, 1/2, 1/2, 1/2],
-       !₂[1/2, 1/2, -1/2, -1/2],
-       !₂[1/2, -1/2, -1/2, 1/2],
-       !₂[-1/2, 1/2, -1/2, 1/2]] :
-      Fin 4 → EuclideanSpace 𝕜 (Fin 4)) := by
+/-- The list of 6.29 in {lit}`𝔽⁴`. -/
+noncomputable def list_6_29 : Fin 4 → EuclideanSpace 𝕜 (Fin 4) :=
+  ![!₂[1/2, 1/2, 1/2, 1/2],
+    !₂[1/2, 1/2, -1/2, -1/2],
+    !₂[1/2, -1/2, -1/2, 1/2],
+    !₂[-1/2, 1/2, -1/2, 1/2]]
+
+/-- 6.29: the list is orthonormal (each vector has norm 1, distinct ones are orthogonal). -/
+theorem orthonormal_6_29 :Orthonormal 𝕜 (list_6_29 (𝕜 := 𝕜)) := by
   rw [orthonormal_iff_ite]
   intro i j
   fin_cases i <;> fin_cases j <;>
-    simp only [PiLp.inner_apply, RCLike.inner_apply, Fin.sum_univ_four,
+    simp only [list_6_29, PiLp.inner_apply, RCLike.inner_apply, Fin.sum_univ_four,
       Matrix.cons_val, Fin.reduceFinMk, Matrix.cons_val_zero, Matrix.cons_val_one,
       map_div₀, map_one, map_neg, map_ofNat, Fin.isValue, Fin.reduceEq, reduceIte] <;>
     norm_num
 
-/-! 6.31 Example: finding coefficients for a linear combination.
-
-To write {lit}`(1, 2, 4, 7) ∈ 𝔽⁴` in the orthonormal basis of 6.29, we need not
-solve a linear system: by 6.30(a) the coefficients are the inner products with the
-basis vectors, giving {lit}`(1, 2, 4, 7) = 7e₁ − 4e₂ + e₃ + 2e₄`. -/
-
-example : (!₂[1, 2, 4, 7] : EuclideanSpace 𝕜 (Fin 4)) =
-    (7 : 𝕜) • !₂[1/2, 1/2, 1/2, 1/2]
-      + (-4 : 𝕜) • !₂[1/2, 1/2, -1/2, -1/2]
-      + (1 : 𝕜) • !₂[1/2, -1/2, -1/2, 1/2]
-      + (2 : 𝕜) • !₂[-1/2, 1/2, -1/2, 1/2] := by
-  ext i
-  fin_cases i <;>
-    simp [PiLp.add_apply, PiLp.smul_apply, Matrix.cons_val, Fin.reduceFinMk] <;>
-    norm_num
+/-- 6.29: the list is an orthonormal basis of {lit}`𝔽⁴`, by 6.28. -/
+theorem orthonormalBasis_6_29 :
+    ∃ b : OrthonormalBasis (Fin 4) 𝕜 (EuclideanSpace 𝕜 (Fin 4)), ∀ i, b i = list_6_29 i :=
+  orthonormalBasis_of_length _ orthonormal_6_29 (by simp)
 
 /-! 6.30 Writing a vector as a linear combination of an orthonormal basis
 
@@ -288,6 +346,20 @@ theorem inner_eq_sum_inner_mul_inner {ι : Type*} [Fintype ι]
   rw [inner_sum]
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [inner_smul_right, mul_comm]
+
+/-! 6.31 Example: finding coefficients for a linear combination.
+
+To write {lit}`(1, 2, 4, 7) ∈ 𝔽⁴` in the orthonormal basis of 6.29, we need not
+solve a linear system: by 6.30(a) the coefficients are the inner products with the
+basis vectors, giving {lit}`(1, 2, 4, 7) = 7e₁ − 4e₂ + e₃ + 2e₄`. -/
+
+example : (!₂[1, 2, 4, 7] : EuclideanSpace 𝕜 (Fin 4)) =
+    (7 : 𝕜) • list_6_29 0 + (-4 : 𝕜) • list_6_29 1 + (1 : 𝕜) • list_6_29 2
+      + (2 : 𝕜) • list_6_29 3 := by
+  ext i
+  fin_cases i <;>
+    simp [list_6_29, PiLp.add_apply, PiLp.smul_apply, Matrix.cons_val, Fin.reduceFinMk] <;>
+    norm_num
 
 /-! 6.32 Gram–Schmidt procedure
 
@@ -387,6 +459,25 @@ theorem span_gram_schmidt_initial (f : ι → V) (k : ι) :
     (span_le.mpr (Set.image_subset_iff.mpr fun _ hi => gramSchmidt_mem_span_of_le f hi))
     (span_le.mpr (Set.image_subset_iff.mpr fun _ hi => mem_span_gramSchmidt_of_le f hi))
 
+/-- 6.32: {lit}`span(e₁, …, eₖ) = span(v₁, …, vₖ)`. Each {lit}`eᵢ = fᵢ/‖fᵢ‖` is a multiple
+of {lit}`fᵢ`, and conversely {lit}`fᵢ = ‖fᵢ‖eᵢ` (or {lit}`fᵢ = 0`), so the {lit}`e`'s and
+{lit}`f`'s have the same initial spans. -/
+@[avoiding span_gramSchmidtNormed]
+theorem span_gramSchmidtNormed_initial (f : ι → V) (k : ι) :
+    span 𝕜 (gramSchmidtNormed 𝕜 f '' Set.Iic k) = span 𝕜 (f '' Set.Iic k) := by
+  rw [← span_gram_schmidt_initial f k]
+  apply le_antisymm <;> rw [span_le]
+  · rintro _ ⟨i, hi, rfl⟩
+    exact smul_mem _ _ (subset_span ⟨i, hi, rfl⟩)
+  · rintro _ ⟨i, hi, rfl⟩
+    by_cases h0 : gramSchmidt 𝕜 f i = 0
+    · rw [SetLike.mem_coe, h0]; exact zero_mem _
+    · have : gramSchmidt 𝕜 f i = (‖gramSchmidt 𝕜 f i‖ : 𝕜) • gramSchmidtNormed 𝕜 f i := by
+        rw [gramSchmidtNormed, smul_smul, mul_inv_cancel₀
+          (RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr h0)), one_smul]
+      rw [SetLike.mem_coe, this]
+      exact smul_mem _ _ (subset_span ⟨i, hi, rfl⟩)
+
 /-- Gram–Schmidt leaves an orthogonal initial segment alone: if
 {lit}`v₁, …, vₖ` are pairwise orthogonal then {lit}`fₖ = vₖ`, since by induction
 every earlier {lit}`fⱼ = vⱼ` is orthogonal to {lit}`vₖ` and so every projection
@@ -414,49 +505,36 @@ end GramSchmidt
 /-! 6.34 Example: an orthonormal basis of {lit}`𝒫₂(ℝ)`. Applying Gram–Schmidt
 (6.32) to {lit}`1, x, x²` under {lit}`⟨p, q⟩ = ∫₋₁¹ pq` yields the (unnormalized)
 Legendre polynomials {lit}`1, x, x² − ⅓`. This uses the {lit}`L²` inner product on
-{lit}`C[-1,1]` from the skippable {lit}`L2Interval.lean` infrastructure. We verify the
-key fact — that the three Legendre polynomials are pairwise orthogonal — by
-reducing each inner product to a concrete interval integral. The analogous
-Gram–Schmidt over {lit}`∫₀¹` is Exercise 6B.8. -/
-
-/-- The interval {lit}`[-1,1]` is nondegenerate, so {lit}`C[-1,1]` carries the `L²` inner
-product (see `L2Interval.lean`). -/
-instance : Fact ((-1 : ℝ) < 1) := ⟨by norm_num⟩
+{lit}`C[-1,1]` from the skippable {lit}`L2Interval.lean` infrastructure. Each inner
+product reduces to a concrete interval integral via {name}`L2C_inner_restrict`: the
+three are pairwise orthogonal, with {lit}`‖f₁‖² = 2`, {lit}`‖f₂‖² = 2/3`,
+{lit}`‖f₃‖² = 8/45`, so dividing by the norms gives the orthonormal list
+{lit}`√(1/2), √(3/2)·x, √(45/8)·(x² − ⅓)`. Being of length {lit}`3 = dim 𝒫₂(ℝ)` it is
+an orthonormal basis of {lit}`𝒫₂(ℝ)` (6.28); we model {lit}`𝒫₂(ℝ)` inside
+{lit}`C[-1,1]` and do not formalize that span. The analogous Gram–Schmidt over
+{lit}`∫₀¹` is Exercise 6B.8. -/
 
 section Example_6_34
 
 open MeasureTheory
 
-/-- Bridge for computing the `L²` inner product on {lit}`C[a,b]`: when the integrand
-{lit}`f g` factors through the coordinate as {lit}`H ↑x`, the inner product equals the
-ordinary interval integral of {lit}`H`. -/
-theorem L2C_inner_eq_intervalIntegral {a b : ℝ} [Fact (a < b)] (f g : L2C a b) (H : ℝ → ℝ)
-    (hH : ∀ x : ↥(Set.Icc a b), f.toCont x * g.toCont x = H x) :
-    ⟪f, g⟫_ℝ = ∫ x in a..b, H x := by
-  have hab : a ≤ b := le_of_lt Fact.out
-  calc ⟪f, g⟫_ℝ = ∫ x : ↥(Set.Icc a b), f.toCont x * g.toCont x := rfl
-    _ = ∫ x : ↥(Set.Icc a b), H (x : ℝ) := by simp_rw [hH]
-    _ = ∫ x in Set.Icc a b, H x := integral_subtype_comap measurableSet_Icc H
-    _ = ∫ x in a..b, H x := by
-        rw [integral_Icc_eq_integral_Ioc, intervalIntegral.integral_of_le hab]
-
 /-- The first Legendre polynomial {lit}`1` as an element of {lit}`C[-1,1]`. -/
-noncomputable def legendre0 : L2C (-1) 1 := (ContinuousMap.const _ 1 : C(↥(Set.Icc (-1:ℝ) 1), ℝ))
+noncomputable def legendre0 : L2C (-1) 1 := (ContinuousMap.const ℝ 1).restrict _
 /-- The second Legendre polynomial {lit}`x`. -/
-noncomputable def legendre1 : L2C (-1) 1 := ⟨fun x => (x : ℝ), by fun_prop⟩
+noncomputable def legendre1 : L2C (-1) 1 := (ContinuousMap.id ℝ).restrict _
 /-- The third Legendre polynomial `x² − ⅓`. -/
-noncomputable def legendre2 : L2C (-1) 1 := ⟨fun x => (x : ℝ) ^ 2 - 1 / 3, by fun_prop⟩
+noncomputable def legendre2 : L2C (-1) 1 :=
+  (⟨fun x => x ^ 2 - 1 / 3, by fun_prop⟩ : C(ℝ, ℝ)).restrict _
 
 /-- `⟨1, x⟩ = ∫₋₁¹ x = 0`. -/
 theorem legendre_inner_01 : ⟪legendre0, legendre1⟫_ℝ = 0 := by
-  rw [L2C_inner_eq_intervalIntegral legendre0 legendre1 (fun x => x)
-      (fun x => by simp [legendre0, legendre1, L2C.toCont])]
+  rw [legendre0, legendre1, L2C_inner_restrict]
   simp
 
 /-- `⟨1, x² − ⅓⟩ = ∫₋₁¹ (x² − ⅓) = 0`. -/
 theorem legendre_inner_02 : ⟪legendre0, legendre2⟫_ℝ = 0 := by
-  rw [L2C_inner_eq_intervalIntegral legendre0 legendre2 (fun x => x ^ 2 - 1 / 3)
-      (fun x => by simp [legendre0, legendre2, L2C.toCont])]
+  rw [legendre0, legendre2, L2C_inner_restrict]
+  simp only [ContinuousMap.const_apply, ContinuousMap.coe_mk, one_mul]
   have h1 : IntervalIntegrable (fun x : ℝ => x ^ 2) volume (-1) 1 := by
     apply Continuous.intervalIntegrable; fun_prop
   have h2 : IntervalIntegrable (fun _ : ℝ => (1 : ℝ) / 3) volume (-1) 1 := by
@@ -466,14 +544,70 @@ theorem legendre_inner_02 : ⟪legendre0, legendre2⟫_ℝ = 0 := by
 
 /-- `⟨x, x² − ⅓⟩ = ∫₋₁¹ (x³ − x/3) = 0`. -/
 theorem legendre_inner_12 : ⟪legendre1, legendre2⟫_ℝ = 0 := by
-  rw [L2C_inner_eq_intervalIntegral legendre1 legendre2 (fun x => x ^ 3 - x / 3)
-      (fun x => by simp only [legendre1, legendre2, L2C.toCont, ContinuousMap.coe_mk]; ring)]
+  rw [legendre1, legendre2, L2C_inner_restrict]
+  simp only [ContinuousMap.id_apply, ContinuousMap.coe_mk]
   have h1 : IntervalIntegrable (fun x : ℝ => x ^ 3) volume (-1) 1 := by
     apply Continuous.intervalIntegrable; fun_prop
   have h2 : IntervalIntegrable (fun x : ℝ => x / 3) volume (-1) 1 := by
     apply Continuous.intervalIntegrable; fun_prop
-  rw [intervalIntegral.integral_sub h1 h2, integral_pow, intervalIntegral.integral_div, integral_id]
+  rw [intervalIntegral.integral_congr (g := fun x => x ^ 3 - x / 3) (fun x _ => by ring),
+    intervalIntegral.integral_sub h1 h2, integral_pow, intervalIntegral.integral_div, integral_id]
   norm_num
+
+/-- `‖1‖² = ∫₋₁¹ 1 = 2`. -/
+theorem legendre_inner_00 : ⟪legendre0, legendre0⟫_ℝ = 2 := by
+  rw [legendre0, L2C_inner_restrict]
+  norm_num
+
+/-- `‖x‖² = ∫₋₁¹ x² = 2/3`. -/
+theorem legendre_inner_11 : ⟪legendre1, legendre1⟫_ℝ = 2 / 3 := by
+  rw [legendre1, L2C_inner_restrict]
+  simp only [ContinuousMap.id_apply]
+  simp_rw [← sq]
+  rw [integral_pow]
+  norm_num
+
+/-- `‖x² − ⅓‖² = ∫₋₁¹ (x⁴ − ⅔x² + ⅑) = 8/45`. -/
+theorem legendre_inner_22 : ⟪legendre2, legendre2⟫_ℝ = 8 / 45 := by
+  rw [legendre2, L2C_inner_restrict]
+  simp only [ContinuousMap.coe_mk]
+  have h4 : IntervalIntegrable (fun x : ℝ => x ^ 4) volume (-1) 1 := by
+    apply Continuous.intervalIntegrable; fun_prop
+  have h2 : IntervalIntegrable (fun x : ℝ => 2 / 3 * x ^ 2) volume (-1) 1 := by
+    apply Continuous.intervalIntegrable; fun_prop
+  have h0 : IntervalIntegrable (fun _ : ℝ => (1 : ℝ) / 9) volume (-1) 1 := by
+    apply Continuous.intervalIntegrable; fun_prop
+  rw [intervalIntegral.integral_congr (g := fun x => x ^ 4 - 2 / 3 * x ^ 2 + 1 / 9)
+      (fun x _ => by ring),
+    intervalIntegral.integral_add (h4.sub h2) h0, intervalIntegral.integral_sub h4 h2,
+    intervalIntegral.integral_const_mul, integral_pow, integral_pow,
+    intervalIntegral.integral_const]
+  norm_num
+
+/-- 6.34: dividing by the norms gives the orthonormal list
+{lit}`√(1/2), √(3/2)·x, √(45/8)·(x² − ⅓)`. -/
+theorem legendre_orthonormal : Orthonormal ℝ
+    ![(Real.sqrt 2)⁻¹ • legendre0, Real.sqrt (3 / 2) • legendre1,
+      Real.sqrt (45 / 8) • legendre2] := by
+  have s2 : Real.sqrt 2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+  have s32 : Real.sqrt (3 / 2) ^ 2 = 3 / 2 := Real.sq_sqrt (by norm_num)
+  have s458 : Real.sqrt (45 / 8) ^ 2 = 45 / 8 := Real.sq_sqrt (by norm_num)
+  have h2 : Real.sqrt 2 ≠ 0 := by positivity
+  have h10 : ⟪legendre1, legendre0⟫_ℝ = 0 := by rw [real_inner_comm]; exact legendre_inner_01
+  have h20 : ⟪legendre2, legendre0⟫_ℝ = 0 := by rw [real_inner_comm]; exact legendre_inner_02
+  have h21 : ⟪legendre2, legendre1⟫_ℝ = 0 := by rw [real_inner_comm]; exact legendre_inner_12
+  rw [orthonormal_iff_ite]
+  intro i j
+  fin_cases i <;> fin_cases j <;>
+    simp only [Fin.zero_eta, Fin.mk_one, Fin.reduceFinMk, Matrix.cons_val_zero,
+      Matrix.cons_val_one, Matrix.cons_val_two, Matrix.head_cons, Matrix.tail_cons, Fin.isValue,
+      reduceIte, Fin.reduceEq] <;>
+    rw [real_inner_smul_left, real_inner_smul_right] <;>
+    simp only [legendre_inner_00, legendre_inner_11, legendre_inner_22, legendre_inner_01,
+      legendre_inner_02, legendre_inner_12, h10, h20, h21, mul_zero]
+  · field_simp; linarith
+  · rw [← mul_assoc, ← sq, s32]; norm_num
+  · rw [← mul_assoc, ← sq, s458]; norm_num
 
 end Example_6_34
 
@@ -577,28 +711,12 @@ theorem exists_gramSchmidt_flag {n : ℕ} (v : Fin n → V) (hli : LinearIndepen
     (hcard : Module.finrank 𝕜 V = Fintype.card (Fin n)) :
     ∃ e : OrthonormalBasis (Fin n) 𝕜 V,
       ∀ k, span 𝕜 (e '' {i | i ≤ k}) = span 𝕜 (v '' {i | i ≤ k}) := by
-  classical
-  have hg_ne : ∀ i, gramSchmidt 𝕜 v i ≠ 0 := gramSchmidt_ne_zero_of_linearIndependent hli
-  have hne : ∀ i, gramSchmidtNormed 𝕜 v i ≠ 0 := by
-    intro i
-    rw [gramSchmidtNormed]
-    exact smul_ne_zero (inv_ne_zero (RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr (hg_ne i))))
-      (hg_ne i)
-  obtain ⟨e, he_eq⟩ : ∃ e : OrthonormalBasis (Fin n) 𝕜 V,
-      ∀ i, e i = (‖gramSchmidt 𝕜 v i‖⁻¹ : 𝕜) • gramSchmidt 𝕜 v i := by
-    refine ⟨gramSchmidtOrthonormalBasis hcard v, fun i => ?_⟩
-    rw [gramSchmidtOrthonormalBasis_apply hcard (hne i), gramSchmidtNormed]
-  refine ⟨e, fun k => ?_⟩
-  have hspan_e_g : span 𝕜 (e '' {i | i ≤ k}) = span 𝕜 (gramSchmidt 𝕜 v '' {i | i ≤ k}) := by
-    apply le_antisymm <;> rw [span_le]
-    · rintro _ ⟨i, hik, rfl⟩
-      rw [he_eq i]; exact smul_mem _ _ (subset_span ⟨i, hik, rfl⟩)
-    · rintro _ ⟨i, hik, rfl⟩
-      have hgi : gramSchmidt 𝕜 v i = (‖gramSchmidt 𝕜 v i‖ : 𝕜) • e i := by
-        rw [he_eq i, smul_smul, mul_inv_cancel₀
-          (RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr (hg_ne i))), one_smul]
-      rw [hgi]; exact smul_mem _ _ (subset_span ⟨i, hik, rfl⟩)
-  rw [hspan_e_g]; exact span_gram_schmidt_initial v k
+  -- mathlib packages the orthonormal Gram–Schmidt list as an `OrthonormalBasis`
+  have he : ⇑(gramSchmidtOrthonormalBasis hcard v) = gramSchmidtNormed 𝕜 v :=
+    funext fun i => gramSchmidtOrthonormalBasis_apply hcard
+      ((gram_schmidt_orthonormal hli).ne_zero i)
+  exact ⟨gramSchmidtOrthonormalBasis hcard v, fun k => by
+    rw [he]; exact span_gramSchmidtNormed_initial v k⟩
 
 omit [FiniteDimensional 𝕜 V] in
 /-- A flag {lit}`span(v₀, …, vₖ)` on which {lit}`T` acts triangularly is
@@ -615,49 +733,75 @@ theorem flag_invariant {n : ℕ} (v : Fin n → V) (T : V →ₗ[𝕜] V)
     exact Submodule.span_mono hsub (hflag j)
   exact fun x hx => hle hx
 
-/-- Schur's theorem (6.38) -/
-theorem exists_orthonormal_upperTriangular (T : V →ₗ[𝕜] V)
-    (h : ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis 𝕜 v), IsUpperTriangular (matrixOf hv hv T)) :
-    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V) (he : IsBasis 𝕜 (⇑e)),
-      IsUpperTriangular (matrixOf he he T) := by
+/-- The key step of 6.37, for all operators at once: Gram–Schmidt turns a basis
+{lit}`v₁, …, vₙ` into an orthonormal basis {lit}`e₁, …, eₙ` with
+{lit}`span(e₁, …, eₖ) = span(v₁, …, vₖ)` (6.32). If {lit}`T` is upper-triangular with
+respect to {lit}`v`, each {lit}`span(v₁, …, vₖ)` is {lit}`T`-invariant (5.39), so
+{lit}`T` is upper-triangular with respect to {lit}`e`. The basis {lit}`e` depends only
+on {lit}`v`, not on {lit}`T`. -/
+theorem exists_orthonormal_upperTriangular_of_basis {n : ℕ} {v : Fin n → V}
+    (hv : IsBasis 𝕜 v) :
+    ∃ (e : OrthonormalBasis (Fin n) 𝕜 V) (he : IsBasis 𝕜 (⇑e)),
+      ∀ T : V →ₗ[𝕜] V, IsUpperTriangular (matrixOf hv hv T) →
+        IsUpperTriangular (matrixOf he he T) := by
   classical
-  obtain ⟨n, v, hv, hA⟩ := h
   have hcoe : (⇑hv.toModuleBasis) = v := funext (IsBasis.toModuleBasis_apply hv)
   have hli : LinearIndependent 𝕜 v := hcoe ▸ hv.toModuleBasis.linearIndependent
   have hcard : Module.finrank 𝕜 V = Fintype.card (Fin n) := by
     rw [Module.finrank_eq_card_basis hv.toModuleBasis, Fintype.card_fin]
   obtain ⟨e, hspan_gs⟩ := exists_gramSchmidt_flag v hli hcard
-  have hflag : ∀ k, T (v k) ∈ span 𝕜 (v '' {i | i ≤ k}) :=
-    ((tfae_upperTriangular hv T).out 0 2).mp hA
   have hek_mem : ∀ (k : Fin n), e k ∈ span 𝕜 (v '' {i | i ≤ k}) := by
     intro k; rw [← hspan_gs k]; exact subset_span ⟨k, le_refl k, rfl⟩
-  have hflag_e : ∀ k, T (e k) ∈ span 𝕜 (e '' {i | i ≤ k}) := by
-    intro k; rw [hspan_gs k]; exact flag_invariant v T hflag k (e k) (hek_mem k)
   have he : IsBasis 𝕜 (⇑e) :=
     LADR.Section_2C.isBasis_of_linearIndependent_of_card_eq _
       e.orthonormal.linearIndependent (by rw [hcard, Fintype.card_fin])
-  exact ⟨n, e, he, ((tfae_upperTriangular he T).out 2 0).mp hflag_e⟩
+  refine ⟨e, he, fun T hA => ?_⟩
+  have hflag : ∀ k, T (v k) ∈ span 𝕜 (v '' {i | i ≤ k}) :=
+    ((tfae_upperTriangular hv T).out 0 2).mp hA
+  have hflag_e : ∀ k, T (e k) ∈ span 𝕜 (e '' {i | i ≤ k}) := by
+    intro k; rw [hspan_gs k]; exact flag_invariant v T hflag k (e k) (hek_mem k)
+  exact ((tfae_upperTriangular he T).out 2 0).mp hflag_e
 
-/-- 6.37 (Schur, one direction): if {lit}`minpoly 𝕜 T` is a product of linear
-factors, then {lit}`T` is upper-triangular with respect to an orthonormal basis. -/
-theorem exists_orthonormal_upperTriangular_of_minpoly (T : V →ₗ[𝕜] V)
-    (h : ∃ (m : ℕ) (γ : Fin m → 𝕜),
-      minpoly 𝕜 T = ∏ k, (Polynomial.X - Polynomial.C (γ k))) :
+/-- 6.37, one operator: if {lit}`T` is upper-triangular with respect to some basis, it
+is upper-triangular with respect to some orthonormal basis. -/
+theorem exists_orthonormal_upperTriangular (T : V →ₗ[𝕜] V)
+    (h : ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis 𝕜 v), IsUpperTriangular (matrixOf hv hv T)) :
     ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V) (he : IsBasis 𝕜 (⇑e)),
-      IsUpperTriangular (matrixOf he he T) :=
-  exists_orthonormal_upperTriangular T
-    ((exists_upperTriangular_iff_minpoly_eq_prod T).mpr h)
+      IsUpperTriangular (matrixOf he he T) := by
+  obtain ⟨n, v, hv, hA⟩ := h
+  obtain ⟨e, he, hT⟩ := exists_orthonormal_upperTriangular_of_basis hv
+  exact ⟨n, e, he, hT T hA⟩
+
+/-- 6.37: {lit}`T` is upper-triangular with respect to some orthonormal basis iff
+{lit}`minpoly 𝕜 T = (z − λ₁)⋯(z − λₘ)`. By 5.44 the right side is equivalent to
+{lit}`T` being upper-triangular with respect to some basis; an orthonormal basis is
+a basis, and conversely {name}`exists_orthonormal_upperTriangular` upgrades a basis to
+an orthonormal one. -/
+theorem exists_orthonormal_upperTriangular_iff_minpoly (T : V →ₗ[𝕜] V) :
+    (∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V) (he : IsBasis 𝕜 (⇑e)),
+      IsUpperTriangular (matrixOf he he T)) ↔
+    ∃ (m : ℕ) (γ : Fin m → 𝕜), minpoly 𝕜 T = ∏ k, (Polynomial.X - Polynomial.C (γ k)) := by
+  rw [← exists_upperTriangular_iff_minpoly_eq_prod T]
+  constructor
+  · rintro ⟨n, e, he, hT⟩
+    exact ⟨n, e, he, hT⟩
+  · exact exists_orthonormal_upperTriangular T
 
 end Schur
 
 /-- 6.38 (Schur's theorem) Every operator on a finite-dimensional complex inner
-product space is upper-triangular with respect to some orthonormal basis. -/
+product space is upper-triangular with respect to some orthonormal basis. Axler's
+proof: by the fundamental theorem of algebra (4.13) the minimal polynomial splits
+into linear factors, so 6.37 applies. -/
 theorem exists_orthonormal_upperTriangular_complex {V : Type*} [NormedAddCommGroup V]
     [InnerProductSpace ℂ V] [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
     ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V)
       (he : LADR.Section_2B.IsBasis ℂ (⇑e)),
-      LADR.Section_5C.IsUpperTriangular (LADR.Section_3C.matrixOf he he T) :=
-  exists_orthonormal_upperTriangular T (LADR.Section_5C.exists_upperTriangular_complex T)
+      LADR.Section_5C.IsUpperTriangular (LADR.Section_3C.matrixOf he he T) := by
+  rw [exists_orthonormal_upperTriangular_iff_minpoly]
+  obtain ⟨m, γ, hfact, -⟩ := LADR.Section_5C.monic_splits_eq_prod_fin
+    (minpoly.monic (Algebra.IsIntegral.isIntegral T)) (IsAlgClosed.splits (k := ℂ) _)
+  exact ⟨m, γ, hfact⟩
 
 /-! # Linear Functionals on Inner Product Spaces -/
 
@@ -693,7 +837,8 @@ related Riesz computation on {lit}`𝒫₂(ℝ)` is 6.44. -/
 section Example_6_41
 
 /-- The weight `cos(π·)` of the functional {lit}`φ`, as an element of {lit}`C[-1,1]`. -/
-noncomputable def cosWeight : L2C (-1) 1 := ⟨fun x => Real.cos (Real.pi * x), by fun_prop⟩
+noncomputable def cosWeight : L2C (-1) 1 :=
+  (⟨fun x => Real.cos (Real.pi * x), by fun_prop⟩ : C(ℝ, ℝ)).restrict _
 
 /-- 6.41: `φ(p) = ∫₋₁¹ p(t) cos(πt) dt = ⟨cos(π·), p⟩` is a linear functional. Its
 type {lit}`L2C (-1) 1 →ₗ[ℝ] ℝ` records that it is linear. -/
@@ -907,7 +1052,9 @@ theorem exercise_6B_1 {m : ℕ} (e : Fin m → V)
   sorry
 
 /-- 6B.2 (a) For {lit}`θ ∈ ℝ`, both {lit}`(cos θ, sin θ), (−sin θ, cos θ)` and
-{lit}`(cos θ, sin θ), (sin θ, −cos θ)` are orthonormal bases of {lit}`ℝ²`. -/
+{lit}`(cos θ, sin θ), (sin θ, −cos θ)` are orthonormal bases of {lit}`ℝ²`. Stated as
+orthonormality; each list then has length {lit}`2 = dim ℝ²`, so it is an orthonormal
+basis by 6.28 ({name}`orthonormalBasis_of_length`). -/
 theorem exercise_6B_2a (θ : ℝ) :
     Orthonormal ℝ ![!₂[Real.cos θ, Real.sin θ], !₂[-Real.sin θ, Real.cos θ]] ∧
       Orthonormal ℝ ![!₂[Real.cos θ, Real.sin θ], !₂[Real.sin θ, -Real.cos θ]] := by sorry
@@ -933,18 +1080,24 @@ open MeasureTheory Real
 /-- The {lit}`2n + 1` trigonometric functions of 6B.4, indexed by {lit}`Fin (2n+1)`:
 index {lit}`0` is the constant {lit}`1/√(2π)`, indices {lit}`1, …, n` are the cosines
 {lit}`(cos kx)/√π`, and {lit}`n+1, …, 2n` are the sines {lit}`(sin kx)/√π`. -/
-noncomputable def fourierList (n : ℕ) : Fin (2 * n + 1) → (ℝ → ℝ) := fun i =>
-  if (i : ℕ) = 0 then (fun _ => 1 / sqrt (2 * π))
-  else if (i : ℕ) ≤ n then (fun x => cos ((i : ℕ) * x) / sqrt π)
-  else (fun x => sin (((i : ℕ) - n : ℕ) * x) / sqrt π)
+noncomputable def fourierList (n : ℕ) : Fin (2 * n + 1) → C(ℝ, ℝ) := fun i =>
+  if (i : ℕ) = 0 then ContinuousMap.const ℝ (1 / sqrt (2 * π))
+  else if (i : ℕ) ≤ n then ⟨fun x => cos ((i : ℕ) * x) / sqrt π, by fun_prop⟩
+  else ⟨fun x => sin (((i : ℕ) - n : ℕ) * x) / sqrt π, by fun_prop⟩
 
-/-- 6B.4 For a positive integer {lit}`n`, the functions {name}`fourierList` form an
-orthonormal list in {lit}`C[-π, π]` with {lit}`⟨f, g⟩ = ∫₋π^π fg`. (Deferred like the
-other analytic function-space exercises; the proof is a family of trigonometric
-integral identities via the product-to-sum formulas.) -/
-theorem exercise_6B_4 (n : ℕ) (hn : 0 < n) :
-    ∀ i j, (∫ x in (-π)..π, fourierList n i x * fourierList n j x)
-      = if i = j then 1 else 0 := by
+/-- The interval {lit}`[-π, π]` is nondegenerate, so {lit}`C[-π, π]` carries the `L²`
+inner product (see `L2Interval.lean`). -/
+instance : Fact (-π < π) := ⟨by linarith [pi_pos]⟩
+
+/-- The functions {name}`fourierList` as elements of {lit}`C[-π, π]`. -/
+noncomputable def fourierL2 (n : ℕ) (i : Fin (2 * n + 1)) : L2C (-π) π :=
+  (fourierList n i).restrict _
+
+/-- 6B.4 For a positive integer {lit}`n`, the functions {name}`fourierL2` form an
+orthonormal list in {lit}`C[-π, π]` with {lit}`⟨f, g⟩ = ∫₋π^π fg`. Each inner product
+reduces to {lit}`∫₋π^π` of a product of the functions ({name}`L2C_inner_restrict`); the
+book's hint is the product-to-sum formulas. -/
+theorem exercise_6B_4 (n : ℕ) : Orthonormal ℝ (fourierL2 n) := by
   sorry
 
 /-- The {lit}`k`-th Fourier cosine coefficient {lit}`(1/√π)∫₋π^π f(x)cos(kx) dx`. -/
@@ -959,7 +1112,7 @@ noncomputable def fourierSinCoeff (f : ℝ → ℝ) (k : ℕ) : ℝ :=
 {lit}`f : [-π, π] → ℝ`, every partial sum of the Fourier coefficients satisfies
 {lit}`a₀²/2 + ∑_{k=1}^N (aₖ² + bₖ²) ≤ ∫₋π^π f²` (the book's infinite-sum form is the
 {lit}`N → ∞` limit). It is Bessel's inequality (6.26) for the list of 6B.4. -/
-theorem exercise_6B_5 (f : ℝ → ℝ) (hf : Continuous f) (N : ℕ) :
+theorem exercise_6B_5 (f : ℝ → ℝ) (hf : ContinuousOn f (Set.Icc (-π) π)) (N : ℕ) :
     fourierCosCoeff f 0 ^ 2 / 2
       + ∑ k ∈ Finset.Icc 1 N, (fourierCosCoeff f k ^ 2 + fourierSinCoeff f k ^ 2)
       ≤ ∫ x in (-π)..π, (f x) ^ 2 := by
@@ -969,7 +1122,7 @@ end Fourier6B
 
 /-- 6B.6 (a) If {lit}`e₁, …, eₙ` is an orthonormal basis and
 {lit}`‖eₖ − vₖ‖ < 1/√n` for each {lit}`k`, then {lit}`v₁, …, vₙ` is a basis. -/
-theorem exercise_6B_6a [FiniteDimensional 𝕜 V] {n : ℕ} (hn : n = finrank 𝕜 V)
+theorem exercise_6B_6a [FiniteDimensional 𝕜 V] {n : ℕ}
     (b : OrthonormalBasis (Fin n) 𝕜 V) (v : Fin n → V)
     (h : ∀ k, ‖b k - v k‖ < 1 / Real.sqrt n) :
     LinearIndependent 𝕜 v := by
@@ -977,7 +1130,7 @@ theorem exercise_6B_6a [FiniteDimensional 𝕜 V] {n : ℕ} (hn : n = finrank �
 
 /-- 6B.6 (b) The bound {lit}`1/√n` in (a) is sharp: there exist {lit}`v₁, …, vₙ`
 with {lit}`‖eₖ − vₖ‖ ≤ 1/√n` for each {lit}`k` that are *not* linearly independent. -/
-theorem exercise_6B_6b [FiniteDimensional 𝕜 V] {n : ℕ} (hn : n = finrank 𝕜 V)
+theorem exercise_6B_6b [FiniteDimensional 𝕜 V] {n : ℕ}
     (hpos : 0 < n) (b : OrthonormalBasis (Fin n) 𝕜 V) :
     ∃ v : Fin n → V, (∀ k, ‖b k - v k‖ ≤ 1 / Real.sqrt n) ∧ ¬ LinearIndependent 𝕜 v := by
   sorry
@@ -1019,7 +1172,7 @@ open LADR.Section_5C (IsUpperTriangular)
 
 /-- The orthonormal basis of {lit}`𝒫₂(ℝ) = Polynomial.degreeLT ℝ 3` (with
 {lit}`⟨p, q⟩ = ∫₀¹ pq`) to find in 6B.8, by Gram–Schmidt on {lit}`1, x, x²`. -/
-noncomputable def legendreBasis01 : Fin 3 → Polynomial.degreeLT ℝ 3 := sorry
+noncomputable def legendreBasis01 (i : Fin 3) : Polynomial.degreeLT ℝ 3 := sorry
 
 /-- The differentiation operator {lit}`p ↦ p′` as a linear operator on
 {lit}`𝒫₂(ℝ) = Polynomial.degreeLT ℝ 3` (differentiation lowers degree, so it maps
@@ -1045,41 +1198,56 @@ noncomputable def diffP2 : Polynomial.degreeLT ℝ 3 →ₗ[ℝ] Polynomial.degr
       exact (Polynomial.natDegree_lt_iff_degree_lt hd).mp h3
 
 /-- 6B.8 (a) On {lit}`𝒫₂(ℝ)` with {lit}`⟨p, q⟩ = ∫₀¹ pq`, applying Gram–Schmidt to
-{lit}`1, x, x²` produces the orthonormal basis {name}`legendreBasis01`, stated as the
-pairwise integral identities {lit}`∫₀¹ eᵢeⱼ = δᵢⱼ`. (Analytic function-space exercise, stated
-as an integral identity.) -/
+{lit}`1, x, x²` produces {name}`legendreBasis01`. Stated as the three properties that
+characterize the Gram–Schmidt output (6.32 and Exercise 10): it is orthonormal
+({lit}`∫₀¹ eᵢeⱼ = δᵢⱼ`), {lit}`span(e₀, …, eₖ) = span(1, …, xᵏ)` for each {lit}`k`, and
+{lit}`⟨xᵏ, eₖ⟩ = ∫₀¹ xᵏeₖ > 0` for each {lit}`k`. -/
 theorem exercise_6B_8a :
-    ∀ i j, (∫ x in (0:ℝ)..1,
+    (∀ i j, (∫ x in (0:ℝ)..1,
         (legendreBasis01 i : Polynomial ℝ).eval x * (legendreBasis01 j : Polynomial ℝ).eval x)
-      = if i = j then 1 else 0 := by
+      = if i = j then 1 else 0) ∧
+    (∀ k : Fin 3,
+      Submodule.span ℝ ((fun i => (legendreBasis01 i : Polynomial ℝ)) '' {i | i ≤ k}) =
+        Submodule.span ℝ ((fun i : Fin 3 => Polynomial.X ^ (i : ℕ)) '' {i | i ≤ k})) ∧
+    (∀ k : Fin 3,
+      0 < ∫ x in (0:ℝ)..1, x ^ (k : ℕ) * (legendreBasis01 k : Polynomial ℝ).eval x) := by
   sorry
 
 /-- {name}`legendreBasis01` is a basis of {lit}`𝒫₂(ℝ)` (needed to form its matrix in
 6B.8(b)). -/
 theorem legendreBasis01_isBasis : IsBasis ℝ legendreBasis01 := sorry
 
-/-- 6B.8 (b) The differentiation operator {name}`diffP2` on {lit}`𝒫₂(ℝ)` is
-upper-triangular with respect to the orthonormal basis {name}`legendreBasis01`, stated
-with the matrix definition {name}`IsUpperTriangular` (as expected from 6.37). Finding
-the actual matrix entries is the computation left to the reader. -/
+/-- The matrix of {name}`diffP2` with respect to {name}`legendreBasis01` to find in
+6B.8(b). -/
+noncomputable def diffMatrix6B8 : Matrix (Fin 3) (Fin 3) ℝ := sorry
+
+/-- 6B.8 (b) The matrix of the differentiation operator {name}`diffP2` on {lit}`𝒫₂(ℝ)`
+with respect to the orthonormal basis {name}`legendreBasis01` is
+{name}`diffMatrix6B8`, and this matrix is upper triangular (as expected from the
+proof of 6.37). -/
 theorem exercise_6B_8b :
-    IsUpperTriangular (matrixOf legendreBasis01_isBasis legendreBasis01_isBasis diffP2) := by
+    matrixOf legendreBasis01_isBasis legendreBasis01_isBasis diffP2 = diffMatrix6B8 ∧
+      IsUpperTriangular diffMatrix6B8 := by
   sorry
 
 end GramSchmidt6B8
 
+open scoped ComplexOrder in
 /-- 6B.9 If {lit}`e₁, …, eₘ` results from Gram–Schmidt applied to a linearly
-independent list {lit}`v₁, …, vₘ`, then {lit}`⟨vₖ, eₖ⟩ > 0` for each {lit}`k`. -/
+independent list {lit}`v₁, …, vₘ`, then {lit}`⟨vₖ, eₖ⟩ > 0` for each {lit}`k`: the
+book's {lit}`⟨vₖ, eₖ⟩` is mathlib's {lit}`⟪eₖ, vₖ⟫`, and {lit}`0 < ·` is the
+{lit}`ComplexOrder` order on {lit}`𝕜`, i.e. "is a positive real" ({name}`RCLike.pos_iff`). -/
 theorem exercise_6B_9 {m : ℕ} (v : Fin m → V) (hv : LinearIndependent 𝕜 v) (k : Fin m) :
-    0 < RCLike.re ⟪v k, InnerProductSpace.gramSchmidtNormed 𝕜 v k⟫_𝕜 := by
+    0 < ⟪InnerProductSpace.gramSchmidtNormed 𝕜 v k, v k⟫_𝕜 := by
   sorry
 
+open scoped ComplexOrder in
 /-- 6B.10 The orthonormal list produced by Gram–Schmidt (6.32) is the *unique*
-orthonormal list {lit}`e₁, …, eₘ` such that {lit}`⟨vₖ, eₖ⟩ > 0` and
-{lit}`span(v₁, …, vₖ) = span(e₁, …, eₖ)` for each {lit}`k`. -/
+orthonormal list {lit}`e₁, …, eₘ` such that {lit}`⟨vₖ, eₖ⟩ > 0` (a positive real, as in
+6B.9) and {lit}`span(v₁, …, vₖ) = span(e₁, …, eₖ)` for each {lit}`k`. -/
 theorem exercise_6B_10 {m : ℕ} (v : Fin m → V) (hv : LinearIndependent 𝕜 v)
     (e : Fin m → V) (he : Orthonormal 𝕜 e)
-    (hpos : ∀ k, 0 < RCLike.re ⟪v k, e k⟫_𝕜)
+    (hpos : ∀ k, 0 < ⟪e k, v k⟫_𝕜)
     (hspan : ∀ k, Submodule.span 𝕜 (e '' {i | i ≤ k}) =
       Submodule.span 𝕜 (v '' {i | i ≤ k})) :
     e = InnerProductSpace.gramSchmidtNormed 𝕜 v := by
@@ -1090,26 +1258,27 @@ open MeasureTheory
 
 /-- The quadratic {lit}`q ∈ 𝒫₂(ℝ)` to find in 6B.11 (Riesz vector representing point
 evaluation {lit}`p ↦ p(½)` for {lit}`⟨p, q⟩ = ∫₀¹ pq`). -/
-noncomputable def q6B11 : ℝ → ℝ := sorry
+noncomputable def q6B11 : Polynomial.degreeLT ℝ 3 := sorry
 
 /-- 6B.11 The polynomial {name}`q6B11` satisfies {lit}`p(½) = ∫₀¹ pq` for every
 {lit}`p ∈ 𝒫₂(ℝ)` (written {lit}`p = a + bx + cx²`). (Analytic function-space exercise, stated
 as an integral identity.) -/
 theorem exercise_6B_11 : ∀ a b c : ℝ,
     (a + b * (1 / 2) + c * (1 / 2) ^ 2)
-      = ∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * q6B11 x := by
+      = ∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * (q6B11 : Polynomial ℝ).eval x := by
   sorry
 
 /-- The quadratic {lit}`q ∈ 𝒫₂(ℝ)` to find in 6B.12 (the analogue of 6.44 on
 {lit}`[0, 1]`, representing {lit}`p ↦ ∫₀¹ p(x)cos(πx) dx`). -/
-noncomputable def q6B12 : ℝ → ℝ := sorry
+noncomputable def q6B12 : Polynomial.degreeLT ℝ 3 := sorry
 
 /-- 6B.12 The polynomial {name}`q6B12` satisfies {lit}`∫₀¹ p(x)cos(πx) dx = ∫₀¹ pq`
-for every {lit}`p ∈ 𝒫₂(ℝ)` (written {lit}`p = a + bx + cx²`). (Analytic
+for every {lit}`p ∈ 𝒫₂(ℝ)` (written {lit}`p = a + bx + cx²`). The answer must lie in
+{lit}`𝒫₂(ℝ)`; otherwise {lit}`q(x) = cos(πx)` would trivially work. (Analytic
 function-space exercise, stated as an integral identity.) -/
 theorem exercise_6B_12 : ∀ a b c : ℝ,
     (∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * Real.cos (Real.pi * x))
-      = ∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * q6B12 x := by
+      = ∫ x in (0:ℝ)..1, (a + b * x + c * x ^ 2) * (q6B12 : Polynomial ℝ).eval x := by
   sorry
 
 end Riesz6B
@@ -1183,7 +1352,7 @@ definition {name}`IsUpperTriangular`). Strengthens the simultaneous-triangulariz
 exercise 5E.9(b) to an *orthonormal* basis. -/
 theorem exercise_6B_20 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (ℰ : Set (V →ₗ[ℂ] V))
-    (hcomm : ∀ S ∈ ℰ, ∀ T ∈ ℰ, S ∘ₗ T = T ∘ₗ S) :
+    (hcomm : ∀ S ∈ ℰ, ∀ T ∈ ℰ, Commute S T) :
     ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V) (he : IsBasis ℂ (⇑e)),
       ∀ T ∈ ℰ, IsUpperTriangular (matrixOf he he T) := by
   sorry
@@ -1191,24 +1360,24 @@ theorem exercise_6B_20 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ
 end UpperTri6B20
 
 /-- 6B.21 Over {lit}`ℂ`, if all eigenvalues of {lit}`T` have absolute value less
-than 1, then for every {lit}`ε > 0` there is {lit}`m` with {lit}`‖Tᵐv‖ ≤ ε‖v‖`
-for all {lit}`v`. -/
+than 1, then for every {lit}`ε > 0` there is a positive integer {lit}`m` with
+{lit}`‖Tᵐv‖ ≤ ε‖v‖` for all {lit}`v`. -/
 theorem exercise_6B_21 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V)
     (h : ∀ μ : ℂ, Module.End.HasEigenvalue T μ → ‖μ‖ < 1) (ε : ℝ) (hε : 0 < ε) :
-    ∃ m : ℕ, ∀ v : V, ‖(T ^ m) v‖ ≤ ε * ‖v‖ := by
+    ∃ m : ℕ, 0 < m ∧ ∀ v : V, ‖(T ^ m) v‖ ≤ ε * ‖v‖ := by
   sorry
 
 section Riesz22
 open MeasureTheory
 
 /-- 6B.22 On {lit}`C[-1, 1]` with {lit}`⟨f, g⟩ = ∫₋₁¹ fg`, the evaluation functional
-{lit}`φ(f) = f(0)` is *not* of the form {lit}`f ↦ ⟨f, g⟩`: there is no continuous
-{lit}`g` with {lit}`f(0) = ∫₋₁¹ fg` for every continuous {lit}`f`. This shows the
+{lit}`φ(f) = f(0)` is *not* of the form {lit}`f ↦ ⟨f, g⟩`: there is no
+{lit}`g ∈ C[-1, 1]` with {lit}`f(0) = ⟨f, g⟩` for every {lit}`f ∈ C[-1, 1]`. This shows the
 Riesz representation theorem (6.42) can fail in infinite dimensions. -/
 theorem exercise_6B_22 :
-    ¬ ∃ g : ℝ → ℝ, Continuous g ∧
-      ∀ f : ℝ → ℝ, Continuous f → f 0 = ∫ x in (-1:ℝ)..1, f x * g x := by
+    ¬ ∃ g : L2C (-1) 1, ∀ f : L2C (-1) 1,
+      L2C.toCont f ⟨0, Set.mem_Icc.mpr ⟨by norm_num, by norm_num⟩⟩ = ⟪f, g⟫_ℝ := by
   sorry
 
 end Riesz22

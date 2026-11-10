@@ -537,7 +537,7 @@ of {lit}`V` iff the minimal polynomial of {lit}`T` equals
 
 /-- A monic polynomial that splits is the (finite, indexed) product of its
 linear factors. -/
-private lemma monic_splits_eq_prod_fin {p : Polynomial F} (hmonic : p.Monic)
+theorem monic_splits_eq_prod_fin {p : Polynomial F} (hmonic : p.Monic)
     (hsplits : p.Splits) :
     ∃ (m : ℕ) (γ : Fin m → F),
       p = ∏ k, (Polynomial.X - Polynomial.C (γ k)) ∧ m = p.natDegree := by
