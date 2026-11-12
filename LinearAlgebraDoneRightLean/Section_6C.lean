@@ -62,15 +62,6 @@ def setOrthogonal (S : Set V) : Submodule 𝕜 V where
 /-- On a subspace the two definitions agree. -/
 theorem setOrthogonal_coe (U : Submodule 𝕜 V) : setOrthogonal (U : Set V) = Uᗮ := rfl
 
-/-- A vector is orthogonal to every element of {lit}`S` exactly when it is
-orthogonal to {lit}`span S`, so {lit}`S⟂ = (span S)⟂`. -/
-theorem setOrthogonal_eq_span_orthogonal (S : Set V) :
-    setOrthogonal (𝕜 := 𝕜) S = (Submodule.span 𝕜 S)ᗮ := by
-  ext v
-  rw [mem_setOrthogonal, ← Submodule.span_singleton_le_iff_mem, ← Submodule.isOrtho_iff_le,
-    Submodule.isOrtho_comm, Submodule.isOrtho_span]
-  simp
-
 /-! 6.47 Example: orthogonal complements -/
 
 /-- The plane {lit}`{(x, y, z) ∈ ℝ³ : 2x + 3y + 5z = 0}`. -/
@@ -108,7 +99,9 @@ theorem setOrthogonal_plane235 :
     (setOrthogonal (𝕜 := ℝ) plane235 : Set (EuclideanSpace ℝ (Fin 3))) = line235 := by
   have hplane : plane235 =
       (((ℝ ∙ (!₂[2, 3, 5] : EuclideanSpace ℝ (Fin 3)))ᗮ : Submodule ℝ _) : Set _) := by
-    rw [← setOrthogonal_singleton_235, setOrthogonal_eq_span_orthogonal]
+    rw [← setOrthogonal_singleton_235]
+    ext v
+    simp [Submodule.mem_orthogonal_singleton_iff_inner_right]
   rw [hplane, setOrthogonal_coe, Submodule.orthogonal_orthogonal, line235_eq_span]
 
 /-- More generally, if {lit}`U` is a plane in {lit}`ℝ³` containing the origin,
@@ -251,8 +244,9 @@ theorem sub_sum_inner_smul_mem_orthogonal (U : Submodule 𝕜 V) {ι : Type*} [F
   -- so being orthogonal to `U` is being orthogonal to each `e k`
   have key : v - ∑ k, ⟪(b k : V), v⟫_𝕜 • (b k : V)
       ∈ (Submodule.span 𝕜 (Set.range fun k => ((b k : V))))ᗮ := by
-    rw [← setOrthogonal_eq_span_orthogonal, mem_setOrthogonal]
-    rintro _ ⟨j, rfl⟩
+    rw [← Submodule.span_singleton_le_iff_mem, ← Submodule.isOrtho_iff_le,
+      Submodule.isOrtho_comm, Submodule.isOrtho_span]
+    rintro _ ⟨j, rfl⟩ _ rfl
     rw [inner_sub_right, hortho.inner_right_fintype, sub_self]
   rwa [hspan] at key
 
@@ -336,7 +330,17 @@ theorem orthogonal_eq_bot_iff (U : Submodule 𝕜 V) [FiniteDimensional 𝕜 U] 
 For a finite-dimensional subspace {lit}`U`, the orthogonal projection of
 {lit}`V` onto {lit}`U` sends {lit}`v = u + w` (with {lit}`u ∈ U`, {lit}`w ∈ U⟂`)
 to {lit}`u`. mathlib's {name}`Submodule.starProjection` {lit}`U : V →L[𝕜] V` is
-this operator {lit}`P_U`. -/
+this operator {lit}`P_U`.
+
+Where Axler assumes {lit}`U` is finite-dimensional, the statements below assume
+{lit}`[U.HasOrthogonalProjection]` instead. That class says exactly that every
+{lit}`v` splits as {lit}`u + w` with {lit}`u ∈ U` and {lit}`w ∈ U⟂`, which is
+what {lit}`P_U` needs in order to exist. It is not automatic: in an
+infinite-dimensional {lit}`V` a subspace can have {lit}`U ⊕ U⟂ ≠ V` (Exercise
+6C.16). It is strictly more general than the book's hypothesis: instance search
+derives it from {lit}`[FiniteDimensional 𝕜 U]` (this is 6.49), so every result
+here applies verbatim to Axler's finite-dimensional {lit}`U`, and it also covers
+complete subspaces such as closed subspaces of a Hilbert space. -/
 
 /-- {lit}`P_U v ∈ U` for every {lit}`v`. -/
 example (U : Submodule 𝕜 V) [U.HasOrthogonalProjection] (v : V) :
