@@ -1,35 +1,39 @@
-import Mathlib.Algebra.Module.LinearMap.Basic
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.Module.Pi
-import Mathlib.Algebra.Module.Prod
-import Mathlib.Algebra.Module.Submodule.Basic
-import Mathlib.Algebra.Module.Submodule.Lattice
-import Mathlib.Algebra.Module.Submodule.Map
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.Basis.Basic
-import Mathlib.LinearAlgebra.Dimension.Constructions
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.LinearIndependent.Defs
-import Mathlib.LinearAlgebra.Quotient.Basic
-import Mathlib.LinearAlgebra.Span.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.TFAE
-import LinearAlgebraDoneRightLean.Section_1C
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_2C
-import LinearAlgebraDoneRightLean.Section_3A
-import LinearAlgebraDoneRightLean.Section_3B
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.LinearMap.Basic
+public import Mathlib.Algebra.Module.LinearMap.End
+public import Mathlib.Algebra.Module.Pi
+public import Mathlib.Algebra.Module.Prod
+public import Mathlib.Algebra.Module.Submodule.Basic
+public import Mathlib.Algebra.Module.Submodule.Lattice
+public import Mathlib.Algebra.Module.Submodule.Map
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.LinearAlgebra.Basis.Basic
+public import Mathlib.LinearAlgebra.Dimension.Constructions
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.LinearIndependent.Defs
+public import Mathlib.LinearAlgebra.Quotient.Basic
+public import Mathlib.LinearAlgebra.Span.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.TFAE
+public import LinearAlgebraDoneRightLean.Section_1C
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_2C
+public import LinearAlgebraDoneRightLean.Section_3A
+public import LinearAlgebraDoneRightLean.Section_3B
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 3E: Products and Quotients of Vector Spaces
 -/
+
+@[expose] public section
 
 namespace LADR.Section_3E
 
@@ -253,7 +257,7 @@ injective. -/
 /-- The underlying {lit}`V`-valued sum map {lit}`(v₁, …, vₘ) ↦ v₁ + ⋯ + vₘ`.
 Its image is the sum subspace (see {lit}`Γ₀_range_eq`); the book's {lit}`Γ`
 below is this map with its codomain cut down to that subspace. -/
-private def Γ₀ {m : ℕ} (V_sub : Fin m → Submodule F V) :
+def Γ₀ {m : ℕ} (V_sub : Fin m → Submodule F V) :
     ((i : Fin m) → ↥(V_sub i)) →ₗ[F] V where
   toFun u := ∑ i, ((u i : V))
   map_add' u v := by
@@ -493,9 +497,9 @@ noncomputable def quot_slope2_equiv_lines :
     ((ℝ × ℝ) ⧸ slope2) ≃ {A : Set (ℝ × ℝ) // ∃ c : ℝ, A = lineOf c} :=
   quot_slope2_equiv_real.toEquiv.trans <|
     (Equiv.ofInjective lineOf lineOf_injective).trans
-      (Equiv.setCongr (by
-        ext A
-        exact ⟨fun ⟨c, hc⟩ => ⟨c, hc.symm⟩, fun ⟨c, hc⟩ => ⟨c, hc.symm⟩⟩))
+      (Equiv.subtypeEquivRight fun A => by
+        rw [Set.mem_range]
+        exact ⟨fun ⟨c, hc⟩ => ⟨c, hc.symm⟩, fun ⟨c, hc⟩ => ⟨c, hc.symm⟩⟩)
 
 /-! 3.101 Two translates of a subspace are equal or disjoint. Axler states
 this as a chain of equivalences, which we package as a single

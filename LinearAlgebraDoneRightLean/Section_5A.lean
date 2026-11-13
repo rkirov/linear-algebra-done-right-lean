@@ -1,41 +1,45 @@
-import Mathlib.Algebra.Algebra.Bilinear
-import Mathlib.Algebra.Module.LinearMap.Basic
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.Module.Submodule.Basic
-import Mathlib.Algebra.Module.Submodule.Lattice
-import Mathlib.Algebra.Polynomial.AlgebraMap
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Analysis.SpecialFunctions.Exp
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.Dual.Defs
-import Mathlib.LinearAlgebra.Dual.Lemmas
-import Mathlib.LinearAlgebra.Eigenspace.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.LinearAlgebra.Quotient.Basic
-import Mathlib.LinearAlgebra.Span.Basic
-import Mathlib.RingTheory.Polynomial.Basic
-import Mathlib.RingTheory.Polynomial.DegreeLT
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.TFAE
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_2C
-import LinearAlgebraDoneRightLean.Section_3A
-import LinearAlgebraDoneRightLean.Section_3B
-import LinearAlgebraDoneRightLean.Section_3D
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Algebra.Bilinear
+public import Mathlib.Algebra.Module.LinearMap.Basic
+public import Mathlib.Algebra.Module.LinearMap.End
+public import Mathlib.Algebra.Module.Submodule.Basic
+public import Mathlib.Algebra.Module.Submodule.Lattice
+public import Mathlib.Algebra.Polynomial.AlgebraMap
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import Mathlib.Analysis.SpecialFunctions.Exp
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.LinearAlgebra.Dual.Defs
+public import Mathlib.LinearAlgebra.Dual.Lemmas
+public import Mathlib.LinearAlgebra.Eigenspace.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import Mathlib.LinearAlgebra.Quotient.Basic
+public import Mathlib.LinearAlgebra.Span.Basic
+public import Mathlib.RingTheory.Polynomial.Basic
+public import Mathlib.RingTheory.Polynomial.DegreeLT
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.TFAE
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_2C
+public import LinearAlgebraDoneRightLean.Section_3A
+public import LinearAlgebraDoneRightLean.Section_3B
+public import LinearAlgebraDoneRightLean.Section_3D
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 5A: Invariant Subspaces
 -/
+
+@[expose] public section
 
 namespace LADR.Section_5A
 
@@ -199,8 +203,8 @@ theorem tfae_isEigenvalue [Finite F V] (T : V →ₗ[F] V) (γ : F) :
       rw [LinearMap.mem_ker, LinearMap.sub_apply, LinearMap.smul_apply,
         LinearMap.id_apply, sub_eq_zero] at hv_mem
       exact hv_mem
-  tfae_have 2 ↔ 3 := not_congr (h365.out 1 2)
-  tfae_have 2 ↔ 4 := not_congr (h365.out 1 0)
+  tfae_have 2 ↔ 3 := not_congr (h365.out 2 3)
+  tfae_have 2 ↔ 4 := not_congr (h365.out 2 1)
   tfae_finish
 
 /-! 5.8 Definition: eigenvector -/

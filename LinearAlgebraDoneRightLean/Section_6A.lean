@@ -1,30 +1,33 @@
-import Mathlib.Analysis.InnerProductSpace.Basic
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Analysis.InnerProductSpace.Convex
-import Mathlib.Analysis.RCLike.Basic
-import Mathlib.LinearAlgebra.Matrix.ToLin
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-import Mathlib.MeasureTheory.Integral.ExpDecay
-import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
-import Mathlib.Analysis.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.Algebra.Polynomial.Roots
-import Mathlib.Topology.Algebra.Polynomial
-import Mathlib.Topology.ContinuousMap.Algebra
-import Mathlib.Algebra.QuadraticDiscriminant
-import Mathlib.Analysis.Calculus.Deriv.Basic
-import Mathlib.Algebra.MvPolynomial.PDeriv
-import Mathlib.Order.Interval.Set.Infinite
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Recall
-import LinearAlgebraDoneRightLean.Section_1B
-import LinearAlgebraDoneRightLean.HarmonicPolynomial
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Basic
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.InnerProductSpace.Convex
+public import Mathlib.Analysis.RCLike.Basic
+public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+public import Mathlib.MeasureTheory.Integral.ExpDecay
+public import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
+public import Mathlib.Analysis.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.Algebra.Polynomial.Roots
+public import Mathlib.Topology.Algebra.Polynomial
+public import Mathlib.Topology.ContinuousMap.Algebra
+public import Mathlib.Algebra.QuadraticDiscriminant
+public import Mathlib.Analysis.Calculus.Deriv.Basic
+public import Mathlib.Algebra.MvPolynomial.PDeriv
+public import Mathlib.Order.Interval.Set.Infinite
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import LinearAlgebraDoneRightLean.Section_1B
+public import LinearAlgebraDoneRightLean.HarmonicPolynomial
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 6A: Inner Products and Norms
 -/
+
+@[expose] public section
 
 namespace LADR.Section_6A
 

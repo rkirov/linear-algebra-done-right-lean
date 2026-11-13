@@ -1,41 +1,45 @@
-import Mathlib.Algebra.Module.LinearMap.Basic
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.Module.Pi
-import Mathlib.Algebra.Module.Submodule.Basic
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.Basis.Basic
-import Mathlib.LinearAlgebra.Dual.Defs
-import Mathlib.LinearAlgebra.Dual.Lemmas
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.Analysis.Calculus.Deriv.Polynomial
-import Mathlib.LinearAlgebra.Matrix.Dual
-import Mathlib.LinearAlgebra.Matrix.Rank
-import Mathlib.LinearAlgebra.Matrix.ToLin
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
-import Mathlib.Topology.Algebra.Polynomial
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Ring
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_2C
-import LinearAlgebraDoneRightLean.Section_3A
-import LinearAlgebraDoneRightLean.Section_3B
-import LinearAlgebraDoneRightLean.Section_3C
-import LinearAlgebraDoneRightLean.Section_3D
-import LinearAlgebraDoneRightLean.Section_3E
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.LinearMap.Basic
+public import Mathlib.Algebra.Module.LinearMap.End
+public import Mathlib.Algebra.Module.Pi
+public import Mathlib.Algebra.Module.Submodule.Basic
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Data.Matrix.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.LinearAlgebra.Basis.Basic
+public import Mathlib.LinearAlgebra.Dual.Defs
+public import Mathlib.LinearAlgebra.Dual.Lemmas
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.Analysis.Calculus.Deriv.Polynomial
+public import Mathlib.LinearAlgebra.Matrix.Dual
+public import Mathlib.LinearAlgebra.Matrix.Rank
+public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
+public import Mathlib.Topology.Algebra.Polynomial
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_2C
+public import LinearAlgebraDoneRightLean.Section_3A
+public import LinearAlgebraDoneRightLean.Section_3B
+public import LinearAlgebraDoneRightLean.Section_3C
+public import LinearAlgebraDoneRightLean.Section_3D
+public import LinearAlgebraDoneRightLean.Section_3E
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 3F: Duality
 -/
+
+@[expose] public section
 
 namespace LADR.Section_3F
 

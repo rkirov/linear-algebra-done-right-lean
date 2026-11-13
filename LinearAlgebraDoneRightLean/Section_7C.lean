@@ -1,17 +1,21 @@
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Analysis.InnerProductSpace.Positive
-import Mathlib.Analysis.InnerProductSpace.Spectrum
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.LinearAlgebra.Matrix.PosDef
-import Mathlib.FieldTheory.Minpoly.Field
-import LinearAlgebraDoneRightLean.Section_6C
-import LinearAlgebraDoneRightLean.Section_7B
-import Mathlib.Tactic.Linter.Style
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Analysis.InnerProductSpace.Positive
+public import Mathlib.Analysis.InnerProductSpace.Spectrum
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.LinearAlgebra.Matrix.PosDef
+public import Mathlib.FieldTheory.Minpoly.Field
+public import LinearAlgebraDoneRightLean.Section_6C
+public import LinearAlgebraDoneRightLean.Section_7B
+public import Mathlib.Tactic.Linter.Style
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 7C: Positive Operators
 -/
+
+@[expose] public section
 
 namespace LADR.Section_7C
 
@@ -304,7 +308,7 @@ theorem tfae_isPositive (T : V →ₗ[𝕜] V) :
 operator has a positive square root. -/
 theorem exists_positive_sqrt {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
     ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ R ∘ₗ R = T :=
-  ((tfae_isPositive T).out 0 3).mp hT
+  ((tfae_isPositive T).out 1 4).mp hT
 
 /-! 7.39 Each positive operator has a *unique* positive square root.
 
@@ -431,20 +435,20 @@ theorem matrix_7_42 :
 /-- The quadratic form of {lit}`S`: {lit}`⟨S(x,y),(x,y)⟩ = x² + 2y²`. -/
 theorem inner_S_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
     ⟪S_7_41 p, p⟫_ℝ = p 0 ^ 2 + 2 * p 1 ^ 2 := by
-  simp [S_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  simp [S_7_41, PiLp.inner_apply, Fin.sum_univ_two]
   ring
 
 /-- The quadratic form of {lit}`T`: {lit}`⟨T(x,y),(x,y)⟩ = (x + y)²`. -/
 theorem inner_T_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
     ⟪T_7_41 p, p⟫_ℝ = (p 0 + p 1) ^ 2 := by
-  simp [T_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  simp [T_7_41, PiLp.inner_apply, Fin.sum_univ_two]
   ring
 
 /-- 7.41: {lit}`S` is a positive operator. -/
 theorem S_7_41_isPositive : S_7_41.IsPositive := by
   constructor
   · intro x y
-    simp [S_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    simp [S_7_41, PiLp.inner_apply, Fin.sum_univ_two]
     ring
   · intro p
     rw [inner_S_7_41, RCLike.re_to_real]
@@ -454,7 +458,7 @@ theorem S_7_41_isPositive : S_7_41.IsPositive := by
 theorem T_7_41_isPositive : T_7_41.IsPositive := by
   constructor
   · intro x y
-    simp [T_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    simp [T_7_41, PiLp.inner_apply, Fin.sum_univ_two]
     ring
   · intro p
     rw [inner_T_7_41, RCLike.re_to_real]
@@ -478,13 +482,13 @@ theorem sqrtT_7_41_sq : IsSquareRoot sqrtT_7_41 T_7_41 := by
 /-- The quadratic form of {lit}`√S`: {lit}`⟨√S(x,y),(x,y)⟩ = x² + √2·y²`. -/
 theorem inner_sqrtS_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
     ⟪sqrtS_7_41 p, p⟫_ℝ = p 0 ^ 2 + Real.sqrt 2 * p 1 ^ 2 := by
-  simp [sqrtS_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  simp [sqrtS_7_41, PiLp.inner_apply, Fin.sum_univ_two]
   ring
 
 /-- The quadratic form of {lit}`√T`: {lit}`⟨√T(x,y),(x,y)⟩ = (x + y)²/√2`. -/
 theorem inner_sqrtT_7_41 (p : EuclideanSpace ℝ (Fin 2)) :
     ⟪sqrtT_7_41 p, p⟫_ℝ = (p 0 + p 1) ^ 2 / Real.sqrt 2 := by
-  simp [sqrtT_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+  simp [sqrtT_7_41, PiLp.inner_apply, Fin.sum_univ_two]
   ring
 
 /-- 7.41: {lit}`√S` is itself positive, so by 7.39 it is *the* positive square
@@ -492,7 +496,7 @@ root of {lit}`S`. -/
 theorem sqrtS_7_41_isPositive : sqrtS_7_41.IsPositive := by
   constructor
   · intro x y
-    simp [sqrtS_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    simp [sqrtS_7_41, PiLp.inner_apply, Fin.sum_univ_two]
     ring
   · intro p
     rw [inner_sqrtS_7_41, RCLike.re_to_real]
@@ -503,7 +507,7 @@ root of {lit}`T`. -/
 theorem sqrtT_7_41_isPositive : sqrtT_7_41.IsPositive := by
   constructor
   · intro x y
-    simp [sqrtT_7_41, PiLp.inner_apply, Fin.sum_univ_two, real_inner_eq_re_inner ℝ]
+    simp [sqrtT_7_41, PiLp.inner_apply, Fin.sum_univ_two]
     ring
   · intro p
     rw [inner_sqrtT_7_41, RCLike.re_to_real]

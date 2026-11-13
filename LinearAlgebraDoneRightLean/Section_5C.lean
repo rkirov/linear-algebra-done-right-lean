@@ -1,44 +1,48 @@
-import Mathlib.Algebra.Module.LinearMap.Basic
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.GroupWithZero.Associated
-import Mathlib.Algebra.Polynomial.AlgebraMap
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.BigOperators
-import Mathlib.Algebra.Polynomial.Monic
-import Mathlib.Algebra.Polynomial.RingDivision
-import Mathlib.Algebra.Polynomial.Roots
-import Mathlib.Algebra.Polynomial.SpecificDegree
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Matrix.Block
-import Mathlib.LinearAlgebra.Matrix.Notation
-import Mathlib.Data.Real.Basic
-import Mathlib.FieldTheory.IsAlgClosed.Basic
-import Mathlib.FieldTheory.Minpoly.Field
-import Mathlib.LinearAlgebra.Dual.Defs
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.LinearAlgebra.Matrix.Charpoly.Minpoly
-import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
-import Mathlib.RingTheory.PrincipalIdealDomain
-import Mathlib.Tactic.ComputeDegree
-import Mathlib.Tactic.FinCases
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.TFAE
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_3B
-import LinearAlgebraDoneRightLean.Section_3C
-import LinearAlgebraDoneRightLean.Section_3D
-import LinearAlgebraDoneRightLean.Section_5A
-import LinearAlgebraDoneRightLean.Section_5B
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.LinearMap.Basic
+public import Mathlib.Algebra.Module.LinearMap.End
+public import Mathlib.Algebra.GroupWithZero.Associated
+public import Mathlib.Algebra.Polynomial.AlgebraMap
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.BigOperators
+public import Mathlib.Algebra.Polynomial.Monic
+public import Mathlib.Algebra.Polynomial.RingDivision
+public import Mathlib.Algebra.Polynomial.Roots
+public import Mathlib.Algebra.Polynomial.SpecificDegree
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Data.Matrix.Basic
+public import Mathlib.Data.Matrix.Block
+public import Mathlib.LinearAlgebra.Matrix.Notation
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.FieldTheory.IsAlgClosed.Basic
+public import Mathlib.FieldTheory.Minpoly.Field
+public import Mathlib.LinearAlgebra.Dual.Defs
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import Mathlib.LinearAlgebra.Matrix.Charpoly.Minpoly
+public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+public import Mathlib.RingTheory.PrincipalIdealDomain
+public import Mathlib.Tactic.ComputeDegree
+public import Mathlib.Tactic.FinCases
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.TFAE
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_3B
+public import LinearAlgebraDoneRightLean.Section_3C
+public import LinearAlgebraDoneRightLean.Section_3D
+public import LinearAlgebraDoneRightLean.Section_5A
+public import LinearAlgebraDoneRightLean.Section_5B
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 5C: Upper-Triangular Matrices
 -/
+
+@[expose] public section
 
 namespace LADR.Section_5C
 
@@ -184,7 +188,7 @@ private lemma sub_diag_maps_into {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
     · -- For {lit}`j < k` both terms already lie in
       -- {lit}`span(v₁, …, v_{k−1})`.
       apply Submodule.sub_mem
-      · have h3 := (tfae_upperTriangular hv T).out 0 2
+      · have h3 := (tfae_upperTriangular hv T).out 1 3
         have hTj := h3.mp hA j
         refine Submodule.span_mono ?_ hTj
         rintro y ⟨i, hi, rfl⟩
@@ -657,7 +661,7 @@ private lemma exists_upperTriangular_of_minpoly_prod :
         LADR.Section_2B.exists_basis_extending uW huW_li
       refine ⟨n, w, hw, ?_⟩
       -- It remains to verify 5.39(c) for the extended basis.
-      have h31 := (tfae_upperTriangular hw T).out 2 0
+      have h31 := (tfae_upperTriangular hw T).out 3 1
       apply h31.mp
       have hT_decomp : ∀ x : W, T x = f x + gamm • x := by
         intro x
@@ -684,7 +688,7 @@ private lemma exists_upperTriangular_of_minpoly_prod :
         have hwk : w k = uW k' := by
           have h := hpre k'
           rwa [show Fin.castLE hMn k' = k from Fin.ext rfl] at h
-        have h302 := (tfae_upperTriangular hu' hU_inv.restrict).out 0 2
+        have h302 := (tfae_upperTriangular hu' hU_inv.restrict).out 1 3
         have hres := h302.mp hA' k'
         have hTwk : T (w k) = ((hU_inv.restrict (u' k') : U) : W) := by
           rw [hwk]

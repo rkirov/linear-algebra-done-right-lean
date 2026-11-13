@@ -1,28 +1,31 @@
-import Mathlib.LinearAlgebra.TensorProduct.Basic
-import Mathlib.LinearAlgebra.TensorProduct.Basis
-import Mathlib.LinearAlgebra.Dimension.Constructions
-import Mathlib.LinearAlgebra.FreeModule.Finite.Matrix
-import Mathlib.LinearAlgebra.Dual.Lemmas
-import Mathlib.LinearAlgebra.Multilinear.Basic
-import Mathlib.LinearAlgebra.PiTensorProduct
-import Mathlib.LinearAlgebra.PiTensorProduct.Basis
-import Mathlib.LinearAlgebra.Matrix.Trace
-import Mathlib.Analysis.InnerProductSpace.TensorProduct
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.RingTheory.Flat.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Recall
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_2C
-import LinearAlgebraDoneRightLean.Section_3D
-import CompanionHelper
+module
+
+public import Mathlib.LinearAlgebra.TensorProduct.Basic
+public import Mathlib.LinearAlgebra.TensorProduct.Basis
+public import Mathlib.LinearAlgebra.Dimension.Constructions
+public import Mathlib.LinearAlgebra.FreeModule.Finite.Matrix
+public import Mathlib.LinearAlgebra.Dual.Lemmas
+public import Mathlib.LinearAlgebra.Multilinear.Basic
+public import Mathlib.LinearAlgebra.PiTensorProduct.Basic
+public import Mathlib.LinearAlgebra.PiTensorProduct.Basis
+public import Mathlib.LinearAlgebra.Matrix.Trace
+public import Mathlib.Analysis.InnerProductSpace.TensorProduct
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.RingTheory.Flat.Basic
+public import Mathlib.Data.Matrix.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_2C
+public import LinearAlgebraDoneRightLean.Section_3D
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 9D: Tensor Products
 -/
+
+@[expose] public section
 
 namespace LADR.Section_9D
 

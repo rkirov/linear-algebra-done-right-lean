@@ -1,23 +1,27 @@
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Analysis.InnerProductSpace.Spectrum
-import Mathlib.Analysis.InnerProductSpace.Symmetric
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
-import Mathlib.LinearAlgebra.Matrix.ToLin
-import Mathlib.LinearAlgebra.Matrix.Rank
-import Mathlib.FieldTheory.Minpoly.Field
-import Mathlib.Data.List.TFAE
-import LinearAlgebraDoneRightLean.Section_5A
-import LinearAlgebraDoneRightLean.Section_5D
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-import Mathlib.RingTheory.Polynomial.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Analysis.InnerProductSpace.Spectrum
+public import Mathlib.Analysis.InnerProductSpace.Symmetric
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
+public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.LinearAlgebra.Matrix.Rank
+public import Mathlib.FieldTheory.Minpoly.Field
+public import Mathlib.Data.List.TFAE
+public import LinearAlgebraDoneRightLean.Section_5A
+public import LinearAlgebraDoneRightLean.Section_5D
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+public import Mathlib.RingTheory.Polynomial.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 7A: Self-Adjoint and Normal Operators
 -/
+
+@[expose] public section
 
 namespace LADR.Section_7A
 
@@ -56,7 +60,7 @@ example (T : EuclideanSpace ℝ (Fin 3) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2))
     LinearMap.adjoint T y = !₂[2 * y 1, y 0, 3 * y 0] := by
   refine ext_inner_left ℝ fun x => ?_
   rw [← adjoint_inner, hT]
-  simp [PiLp.inner_apply, Fin.sum_univ_two, Fin.sum_univ_three, real_inner_eq_re_inner ℝ]
+  simp [PiLp.inner_apply, Fin.sum_univ_two, Fin.sum_univ_three]
   ring
 
 /-! 7.3 Example: for fixed {lit}`u ∈ V`, {lit}`x ∈ W`, the map {lit}`T v = ⟨v, u⟩ x`

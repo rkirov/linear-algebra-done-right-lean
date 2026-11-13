@@ -1,24 +1,27 @@
-import Mathlib.LinearAlgebra.Alternating.Basic
-import Mathlib.LinearAlgebra.Determinant
-import Mathlib.LinearAlgebra.Trace
-import Mathlib.LinearAlgebra.Multilinear.Basic
-import Mathlib.LinearAlgebra.Multilinear.TensorProduct
-import Mathlib.LinearAlgebra.Dimension.Finite
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.GroupTheory.Perm.Fin
-import Mathlib.GroupTheory.Perm.Sign
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Recall
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_2C
-import CompanionHelper
+module
+
+public import Mathlib.LinearAlgebra.Alternating.Basic
+public import Mathlib.LinearAlgebra.Determinant
+public import Mathlib.LinearAlgebra.Trace
+public import Mathlib.LinearAlgebra.Multilinear.Basic
+public import Mathlib.LinearAlgebra.Multilinear.TensorProduct
+public import Mathlib.LinearAlgebra.Dimension.Finite
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.GroupTheory.Perm.Fin
+public import Mathlib.GroupTheory.Perm.Sign
+public import Mathlib.Data.Matrix.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_2C
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 9B: Alternating Multilinear Forms
 -/
+
+@[expose] public section
 
 namespace LADR.Section_9B
 
@@ -178,7 +181,7 @@ example : Equiv.Perm.sign (Equiv.swap (0 : Fin 4) 1) = -1 :=
 /-- The permutation {lit}`(2, 3, …, m, 1)` — the rotation {name}`finRotate`
 {lit}`m` — has sign {lit}`(−1)ᵐ⁻¹`. Here {lit}`m = n + 1`. -/
 example (n : ℕ) : Equiv.Perm.sign (finRotate (n + 1)) = (-1) ^ n :=
-  sign_finRotate n
+  (sign_finRotate (n + 1)).trans (by simp)
 
 /-! 9.34 Swapping two entries in a permutation
 

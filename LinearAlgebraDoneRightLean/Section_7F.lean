@@ -1,16 +1,18 @@
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Analysis.InnerProductSpace.Spectrum
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Analysis.Normed.Operator.NNNorm
-import Mathlib.Analysis.InnerProductSpace.Dual
-import Mathlib.Topology.Algebra.Module.FiniteDimension
-import Mathlib.Data.Fin.Tuple.Sort
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import LinearAlgebraDoneRightLean.Section_7C
-import LinearAlgebraDoneRightLean.Section_7D
-import LinearAlgebraDoneRightLean.Section_7E
-import Mathlib.Tactic.Linter.Style
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Analysis.InnerProductSpace.Spectrum
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.Normed.Operator.NNNorm
+public import Mathlib.Analysis.InnerProductSpace.Dual
+public import Mathlib.Topology.Algebra.Module.FiniteDimension
+public import Mathlib.Data.Fin.Tuple.Sort
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import LinearAlgebraDoneRightLean.Section_7C
+public import LinearAlgebraDoneRightLean.Section_7D
+public import LinearAlgebraDoneRightLean.Section_7E
+public import Mathlib.Tactic.Linter.Style
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 7F: Consequences of Singular Value Decomposition
@@ -28,6 +30,8 @@ volume theorem 7.111 (proved measure-theoretically in 9C). Only Axler's
 deliberately informal box/volume *definitions* 7.108–7.110 and a few set-geometry
 image results remain in prose with reasons, as flagged below.
 -/
+
+@[expose] public section
 
 namespace LADR.Section_7F
 
@@ -240,7 +244,7 @@ noncomputable def svSortPerm (T : V →ₗ[𝕜] V) : Equiv.Perm (Fin (finrank �
 theorem singularValues_svSortPerm_antitone (T : V →ₗ[𝕜] V) {j k : Fin (finrank 𝕜 V)}
     (hjk : j ≤ k) : singularValues T (svSortPerm T k) ≤ singularValues T (svSortPerm T j) := by
   have h := Tuple.monotone_sort (fun i => -(singularValues T i)) hjk
-  simpa only [Function.comp_apply, neg_le_neg_iff] using h
+  exact le_of_neg_le_neg h
 
 theorem svd_apply_sorted (T : V →ₗ[𝕜] V) (v : V) :
     T v = ∑ j, ((singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜) •

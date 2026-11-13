@@ -1,39 +1,42 @@
-import Mathlib.Algebra.Module.Pi
-import Mathlib.Algebra.Module.Submodule.Basic
-import Mathlib.Algebra.Module.Submodule.Lattice
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Degree.Defs
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.Algebra.Polynomial.Eval.SMul
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.Basis.VectorSpace
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Defs
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.LinearAlgebra.Dimension.Constructions
-import Mathlib.LinearAlgebra.Dimension.OrzechProperty
-import Mathlib.LinearAlgebra.Dimension.StrongRankCondition
-import Mathlib.LinearAlgebra.LinearIndependent.Basic
-import Mathlib.LinearAlgebra.LinearIndependent.Defs
-import Mathlib.LinearAlgebra.LinearIndependent.Lemmas
-import Mathlib.LinearAlgebra.Span.Basic
-import Mathlib.LinearAlgebra.Span.Defs
-import Mathlib.RingTheory.Finiteness.Defs
-import Mathlib.RingTheory.Polynomial.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Recall
-import Mathlib.Tactic.Ring
-import LinearAlgebraDoneRightLean.Section_1C
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.Pi
+public import Mathlib.Algebra.Module.Submodule.Basic
+public import Mathlib.Algebra.Module.Submodule.Lattice
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.Degree.Defs
+public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.Algebra.Polynomial.Eval.SMul
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.LinearAlgebra.Basis.VectorSpace
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import Mathlib.LinearAlgebra.Dimension.Constructions
+public import Mathlib.LinearAlgebra.Dimension.OrzechProperty
+public import Mathlib.LinearAlgebra.Dimension.StrongRankCondition
+public import Mathlib.LinearAlgebra.LinearIndependent.Basic
+public import Mathlib.LinearAlgebra.LinearIndependent.Defs
+public import Mathlib.LinearAlgebra.LinearIndependent.Lemmas
+public import Mathlib.LinearAlgebra.Span.Basic
+public import Mathlib.LinearAlgebra.Span.Defs
+public import Mathlib.RingTheory.Finiteness.Defs
+public import Mathlib.RingTheory.Polynomial.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import LinearAlgebraDoneRightLean.Section_1C
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 2C: Dimension
 -/
+
+@[expose] public section
 
 namespace LADR.Section_2C
 
@@ -196,7 +199,7 @@ noncomputable def U_2_41 : Submodule ℝ (Polynomial.degreeLT ℝ 4) where
 
 /-- {lit}`(X - 5)^k` has degree {lit}`k`, hence lives in {lit}`degreeLT ℝ 4`
 when {lit}`k < 4`. -/
-private lemma xSub5_pow_mem_degreeLT (k : ℕ) (hk : k < 4) :
+lemma xSub5_pow_mem_degreeLT (k : ℕ) (hk : k < 4) :
     (Polynomial.X - Polynomial.C (5 : ℝ)) ^ k ∈ Polynomial.degreeLT ℝ 4 := by
   rw [Polynomial.mem_degreeLT]
   rw [Polynomial.degree_pow, Polynomial.degree_X_sub_C]
@@ -205,7 +208,7 @@ private lemma xSub5_pow_mem_degreeLT (k : ℕ) (hk : k < 4) :
 
 /-- The derivative of {lit}`(X - 5)^k` evaluated at {lit}`5` is {lit}`0` for
 {lit}`k ≥ 2`. -/
-private lemma xSub5_pow_derivative_eval (k : ℕ) (hk : 2 ≤ k) :
+lemma xSub5_pow_derivative_eval (k : ℕ) (hk : 2 ≤ k) :
     ((Polynomial.X - Polynomial.C (5 : ℝ)) ^ k).derivative.eval 5 = 0 := by
   obtain ⟨k', rfl⟩ : ∃ k', k = k' + 1 := ⟨k - 1, by omega⟩
   simp [Polynomial.derivative_pow, Polynomial.derivative_sub,

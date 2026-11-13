@@ -1,44 +1,48 @@
-import Mathlib.Algebra.Module.LinearMap.Basic
-import Mathlib.Algebra.Module.LinearMap.Defs
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.Algebra.Bilinear
-import Mathlib.Algebra.Module.Pi
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.RingTheory.Polynomial.Basic
-import Mathlib.RingTheory.Polynomial.DegreeLT
-import Mathlib.Tactic.ComputeDegree
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.Basis.Basic
-import Mathlib.LinearAlgebra.Basis.Defs
-import Mathlib.LinearAlgebra.Basis.VectorSpace
-import Mathlib.LinearAlgebra.Dimension.Constructions
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.LinearAlgebra.FreeModule.Finite.Matrix
-import Mathlib.LinearAlgebra.LinearIndependent.Defs
-import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
-import Mathlib.LinearAlgebra.Matrix.ToLin
-import Mathlib.LinearAlgebra.Span.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.TFAE
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_2C
-import LinearAlgebraDoneRightLean.Section_3A
-import LinearAlgebraDoneRightLean.Section_3B
-import LinearAlgebraDoneRightLean.Section_3C
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.LinearMap.Basic
+public import Mathlib.Algebra.Module.LinearMap.Defs
+public import Mathlib.Algebra.Module.LinearMap.End
+public import Mathlib.Algebra.Algebra.Bilinear
+public import Mathlib.Algebra.Module.Pi
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.RingTheory.Polynomial.Basic
+public import Mathlib.RingTheory.Polynomial.DegreeLT
+public import Mathlib.Tactic.ComputeDegree
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Data.Matrix.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.LinearAlgebra.Basis.Basic
+public import Mathlib.LinearAlgebra.Basis.Defs
+public import Mathlib.LinearAlgebra.Basis.VectorSpace
+public import Mathlib.LinearAlgebra.Dimension.Constructions
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import Mathlib.LinearAlgebra.FreeModule.Finite.Matrix
+public import Mathlib.LinearAlgebra.LinearIndependent.Defs
+public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.LinearAlgebra.Span.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.TFAE
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_2C
+public import LinearAlgebraDoneRightLean.Section_3A
+public import LinearAlgebraDoneRightLean.Section_3B
+public import LinearAlgebraDoneRightLean.Section_3C
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 3D: Invertibility and Isomorphisms
 -/
+
+@[expose] public section
 
 namespace LADR.Section_3D
 
@@ -273,17 +277,17 @@ theorem tfae_isInvertible [Finite F V] [Finite F W]
 theorem injective_iff_surjective [Finite F V] [Finite F W]
     (h : finrank F V = finrank F W) (T : V →ₗ[F] W) :
     Function.Injective T ↔ Function.Surjective T :=
-  (tfae_isInvertible h T).out 1 2
+  (tfae_isInvertible h T).out 2 3
 
 theorem isInvertible_iff_injective [Finite F V] [Finite F W]
     (h : finrank F V = finrank F W) (T : V →ₗ[F] W) :
     IsInvertible T ↔ Function.Injective T :=
-  (tfae_isInvertible h T).out 0 1
+  (tfae_isInvertible h T).out 1 2
 
 theorem isInvertible_iff_surjective [Finite F V] [Finite F W]
     (h : finrank F V = finrank F W) (T : V →ₗ[F] W) :
     IsInvertible T ↔ Function.Surjective T :=
-  (tfae_isInvertible h T).out 0 2
+  (tfae_isInvertible h T).out 1 3
 
 /-! 3.67 Example: for every {lit}`q ∈ 𝒫(ℝ)` there exists {lit}`p ∈ 𝒫(ℝ)` with
 {lit}`((x² + 5x + 7)·p)'' = q`.

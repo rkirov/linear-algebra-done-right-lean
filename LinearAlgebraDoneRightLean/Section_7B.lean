@@ -1,22 +1,26 @@
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Analysis.InnerProductSpace.Spectrum
-import Mathlib.Analysis.InnerProductSpace.Symmetric
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.FieldTheory.Minpoly.Field
-import Mathlib.Algebra.Polynomial.Splits
-import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
-import Mathlib.LinearAlgebra.Matrix.ToLin
-import Mathlib.Analysis.Matrix.Hermitian
-import LinearAlgebraDoneRightLean.Section_7A
-import LinearAlgebraDoneRightLean.Section_6B
-import LinearAlgebraDoneRightLean.Section_6C
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Analysis.InnerProductSpace.Spectrum
+public import Mathlib.Analysis.InnerProductSpace.Symmetric
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.FieldTheory.Minpoly.Field
+public import Mathlib.Algebra.Polynomial.Splits
+public import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
+public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.Analysis.Matrix.Hermitian
+public import LinearAlgebraDoneRightLean.Section_7A
+public import LinearAlgebraDoneRightLean.Section_6B
+public import LinearAlgebraDoneRightLean.Section_6C
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 7B: Spectral Theorem
 -/
+
+@[expose] public section
 
 namespace LADR.Section_7B
 
@@ -210,7 +214,7 @@ pattern. -/
 theorem spectral_orthonormal_eigenbasis {V : Type*} [NormedAddCommGroup V]
     [InnerProductSpace ℝ V] [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V)
     (hT : T.IsSymmetric) : HasOrthonormalEigenbasis T :=
-  ((tfae_real_spectral T).out 0 2).mp hT
+  ((tfae_real_spectral T).out 1 3).mp hT
 
 /-- The eigenvalues in the spectral decomposition are real, as expected for a
 self-adjoint operator (7.12). -/
@@ -438,7 +442,7 @@ theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace �
       ∀ k, T (e k) = ⟪e k, T (e k)⟫_ℂ • e k := by
   obtain ⟨n, e, he, hUT⟩ := LADR.Section_6B.exists_orthonormal_upperTriangular_complex T
   have hflag : ∀ k, T (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) :=
-    ((LADR.Section_5C.tfae_upperTriangular he T).out 0 2).mp hUT
+    ((LADR.Section_5C.tfae_upperTriangular he T).out 1 3).mp hUT
   exact ⟨n, e, normal_ut_diagonal T hN e hflag⟩
 
 /-- 7.31 (complex spectral theorem) The three-way equivalence: for {lit}`𝔽 = ℂ`,

@@ -90,6 +90,6 @@ alignment:
   statements: [] # too many to state, one in each chapter.
 
 acknowledgements: >-
-  Built on Lean 4 and mathlib (leanprover-community), pinned at v4.30.0-rc2.
+  Built on Lean 4 and mathlib (leanprover-community), pinned at v4.35.0, using the Lean module system.
   Uses companion-helper (https://github.com/rkirov/companion-helper) and Verso.
   Modeled on Terence Tao's Lean companion to Analysis I.

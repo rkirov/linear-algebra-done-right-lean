@@ -1,10 +1,12 @@
-import Mathlib.Analysis.InnerProductSpace.Basic
-import Mathlib.MeasureTheory.Integral.Bochner.Basic
-import Mathlib.MeasureTheory.Constructions.UnitInterval
-import Mathlib.Topology.ContinuousMap.Compact
-import Mathlib.MeasureTheory.Function.LocallyIntegrable
-import Mathlib.MeasureTheory.Measure.OpenPos
-import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Basic
+public import Mathlib.MeasureTheory.Integral.Bochner.Basic
+public import Mathlib.MeasureTheory.Constructions.UnitInterval
+public import Mathlib.Topology.ContinuousMap.Compact
+public import Mathlib.MeasureTheory.Function.LocallyIntegrable
+public import Mathlib.MeasureTheory.Measure.OpenPos
+public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 
 /-!
 # Skippable infrastructure: the L² inner product space {lit}`C[a,b]`
@@ -26,6 +28,8 @@ space instance is gated on {lit}`Fact (a < b)` — for the degenerate interval {
 the interval subtype is a single point of Lebesgue measure zero, on which
 {lit}`⟨f, f⟩ = 0` for every {lit}`f`.
 -/
+
+@[expose] public section
 
 open MeasureTheory
 

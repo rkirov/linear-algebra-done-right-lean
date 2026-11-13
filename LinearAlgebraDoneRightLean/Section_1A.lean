@@ -1,16 +1,19 @@
-import Mathlib.Algebra.Module.Pi
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Fin.VecNotation
-import Mathlib.Data.Real.Sqrt
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Recall
-import Mathlib.Tactic.Ring
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.Pi
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Data.Fin.VecNotation
+public import Mathlib.Analysis.Real.Sqrt
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 1A: ℝⁿ and ℂⁿ
 -/
+
+@[expose] public section
 
 namespace LADR.Section_1A
 

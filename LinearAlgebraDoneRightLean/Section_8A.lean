@@ -1,33 +1,37 @@
-import Mathlib.Algebra.GroupWithZero.Associated
-import Mathlib.Algebra.Polynomial.AlgebraMap
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Algebra.Polynomial.Monic
-import Mathlib.Algebra.Polynomial.RingDivision
-import Mathlib.Data.Complex.Basic
-import Mathlib.FieldTheory.IsAlgClosed.Basic
-import Mathlib.FieldTheory.Minpoly.Field
-import Mathlib.LinearAlgebra.Dimension.DivisionRing
-import Mathlib.LinearAlgebra.Eigenspace.Basic
-import Mathlib.LinearAlgebra.Eigenspace.Minpoly
-import Mathlib.LinearAlgebra.Eigenspace.Triangularizable
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.RingTheory.Nilpotent.Basic
-import Mathlib.RingTheory.Nilpotent.Defs
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import LinearAlgebraDoneRightLean.Section_3A
-import LinearAlgebraDoneRightLean.Section_3B
-import LinearAlgebraDoneRightLean.Section_5A
-import LinearAlgebraDoneRightLean.Section_5B
-import LinearAlgebraDoneRightLean.Section_5C
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.GroupWithZero.Associated
+public import Mathlib.Algebra.Polynomial.AlgebraMap
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import Mathlib.Algebra.Polynomial.Monic
+public import Mathlib.Algebra.Polynomial.RingDivision
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.FieldTheory.IsAlgClosed.Basic
+public import Mathlib.FieldTheory.Minpoly.Field
+public import Mathlib.LinearAlgebra.Dimension.DivisionRing
+public import Mathlib.LinearAlgebra.Eigenspace.Basic
+public import Mathlib.LinearAlgebra.Eigenspace.Minpoly
+public import Mathlib.LinearAlgebra.Eigenspace.Triangularizable
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import Mathlib.RingTheory.Nilpotent.Basic
+public import Mathlib.RingTheory.Nilpotent.Defs
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import LinearAlgebraDoneRightLean.Section_3A
+public import LinearAlgebraDoneRightLean.Section_3B
+public import LinearAlgebraDoneRightLean.Section_5A
+public import LinearAlgebraDoneRightLean.Section_5B
+public import LinearAlgebraDoneRightLean.Section_5C
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 8A: Generalized Eigenvectors and Nilpotent Operators
 -/
+
+@[expose] public section
 
 namespace LADR.Section_8A
 
@@ -401,7 +405,7 @@ theorem zero_hasEigenvalue_of_isNilpotent [Finite F V] [Nontrivial V]
         exact fun hh => ih (hinj (hh.trans (map_zero T).symm))
     exact hne (finrank F V)
       (by rw [pow_finrank_eq_zero_of_isNilpotent T h, LinearMap.zero_apply])
-  have htfae := (tfae_isEigenvalue T 0).out 0 1
+  have htfae := (tfae_isEigenvalue T 0).out 1 2
   rw [htfae]
   simpa using hnotinj
 

@@ -1,13 +1,15 @@
-import Mathlib.Algebra.MvPolynomial.PDeriv
-import Mathlib.Algebra.MvPolynomial.Funext
-import Mathlib.Algebra.Polynomial.Roots
-import Mathlib.Analysis.Calculus.Deriv.Polynomial
-import Mathlib.Analysis.Calculus.DerivativeTest
-import Mathlib.Analysis.Calculus.LocalExtr.Basic
-import Mathlib.RingTheory.MvPolynomial.Basic
-import Mathlib.Topology.Algebra.MvPolynomial
-import Mathlib.Topology.Algebra.Polynomial
-import Mathlib.Topology.Order.Compact
+module
+
+public import Mathlib.Algebra.MvPolynomial.PDeriv
+public import Mathlib.Algebra.MvPolynomial.Funext
+public import Mathlib.Algebra.Polynomial.Roots
+public import Mathlib.Analysis.Calculus.Deriv.Polynomial
+public import Mathlib.Analysis.Calculus.DerivativeTest
+public import Mathlib.Analysis.Calculus.LocalExtr.Basic
+public import Mathlib.RingTheory.MvPolynomial.Basic
+public import Mathlib.Topology.Algebra.MvPolynomial
+public import Mathlib.Topology.Algebra.Polynomial
+public import Mathlib.Topology.Order.Compact
 
 /-!
 # Skippable infrastructure: the maximum principle for harmonic polynomials
@@ -31,6 +33,8 @@ ray through the origin it is a one-variable polynomial with infinitely many root
 We also record that a partial derivative lowers the total degree, used to set up
 the finite-dimensional linear map in 6A.35.
 -/
+
+@[expose] public section
 
 namespace LADR.HarmonicPolynomial
 

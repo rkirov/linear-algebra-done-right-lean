@@ -1,40 +1,44 @@
-import Mathlib.LinearAlgebra.Determinant
-import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
-import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
-import Mathlib.LinearAlgebra.Matrix.Block
-import Mathlib.LinearAlgebra.Matrix.ToLin
-import Mathlib.LinearAlgebra.Matrix.RowCol
-import Mathlib.LinearAlgebra.Vandermonde
-import Mathlib.LinearAlgebra.Charpoly.Basic
-import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
-import Mathlib.LinearAlgebra.Matrix.Charpoly.Eigs
-import Mathlib.LinearAlgebra.Eigenspace.Basic
-import Mathlib.LinearAlgebra.Eigenspace.Charpoly
-import Mathlib.LinearAlgebra.Dual.Defs
-import Mathlib.FieldTheory.IsAlgClosed.Basic
-import Mathlib.Analysis.Complex.Polynomial.Basic
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.RingTheory.Nilpotent.Defs
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Analysis.InnerProductSpace.Positive
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.MeasureTheory.Measure.Lebesgue.EqHaar
-import Mathlib.RingTheory.MvPolynomial.Symmetric.Defs
-import Mathlib.Analysis.Calculus.Deriv.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Linter.Style
-import LinearAlgebraDoneRightLean.Section_3D
-import LinearAlgebraDoneRightLean.Section_7C
-import LinearAlgebraDoneRightLean.Section_7D
-import LinearAlgebraDoneRightLean.Section_7E
-import LinearAlgebraDoneRightLean.Section_7F
-import CompanionHelper
+module
+
+public import Mathlib.LinearAlgebra.Determinant
+public import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
+public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+public import Mathlib.LinearAlgebra.Matrix.Block
+public import Mathlib.LinearAlgebra.Matrix.ToLin
+public import Mathlib.LinearAlgebra.Matrix.RowCol
+public import Mathlib.LinearAlgebra.Vandermonde
+public import Mathlib.LinearAlgebra.Charpoly.Basic
+public import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
+public import Mathlib.LinearAlgebra.Matrix.Charpoly.Eigs
+public import Mathlib.LinearAlgebra.Eigenspace.Basic
+public import Mathlib.LinearAlgebra.Eigenspace.Charpoly
+public import Mathlib.LinearAlgebra.Dual.Defs
+public import Mathlib.FieldTheory.IsAlgClosed.Basic
+public import Mathlib.Analysis.Complex.Polynomial.Basic
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.RingTheory.Nilpotent.Defs
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Analysis.InnerProductSpace.Positive
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.MeasureTheory.Measure.Lebesgue.EqHaar
+public import Mathlib.RingTheory.MvPolynomial.Symmetric.Defs
+public import Mathlib.Analysis.Calculus.Deriv.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.Linter.Style
+public import LinearAlgebraDoneRightLean.Section_3D
+public import LinearAlgebraDoneRightLean.Section_7C
+public import LinearAlgebraDoneRightLean.Section_7D
+public import LinearAlgebraDoneRightLean.Section_7E
+public import LinearAlgebraDoneRightLean.Section_7F
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 9C: Determinants
 -/
+
+@[expose] public section
 
 namespace LADR.Section_9C
 
@@ -507,7 +511,7 @@ theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
       rw [hAQR, Matrix.det_mul, norm_mul, hQdet, one_mul,
         Matrix.det_of_upperTriangular hRupper, norm_prod]
     rw [hnormdet]
-    refine Finset.prod_le_prod (fun i _ => norm_nonneg _) (fun i _ => ?_)
+    refine Finset.prod_le_prod₀ (fun i _ => norm_nonneg _) (fun i _ => ?_)
     -- ‖R i i‖ ≤ ‖col i‖
     have hARR : Aᴴ * A = Rᴴ * R := by
       have hQQ : Qᴴ * Q = 1 := (Matrix.mem_unitaryGroup_iff').mp hQ

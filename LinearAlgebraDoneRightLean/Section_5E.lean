@@ -1,35 +1,39 @@
-import Mathlib.Algebra.Module.LinearMap.Basic
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.MvPolynomial.PDeriv
-import Mathlib.Algebra.Polynomial.AlgebraMap
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.Dual.Defs
-import Mathlib.LinearAlgebra.Eigenspace.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.LinearAlgebra.Matrix.IsDiag
-import Mathlib.RingTheory.MvPolynomial.Basic
-import Mathlib.Tactic.FinCases
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Ring
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_2C
-import LinearAlgebraDoneRightLean.Section_3C
-import LinearAlgebraDoneRightLean.Section_3D
-import LinearAlgebraDoneRightLean.Section_3E
-import LinearAlgebraDoneRightLean.Section_5A
-import LinearAlgebraDoneRightLean.Section_5B
-import LinearAlgebraDoneRightLean.Section_5C
-import LinearAlgebraDoneRightLean.Section_5D
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.LinearMap.Basic
+public import Mathlib.Algebra.Module.LinearMap.End
+public import Mathlib.Algebra.MvPolynomial.PDeriv
+public import Mathlib.Algebra.Polynomial.AlgebraMap
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Data.Matrix.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.LinearAlgebra.Dual.Defs
+public import Mathlib.LinearAlgebra.Eigenspace.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import Mathlib.LinearAlgebra.Matrix.IsDiag
+public import Mathlib.RingTheory.MvPolynomial.Basic
+public import Mathlib.Tactic.FinCases
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_2C
+public import LinearAlgebraDoneRightLean.Section_3C
+public import LinearAlgebraDoneRightLean.Section_3D
+public import LinearAlgebraDoneRightLean.Section_3E
+public import LinearAlgebraDoneRightLean.Section_5A
+public import LinearAlgebraDoneRightLean.Section_5B
+public import LinearAlgebraDoneRightLean.Section_5C
+public import LinearAlgebraDoneRightLean.Section_5D
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 5E: Commuting Operators
 -/
+
+@[expose] public section
 
 namespace LADR.Section_5E
 
@@ -357,13 +361,13 @@ private lemma simul_upperTriangular_aux :
       -- Let {lit}`W` be a subspace with {lit}`V = span(v₁) ⊕ W` (2.33), and
       -- {lit}`P : V → W` the projection {lit}`P(a v₁ + w) = w`.
       obtain ⟨W, hUW⟩ := LADR.Section_2B.exists_isCompl U
-      set P : V →ₗ[ℂ] W := W.linearProjOfIsCompl U hUW.symm with hP_def
-      have hPw : ∀ w : W, P w = w := W.linearProjOfIsCompl_apply_left hUW.symm
-      have hPv₁ : P v₁ = 0 := W.linearProjOfIsCompl_apply_right' hUW.symm _
+      set P : V →ₗ[ℂ] W := W.projectionOnto U hUW.symm with hP_def
+      have hPw : ∀ w : W, P w = w := W.projectionOnto_apply_left hUW.symm
+      have hPv₁ : P v₁ = 0 := W.projectionOnto_apply_of_mem_right hUW.symm
         (Submodule.mem_span_singleton_self v₁)
       -- {lit}`x − P x ∈ span(v₁)`, i.e. {lit}`x = a v₁ + P x`.
       have hdecomp : ∀ x : V, x - (P x : V) ∈ U := fun x =>
-        (W.linearProjOfIsCompl_apply_eq_zero_iff hUW.symm).mp
+        (W.projectionOnto_apply_eq_zero_iff hUW.symm).mp
           (by rw [map_sub, hPw, sub_self])
       -- If {lit}`R(span v₁) ⊆ span v₁`, then {lit}`P(R(P x)) = P(R x)`,
       -- because {lit}`R(x − P x) ∈ span(v₁)` and {lit}`P v₁ = 0`.
@@ -373,7 +377,7 @@ private lemma simul_upperTriangular_aux :
           rw [← map_sub]
           exact hR _ (hdecomp x)
         rw [← sub_eq_zero, ← map_sub,
-          W.linearProjOfIsCompl_apply_eq_zero_iff hUW.symm]
+          W.projectionOnto_apply_eq_zero_iff hUW.symm]
         rw [← neg_mem_iff, neg_sub]
         exact h
       -- Define {lit}`Ŝ w = P(S w)` and {lit}`T̂ w = P(T w)`; they commute,
@@ -431,7 +435,7 @@ private lemma simul_upperTriangular_aux :
           (_ : IsUpperTriangular (matrixOf hwl hwl (hat R))),
           IsUpperTriangular (matrixOf hv_basis hv_basis R) := by
         intro R _ lamR hlamR hAR
-        apply ((tfae_upperTriangular hv_basis R).out 2 0).mp
+        apply ((tfae_upperTriangular hv_basis R).out 3 1).mp
         intro k
         induction k using Fin.cases with
         | zero =>
@@ -443,7 +447,7 @@ private lemma simul_upperTriangular_aux :
         | succ i =>
           -- {lit}`R vₖ = a v₁ + R̂ vₖ` with {lit}`R̂ vₖ ∈ span(v₂, …, vₖ)`
           -- (upper-triangularity of {lit}`R̂`).
-          have hq30 := (tfae_upperTriangular hwl (hat R)).out 0 2
+          have hq30 := (tfae_upperTriangular hwl (hat R)).out 1 3
           have hq3 := hq30.mp hAR i
           have hsucc : v i.succ = wl i := rfl
           have hmem : R (wl i : V) ∈

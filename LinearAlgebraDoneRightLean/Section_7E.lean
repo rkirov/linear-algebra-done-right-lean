@@ -1,16 +1,21 @@
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Analysis.InnerProductSpace.Spectrum
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.LinearAlgebra.Matrix.Notation
-import LinearAlgebraDoneRightLean.Section_7B
-import LinearAlgebraDoneRightLean.Section_7C
-import LinearAlgebraDoneRightLean.Section_7D
-import Mathlib.Tactic.Linter.Style
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Analysis.InnerProductSpace.Spectrum
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.LinearAlgebra.Matrix.Notation
+public import Mathlib.LinearAlgebra.Eigenspace.Matrix
+public import LinearAlgebraDoneRightLean.Section_7B
+public import LinearAlgebraDoneRightLean.Section_7C
+public import LinearAlgebraDoneRightLean.Section_7D
+public import Mathlib.Tactic.Linter.Style
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 7E: Singular Value Decomposition
 -/
+
+@[expose] public section
 
 namespace LADR.Section_7E
 

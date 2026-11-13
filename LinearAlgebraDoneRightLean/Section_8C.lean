@@ -1,26 +1,30 @@
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.Data.Complex.Basic
-import Mathlib.Dynamics.Newton
-import Mathlib.FieldTheory.IsAlgClosed.Basic
-import Mathlib.FieldTheory.Minpoly.Field
-import Mathlib.LinearAlgebra.Charpoly.Basic
-import Mathlib.LinearAlgebra.Eigenspace.Basic
-import Mathlib.LinearAlgebra.Eigenspace.Minpoly
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.JordanChevalley
-import Mathlib.LinearAlgebra.Semisimple
-import Mathlib.RingTheory.Adjoin.Polynomial.Basic
-import Mathlib.RingTheory.Nilpotent.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import LinearAlgebraDoneRightLean.Section_5D
-import LinearAlgebraDoneRightLean.Section_8A
-import LinearAlgebraDoneRightLean.Section_8B
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Dynamics.Newton
+public import Mathlib.FieldTheory.IsAlgClosed.Basic
+public import Mathlib.FieldTheory.Minpoly.Field
+public import Mathlib.LinearAlgebra.Charpoly.Basic
+public import Mathlib.LinearAlgebra.Eigenspace.Basic
+public import Mathlib.LinearAlgebra.Eigenspace.Minpoly
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.JordanChevalley
+public import Mathlib.LinearAlgebra.Semisimple
+public import Mathlib.RingTheory.Adjoin.Polynomial.Basic
+public import Mathlib.RingTheory.Nilpotent.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import LinearAlgebraDoneRightLean.Section_5D
+public import LinearAlgebraDoneRightLean.Section_8A
+public import LinearAlgebraDoneRightLean.Section_8B
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 8C: Consequences of Generalized Eigenspace Decomposition
 -/
+
+@[expose] public section
 
 namespace LADR.Section_8C
 
@@ -118,15 +122,16 @@ theorem glue_endo {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {ι :
     (f : ∀ i, A i →ₗ[R] A i) :
     ∃ g : M →ₗ[R] M, ∀ i (x : A i), g (x : M) = (f i x : M) := by
   set e : (⨁ i, A i) ≃ₗ[R] M := LinearEquiv.ofBijective (DirectSum.coeLinearMap A) hA with he
+  have he_apply : ∀ y, e y = DirectSum.coeLinearMap A y := fun _ => rfl
   set D : (⨁ i, A i) →ₗ[R] (⨁ i, A i) :=
     DirectSum.toModule R ι _ (fun i => (DirectSum.lof R ι (fun i => A i) i) ∘ₗ f i) with hD
   refine ⟨e.toLinearMap ∘ₗ D ∘ₗ e.symm.toLinearMap, fun i x => ?_⟩
   have hex : e.symm (x : M) = DirectSum.lof R ι (fun i => A i) i x := by
     apply e.injective
-    rw [LinearEquiv.apply_symm_apply, he, LinearEquiv.ofBijective_apply,
+    rw [LinearEquiv.apply_symm_apply, he_apply,
       DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
   show e (D (e.symm (x : M))) = (f i x : M)
-  rw [hex, hD, DirectSum.toModule_lof, LinearMap.comp_apply, he, LinearEquiv.ofBijective_apply,
+  rw [hex, hD, DirectSum.toModule_lof, LinearMap.comp_apply, he_apply,
     DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
 
 open DirectSum in
@@ -139,10 +144,11 @@ theorem exists_sqComp_of_forall_restrict {R M : Type*} [CommRing R] [AddCommGrou
   obtain ⟨g, hg⟩ := glue_endo A hA f
   refine ⟨g, ?_⟩
   set e : (⨁ i, A i) ≃ₗ[R] M := LinearEquiv.ofBijective (DirectSum.coeLinearMap A) hA with he
+  have he_apply : ∀ y, e y = DirectSum.coeLinearMap A y := fun _ => rfl
   have key : (g ∘ₗ g) ∘ₗ e.toLinearMap = T ∘ₗ e.toLinearMap := by
     refine DirectSum.linearMap_ext _ fun i => LinearMap.ext fun x => ?_
     have hei : e (DirectSum.lof R ι (fun i => A i) i x) = (x : M) := by
-      rw [he, LinearEquiv.ofBijective_apply, DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
+      rw [he_apply, DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
     simp only [LinearMap.comp_apply, LinearEquiv.coe_coe, hei]
     rw [hg i x, hg i (f i x)]
     exact hf i x
@@ -191,9 +197,8 @@ theorem exists_sqComp_of_bijective {V : Type*} [AddCommGroup V] [Module ℂ V]
       have hSc : S ∘ₗ S = 1 + μ⁻¹ • N := by rw [← Module.End.mul_eq_comp, ← pow_two]; exact hS
       have hTres : T.restrict (hmaps μ) = μ • 1 + N := by
         ext y
-        simp only [LinearMap.add_apply, LinearMap.smul_apply, Module.End.one_apply,
-          Submodule.coe_add, Submodule.coe_smul, hNval, LinearMap.restrict_coe_apply,
-          LinearMap.sub_apply, Module.algebraMap_end_apply]
+        show T (y : V) = μ • (y : V) + (T (y : V) - algebraMap ℂ (Module.End ℂ V) μ (y : V))
+        rw [Module.algebraMap_end_apply]
         abel
       refine ⟨z • S, ?_⟩
       rw [hTres, LinearMap.smul_comp, LinearMap.comp_smul, smul_smul, ← pow_two, hz, hSc,
@@ -201,7 +206,8 @@ theorem exists_sqComp_of_bijective {V : Type*} [AddCommGroup V] [Module ℂ V]
   choose f hf using hper
   refine exists_sqComp_of_forall_restrict (fun μ : ℂ => maxGenEigenspace T μ)
     (LADR.Section_8B.isInternal_maxGenEigenspace T) T f (fun μ x => ?_)
-  rw [← LinearMap.comp_apply, hf μ, LinearMap.restrict_coe_apply]
+  rw [← LinearMap.comp_apply, hf μ]
+  rfl
 
 /-! Axler's closing remark: by imitating the same technique (using {lit}`k`-th
 roots of {lit}`I + Tₖ/λₖ` and of the scalars {lit}`λₖ`) one shows that over
@@ -564,7 +570,8 @@ theorem hasJordanBasis (T : V →ₗ[ℂ] V) : HasJordanBasis T := by
   have hbridge : ∀ (μ : ℂ) (i : ιμ μ) (j : ℕ),
       ((T - μ • 1) ^ j) (↑(vμ μ i) : V) = ↑((N μ ^ j) (vμ μ i)) := by
     intro μ i j
-    rw [hNdef, coe_restrict_pow, Algebra.algebraMap_eq_smul_one]
+    rw [hNdef, ← Algebra.algebraMap_eq_smul_one]
+    exact (coe_restrict_pow _ (hmaps μ) j _).symm
   have hFeq : (fun p : Σ a : Σ μ : ℂ, ιμ μ, Fin (Mμ a.1 a.2) =>
       ((T - p.1.1 • 1) ^ (p.2 : ℕ)) (↑(vμ p.1.1 p.1.2) : V))
       = ⇑B ∘ e := by

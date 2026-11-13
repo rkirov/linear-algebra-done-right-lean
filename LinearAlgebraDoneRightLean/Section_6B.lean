@@ -1,21 +1,24 @@
-import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Analysis.InnerProductSpace.Dual
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
-import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
-import Mathlib.Analysis.SpecialFunctions.Complex.Arg
-import LinearAlgebraDoneRightLean.Section_5C
-import LinearAlgebraDoneRightLean.Section_6A
-import LinearAlgebraDoneRightLean.L2Interval
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Recall
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.InnerProductSpace.Dual
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
+public import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
+public import Mathlib.Analysis.SpecialFunctions.Complex.Arg
+public import LinearAlgebraDoneRightLean.Section_5C
+public import LinearAlgebraDoneRightLean.Section_6A
+public import LinearAlgebraDoneRightLean.L2Interval
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 6B: Orthonormal Bases
 -/
+
+@[expose] public section
 
 namespace LADR.Section_6B
 
@@ -164,10 +167,8 @@ theorem example_6_23e : ¬ Orthonormal ℝ
       (show L2C (-1) 1 from
         (⟨fun x => Real.sqrt (5 / 2) * x ^ 2, by fun_prop⟩ : C(ℝ, ℝ)).restrict _)] := by
   intro h
-  have h02 := h.2 (show (0 : Fin 3) ≠ 2 by decide)
-  simp only [Matrix.cons_val_zero, Matrix.cons_val_two, Matrix.tail_cons,
-    Matrix.head_cons] at h02
-  rw [example_6_23e_inner] at h02
+  have h02 : Real.sqrt 5 / 3 = 0 :=
+    example_6_23e_inner.symm.trans (h.2 (show (0 : Fin 3) ≠ 2 by decide))
   have : 0 < Real.sqrt 5 := by positivity
   linarith
 
@@ -757,10 +758,10 @@ theorem exists_orthonormal_upperTriangular_of_basis {n : ℕ} {v : Fin n → V}
       e.orthonormal.linearIndependent (by rw [hcard, Fintype.card_fin])
   refine ⟨e, he, fun T hA => ?_⟩
   have hflag : ∀ k, T (v k) ∈ span 𝕜 (v '' {i | i ≤ k}) :=
-    ((tfae_upperTriangular hv T).out 0 2).mp hA
+    ((tfae_upperTriangular hv T).out 1 3).mp hA
   have hflag_e : ∀ k, T (e k) ∈ span 𝕜 (e '' {i | i ≤ k}) := by
     intro k; rw [hspan_gs k]; exact flag_invariant v T hflag k (e k) (hek_mem k)
-  exact ((tfae_upperTriangular he T).out 2 0).mp hflag_e
+  exact ((tfae_upperTriangular he T).out 3 1).mp hflag_e
 
 /-- 6.37, one operator: if {lit}`T` is upper-triangular with respect to some basis, it
 is upper-triangular with respect to some orthonormal basis. -/
@@ -929,7 +930,7 @@ theorem integral_id_mul_cos_pi : (∫ t in (-1:ℝ)..1, t * Real.cos (Real.pi * 
     have e1 := ((hasDerivAt_id t).div_const Real.pi).mul hsin
     have e2 := (hasDerivAt_const t (1 / Real.pi ^ 2)).mul hcos
     have hsum := e1.add e2
-    convert hsum using 1
+    refine hsum.congr_deriv ?_
     simp only [Function.comp_apply, id_eq]
     field_simp
     ring
@@ -956,7 +957,7 @@ theorem integral_sq_mul_cos_pi :
     have e2 := (((hasDerivAt_id t).const_mul 2).div_const (Real.pi ^ 2)).mul hcos
     have e3 := (hasDerivAt_const t (-(2 / Real.pi ^ 3))).mul hsin
     have hsum := (e1.add e2).add e3
-    convert hsum using 1
+    refine hsum.congr_deriv ?_
     simp only [Function.comp_apply, id_eq]
     field_simp
     ring
@@ -972,7 +973,8 @@ theorem integral_q644 : (∫ t in (-1:ℝ)..1, 15 / (2 * Real.pi ^ 2) * (1 - 3 *
       (15 / (2 * Real.pi ^ 2) * (1 - 3 * t ^ 2)) t := by
     intro t
     have := ((hasDerivAt_id t).sub (hasDerivAt_pow 3 t)).const_mul (15 / (2 * Real.pi ^ 2))
-    convert this using 1
+    refine this.congr_deriv ?_
+    norm_num
   rw [intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hg t)
     ((by fun_prop : Continuous fun t : ℝ =>
       15 / (2 * Real.pi ^ 2) * (1 - 3 * t ^ 2)).intervalIntegrable _ _)]

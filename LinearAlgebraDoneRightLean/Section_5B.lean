@@ -1,44 +1,48 @@
-import Mathlib.Algebra.Algebra.Bilinear
-import Mathlib.Algebra.Module.LinearMap.Basic
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.Module.Submodule.Basic
-import Mathlib.Algebra.Polynomial.AlgebraMap
-import Mathlib.Algebra.Polynomial.Basic
-import Mathlib.Algebra.Polynomial.BigOperators
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Algebra.Polynomial.FieldDivision
-import Mathlib.Algebra.Polynomial.Roots
-import Mathlib.Analysis.Complex.Polynomial.Basic
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.FieldTheory.IsAlgClosed.Basic
-import Mathlib.FieldTheory.Minpoly.Field
-import Mathlib.LinearAlgebra.Charpoly.Basic
-import Mathlib.LinearAlgebra.Dual.Defs
-import Mathlib.LinearAlgebra.Eigenspace.Minpoly
-import Mathlib.LinearAlgebra.Eigenspace.Triangularizable
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.LinearAlgebra.Quotient.Basic
-import Mathlib.Tactic.ComputeDegree
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.LinearCombination
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Ring
-import LinearAlgebraDoneRightLean.Section_2A
-import LinearAlgebraDoneRightLean.Section_2B
-import LinearAlgebraDoneRightLean.Section_3B
-import LinearAlgebraDoneRightLean.Section_3C
-import LinearAlgebraDoneRightLean.Section_3D
-import LinearAlgebraDoneRightLean.Section_3E
-import LinearAlgebraDoneRightLean.Chapter_4
-import LinearAlgebraDoneRightLean.Section_5A
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Algebra.Bilinear
+public import Mathlib.Algebra.Module.LinearMap.Basic
+public import Mathlib.Algebra.Module.LinearMap.End
+public import Mathlib.Algebra.Module.Submodule.Basic
+public import Mathlib.Algebra.Polynomial.AlgebraMap
+public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.BigOperators
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import Mathlib.Algebra.Polynomial.FieldDivision
+public import Mathlib.Algebra.Polynomial.Roots
+public import Mathlib.Analysis.Complex.Polynomial.Basic
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.FieldTheory.IsAlgClosed.Basic
+public import Mathlib.FieldTheory.Minpoly.Field
+public import Mathlib.LinearAlgebra.Charpoly.Basic
+public import Mathlib.LinearAlgebra.Dual.Defs
+public import Mathlib.LinearAlgebra.Eigenspace.Minpoly
+public import Mathlib.LinearAlgebra.Eigenspace.Triangularizable
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+public import Mathlib.LinearAlgebra.Quotient.Basic
+public import Mathlib.Tactic.ComputeDegree
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import LinearAlgebraDoneRightLean.Section_2A
+public import LinearAlgebraDoneRightLean.Section_2B
+public import LinearAlgebraDoneRightLean.Section_3B
+public import LinearAlgebraDoneRightLean.Section_3C
+public import LinearAlgebraDoneRightLean.Section_3D
+public import LinearAlgebraDoneRightLean.Section_3E
+public import LinearAlgebraDoneRightLean.Chapter_4
+public import LinearAlgebraDoneRightLean.Section_5A
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 5B: The Minimal Polynomial
 -/
+
+@[expose] public section
 
 namespace LADR.Section_5B
 
@@ -563,7 +567,7 @@ theorem not_invertible_iff_minpoly_coeff_zero [Finite F V] (T : V →ₗ[F] V) :
   -- ⟺ {lit}`0` zero of {lit}`p` (5.27) ⟺ constant term {lit}`0`.
   have h0 : T - (0 : F) • (LinearMap.id : V →ₗ[F] V) = T := by
     rw [zero_smul, sub_zero]
-  have h2 := (tfae_isEigenvalue T 0).out 0 3
+  have h2 := (tfae_isEigenvalue T 0).out 1 4
   rw [h0] at h2
   rw [← h2, isEigenvalue_iff_isRoot, Polynomial.IsRoot.def,
     Polynomial.coeff_zero_eq_eval_zero]
@@ -579,8 +583,7 @@ def quotOp (T : V →ₗ[F] V) (U : Submodule F V) (hU : InvariantUnder T U) :
 
 theorem quotOp_mkQ (T : V →ₗ[F] V) {U : Submodule F V}
     (hU : InvariantUnder T U) (v : V) :
-    quotOp T U hU (U.mkQ v) = U.mkQ (T v) := by
-  simp [quotOp, Submodule.mapQ_apply]
+    quotOp T U hU (U.mkQ v) = U.mkQ (T v) := rfl
 
 theorem quotOp_pow_mkQ (T : V →ₗ[F] V) {U : Submodule F V}
     (hU : InvariantUnder T U) (n : ℕ) (v : V) :

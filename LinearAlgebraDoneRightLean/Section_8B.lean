@@ -1,31 +1,35 @@
-import Mathlib.Algebra.DirectSum.Module
-import Mathlib.Algebra.Polynomial.Roots
-import Mathlib.Algebra.Polynomial.Splits
-import Mathlib.Data.Complex.Basic
-import Mathlib.FieldTheory.IsAlgClosed.Basic
-import Mathlib.FieldTheory.Minpoly.Field
-import Mathlib.LinearAlgebra.Charpoly.Basic
-import Mathlib.LinearAlgebra.Eigenspace.Basic
-import Mathlib.LinearAlgebra.Eigenspace.Charpoly
-import Mathlib.LinearAlgebra.Eigenspace.Minpoly
-import Mathlib.LinearAlgebra.Eigenspace.Triangularizable
-import Mathlib.LinearAlgebra.Eigenspace.Zero
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.RingTheory.Nilpotent.Basic
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Data.Matrix.Block
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import LinearAlgebraDoneRightLean.Section_1B
-import LinearAlgebraDoneRightLean.Section_3B
-import LinearAlgebraDoneRightLean.Section_5A
-import LinearAlgebraDoneRightLean.Section_5B
-import LinearAlgebraDoneRightLean.Section_8A
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.DirectSum.Module
+public import Mathlib.Algebra.Polynomial.Roots
+public import Mathlib.Algebra.Polynomial.Splits
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.FieldTheory.IsAlgClosed.Basic
+public import Mathlib.FieldTheory.Minpoly.Field
+public import Mathlib.LinearAlgebra.Charpoly.Basic
+public import Mathlib.LinearAlgebra.Eigenspace.Basic
+public import Mathlib.LinearAlgebra.Eigenspace.Charpoly
+public import Mathlib.LinearAlgebra.Eigenspace.Minpoly
+public import Mathlib.LinearAlgebra.Eigenspace.Triangularizable
+public import Mathlib.LinearAlgebra.Eigenspace.Zero
+public import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+public import Mathlib.RingTheory.Nilpotent.Basic
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.Data.Matrix.Block
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import LinearAlgebraDoneRightLean.Section_1B
+public import LinearAlgebraDoneRightLean.Section_3B
+public import LinearAlgebraDoneRightLean.Section_5A
+public import LinearAlgebraDoneRightLean.Section_5B
+public import LinearAlgebraDoneRightLean.Section_8A
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 8B: Generalized Eigenspace Decomposition
 -/
+
+@[expose] public section
 
 namespace LADR.Section_8B
 
@@ -484,9 +488,8 @@ theorem exists_upperTriangular_restrict_maxGenEigenspace [Finite F V] (T : V →
   have hvec : ∀ x : maxGenEigenspace T μ, (T.restrict hT) x = N x + μ • x := by
     intro x
     apply Subtype.ext
-    simp only [LinearMap.restrict_coe_apply, hNdef, Submodule.coe_add, Submodule.coe_smul,
-      LinearMap.sub_apply, Module.algebraMap_end_apply]
-    abel
+    show T (x : V) = (T (x : V) - algebraMap F (Module.End F V) μ (x : V)) + μ • (x : V)
+    rw [Module.algebraMap_end_apply, sub_add_cancel]
   by_cases hnt : Nontrivial (maxGenEigenspace T μ)
   · obtain ⟨n, e, he, hUT, hdiag⟩ := exists_strictUpperTriangular_of_nilpotent N hNnil
     refine ⟨n, e, he, ?_, fun k => ?_⟩

@@ -1,28 +1,31 @@
-import Mathlib.Algebra.Module.Pi
-import Mathlib.Algebra.Module.Submodule.Basic
-import Mathlib.Algebra.Module.Submodule.Lattice
-import Mathlib.Algebra.Module.Submodule.Pointwise
-import Mathlib.Analysis.Calculus.Deriv.Add
-import Mathlib.Analysis.Calculus.Deriv.Basic
-import Mathlib.Analysis.Calculus.Deriv.Mul
-import Mathlib.Analysis.Complex.Basic
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.DFinsupp
-import Mathlib.LinearAlgebra.Span.Basic
-import Mathlib.LinearAlgebra.Span.Defs
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.Tactic.Recall
-import Mathlib.Tactic.Ring
-import Mathlib.Topology.Algebra.Module.Basic
-import Mathlib.Topology.Instances.Real.Lemmas
-import CompanionHelper
+module
+
+public import Mathlib.Algebra.Module.Pi
+public import Mathlib.Algebra.Module.Submodule.Basic
+public import Mathlib.Algebra.Module.Submodule.Lattice
+public import Mathlib.Algebra.Module.Submodule.Pointwise
+public import Mathlib.Analysis.Calculus.Deriv.Add
+public import Mathlib.Analysis.Calculus.Deriv.Basic
+public import Mathlib.Analysis.Calculus.Deriv.Mul
+public import Mathlib.Analysis.Complex.Basic
+public import Mathlib.Basic.Complex.Basic
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.LinearAlgebra.DFinsupp
+public import Mathlib.LinearAlgebra.Span.Basic
+public import Mathlib.LinearAlgebra.Span.Defs
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.Tactic.Ring
+public import Mathlib.Topology.Algebra.Module.Basic
+public import Mathlib.Topology.Instances.Real.Lemmas
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 1C: Subspaces
 -/
+
+@[expose] public section
 
 namespace LADR.Section_1C
 
@@ -489,7 +492,6 @@ example (n : ℕ) : IsDirectSum (Axis (F := F) n) := by
       · intro i _ hik; exact (v i).2 k hik.symm
       · intro h; exact absurd (Finset.mem_univ k) h
     have h := congrArg (· k) huv
-    simp only at h
     rw [← hu, ← hv, h]
   · rw [(u k).2 j hjk, (v k).2 j hjk]
 

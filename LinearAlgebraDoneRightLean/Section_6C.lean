@@ -1,22 +1,27 @@
-import Mathlib.Analysis.InnerProductSpace.Projection.Basic
-import Mathlib.Analysis.InnerProductSpace.Projection.Submodule
-import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
-import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Analysis.InnerProductSpace.Adjoint
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Linter.Style
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
-import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
-import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.LinearAlgebra.Dual.Basis
-import LinearAlgebraDoneRightLean.L2Interval
-import CompanionHelper
+module
+
+public import Mathlib.Analysis.InnerProductSpace.Projection.Basic
+public import Mathlib.Analysis.InnerProductSpace.Projection.Submodule
+public import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
+public import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
+public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
+public import Mathlib.LinearAlgebra.Dual.Lemmas
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Linter.Style
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+public import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
+public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.LinearAlgebra.Dual.Basis
+public import LinearAlgebraDoneRightLean.L2Interval
+public import CompanionHelper
 
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 6C: Orthogonal Complements and Minimization Problems
 -/
+
+@[expose] public section
 
 namespace LADR.Section_6C
 
@@ -80,7 +85,7 @@ theorem setOrthogonal_singleton_235 :
   rw [SetLike.mem_coe, mem_setOrthogonal]
   simp only [Set.mem_singleton_iff, forall_eq, plane235, Set.mem_setOf_eq]
   rw [show ⟪(!₂[2, 3, 5] : EuclideanSpace ℝ (Fin 3)), v⟫_ℝ = 2 * v 0 + 3 * v 1 + 5 * v 2 by
-    simp [PiLp.inner_apply, Fin.sum_univ_three, real_inner_eq_re_inner ℝ]; ring]
+    simp [PiLp.inner_apply, Fin.sum_univ_three]; ring]
 
 /-- The line {lit}`{(2t, 3t, 5t)}` is {lit}`span((2, 3, 5))`. -/
 theorem line235_eq_span : line235 = (ℝ ∙ (!₂[2, 3, 5] : EuclideanSpace ℝ (Fin 3)) : Set _) := by
