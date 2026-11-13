@@ -42,6 +42,20 @@ jobs:
                   build: false
                   test: false
 
+            # Verso v4.35.0's verso-literate imports at the `.private` level, which
+            # fails on `module` files ("missing data file for module …"). Apply the
+            # upstream fix (leanprover/verso#1043, in v4.36). Remove after upgrading.
+            - name: Patch verso-literate for the module system
+              run: |
+                  lake env true
+                  f=.lake/packages/verso/src/verso-literate/VersoLiterateMain.lean
+                  if grep -q '(loadExts := true) (arts := importArts)' "$f"; then
+                      sed -i 's/(loadExts := true) (arts := importArts)/(loadExts := true) (level := (if HeaderSyntax.isModule headerStx then .server else .private)) (arts := importArts)/' "$f"
+                      grep -n 'HeaderSyntax.isModule' "$f"
+                  else
+                      echo "verso-literate already handles modules; this step can be removed"
+                  fi
+
             - name: Build literate site
               id: build
               run: echo "path=$(lake query :literateHtml)" >> "$GITHUB_OUTPUT"
