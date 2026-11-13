@@ -353,16 +353,24 @@ theorem exercise_3A_7 [Finite F V] (hV : finrank F V = 1) (T : V →ₗ[F] V) :
     ∃ γ : F, ∀ v : V, T v = γ • v := by
   sorry
 
-def exercise_3A_8 :
-    ∃ φ : (Fin 2 → ℝ) → ℝ,
-      (∀ a : ℝ, ∀ v : Fin 2 → ℝ, φ (a • v) = a * φ v) ∧
-      ¬ ∀ u v : Fin 2 → ℝ, φ (u + v) = φ u + φ v := by
+/-- The function {lit}`φ : ℝ² → ℝ` to find in 3A.8. -/
+noncomputable def phi3A8 : (Fin 2 → ℝ) → ℝ := sorry
+
+/-- 3A.8 {name}`phi3A8` satisfies {lit}`φ(av) = aφ(v)` for all {lit}`a ∈ ℝ`,
+{lit}`v ∈ ℝ²`, but is not linear. -/
+theorem exercise_3A_8 :
+    (∀ a : ℝ, ∀ v : Fin 2 → ℝ, phi3A8 (a • v) = a * phi3A8 v) ∧
+      ¬ ∀ u v : Fin 2 → ℝ, phi3A8 (u + v) = phi3A8 u + phi3A8 v := by
   sorry
 
-def exercise_3A_9 :
-    ∃ φ : ℂ → ℂ,
-      (∀ w z : ℂ, φ (w + z) = φ w + φ z) ∧
-      ¬ ∀ a z : ℂ, φ (a • z) = a • φ z := by
+/-- The function {lit}`φ : ℂ → ℂ` to find in 3A.9. -/
+noncomputable def phi3A9 : ℂ → ℂ := sorry
+
+/-- 3A.9 {name}`phi3A9` satisfies {lit}`φ(w + z) = φ(w) + φ(z)` for all
+{lit}`w, z ∈ ℂ`, but is not linear ({lit}`ℂ` as a complex vector space). -/
+theorem exercise_3A_9 :
+    (∀ w z : ℂ, phi3A9 (w + z) = phi3A9 w + phi3A9 z) ∧
+      ¬ ∀ a z : ℂ, phi3A9 (a • z) = a • phi3A9 z := by
   sorry
 
 def exercise_3A_10 :
