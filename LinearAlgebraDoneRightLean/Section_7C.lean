@@ -177,7 +177,7 @@ theorem toMatrixOrthonormal_eq_diagonal {n : ℕ} {T : V →ₗ[𝕜] V}
 
 /-- {lit}`R* R` is always a positive operator (7.38 (f) ⟹ (a)). -/
 theorem adjoint_comp_self_isPositive (R : V →ₗ[𝕜] V) :
-    (LinearMap.adjoint R ∘ₗ R).IsPositive := by
+    (R† ∘ₗ R).IsPositive := by
   constructor
   · intro x y
     simp only [LinearMap.comp_apply]
@@ -277,8 +277,8 @@ so {lit}`R² = R* R` ((e) ⟹ (f)). -/
 /-- (e) ⟹ (f): a self-adjoint square root {lit}`R` of {lit}`T` exhibits
 {lit}`T = R* R`. -/
 theorem adjoint_comp_self_eq_of_isSymmetric_isSquareRoot {T R : V →ₗ[𝕜] V}
-    (hR : R.IsSymmetric) (hRT : IsSquareRoot R T) : LinearMap.adjoint R ∘ₗ R = T := by
-  have hadj : LinearMap.adjoint R = R := by
+    (hR : R.IsSymmetric) (hRT : IsSquareRoot R T) : R† ∘ₗ R = T := by
+  have hadj : R† = R := by
     rw [← LinearMap.star_eq_adjoint]
     exact (LinearMap.isSymmetric_iff_isSelfAdjoint R).mp hR
   rw [hadj]
@@ -293,7 +293,7 @@ theorem tfae_isPositive (T : V →ₗ[𝕜] V) :
       HasNonnegDiagonalMatrix T,
       ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ IsSquareRoot R T,
       ∃ R : V →ₗ[𝕜] V, R.IsSymmetric ∧ IsSquareRoot R T,
-      ∃ R : V →ₗ[𝕜] V, LinearMap.adjoint R ∘ₗ R = T].TFAE := by
+      ∃ R : V →ₗ[𝕜] V, R† ∘ₗ R = T].TFAE := by
   tfae_have 1 → 2 := fun hT => ⟨hT.isSymmetric, fun _ hμ => eigenvalue_nonneg hT hμ⟩
   tfae_have 2 → 3 := fun h =>
     hasNonnegDiagonalMatrix_of_eigenvalue_nonneg h.1 fun μ hμ => (h.2 μ hμ).1
@@ -580,7 +580,7 @@ theorem exercise_7C_8 (T : V →ₗ[𝕜] V) :
 {lit}`S* T S` is positive on {lit}`W`. -/
 theorem exercise_7C_9 {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W]
     [FiniteDimensional 𝕜 W] (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (S : W →ₗ[𝕜] V) :
-    (LinearMap.adjoint S ∘ₗ T ∘ₗ S).IsPositive := by
+    (S† ∘ₗ T ∘ₗ S).IsPositive := by
   sorry
 
 /-- 7C.10 If {lit}`T` is positive, {lit}`Tv = w` and {lit}`Tw = v`, then
@@ -622,7 +622,7 @@ theorem exercise_7C_14 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) {m : ℕ} (v :
 {lit}`AB = BA = 0`. -/
 theorem exercise_7C_15 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
     ∃ A B : V →ₗ[𝕜] V, A.IsPositive ∧ B.IsPositive ∧ T = A - B ∧
-      (A + B) ∘ₗ (A + B) = LinearMap.adjoint T ∘ₗ T ∧ A ∘ₗ B = 0 ∧ B ∘ₗ A = 0 := by
+      (A + B) ∘ₗ (A + B) = T† ∘ₗ T ∧ A ∘ₗ B = 0 ∧ B ∘ₗ A = 0 := by
   sorry
 
 /-- 7C.16 For positive {lit}`T` with positive square root {lit}`R` ({lit}`R² = T`),

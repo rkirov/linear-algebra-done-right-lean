@@ -114,7 +114,7 @@ theorem isometry_iff_inner (S : V →ₗ[𝕜] W) :
 
 /-- (c) ⟺ (b): preserving inner products is equivalent to {lit}`S* S = I`. -/
 theorem inner_iff_adjoint_comp (S : V →ₗ[𝕜] W) :
-    (∀ u v, ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜) ↔ LinearMap.adjoint S ∘ₗ S = 1 := by
+    (∀ u v, ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜) ↔ S† ∘ₗ S = 1 := by
   constructor
   · intro h; ext u
     refine ext_inner_right 𝕜 fun v => ?_
@@ -126,7 +126,7 @@ theorem inner_iff_adjoint_comp (S : V →ₗ[𝕜] W) :
 
 /-- (a) ⟺ (b). -/
 theorem isometry_iff_adjoint_comp (S : V →ₗ[𝕜] W) :
-    Isometry S ↔ LinearMap.adjoint S ∘ₗ S = 1 :=
+    Isometry S ↔ S† ∘ₗ S = 1 :=
   (isometry_iff_inner S).trans (inner_iff_adjoint_comp S)
 
 omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
@@ -168,7 +168,7 @@ theorem orthonormal_image_iff_orthonormal_columns {ι κ : Type*} [Fintype ι] [
 theorem tfae_isometry {ι κ : Type*} [Fintype ι] [Fintype κ] [DecidableEq ι] [DecidableEq κ]
     (e : OrthonormalBasis ι 𝕜 V) (f : OrthonormalBasis κ 𝕜 W) (S : V →ₗ[𝕜] W) :
     [Isometry S,
-      LinearMap.adjoint S ∘ₗ S = 1,
+      S† ∘ₗ S = 1,
       ∀ u v, ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜,
       (Orthonormal 𝕜 fun i => S (e i)),
       (Orthonormal 𝕜 fun j =>
@@ -202,7 +202,7 @@ theorem isometry_bijective {S : V →ₗ[𝕜] V} (h : Isometry S) : Function.Bi
 /-- (b) as it is spelled in mathlib: {lit}`star` on {lit}`ℒ(V)` is the adjoint. -/
 theorem mem_unitary_iff_adjoint (S : V →ₗ[𝕜] V) :
     S ∈ unitary (V →ₗ[𝕜] V) ↔
-      LinearMap.adjoint S ∘ₗ S = 1 ∧ S ∘ₗ LinearMap.adjoint S = 1 :=
+      S† ∘ₗ S = 1 ∧ S ∘ₗ S† = 1 :=
   Unitary.mem_iff
 
 /-- Hence on {lit}`ℒ(V)` "unitary" and "isometry" coincide. -/
@@ -212,11 +212,11 @@ theorem mem_unitary_iff_isometry (S : V →ₗ[𝕜] V) :
   constructor
   · exact fun h => (isometry_iff_adjoint_comp S).mpr h.1
   · intro hiso
-    have hSS : LinearMap.adjoint S ∘ₗ S = 1 := (isometry_iff_adjoint_comp S).mp hiso
+    have hSS : S† ∘ₗ S = 1 := (isometry_iff_adjoint_comp S).mp hiso
     refine ⟨hSS, ?_⟩
     ext w
     obtain ⟨x, rfl⟩ := (isometry_bijective hiso).surjective w
-    have hx : LinearMap.adjoint S (S x) = x := by
+    have hx : S† (S x) = x := by
       have := LinearMap.congr_fun hSS x
       rwa [LinearMap.comp_apply, Module.End.one_apply] at this
     rw [LinearMap.comp_apply, hx, Module.End.one_apply]
@@ -265,7 +265,7 @@ matrix those two agree ({name}`Matrix.unitaryGroup`). -/
 
 /-- (c): for a unitary operator, {lit}`S*` is a two-sided inverse of {lit}`S`. -/
 theorem mem_unitary_inverse {S : V →ₗ[𝕜] V} (h : S ∈ unitary (V →ₗ[𝕜] V)) :
-    LinearMap.adjoint S ∘ₗ S = 1 ∧ S ∘ₗ LinearMap.adjoint S = 1 :=
+    S† ∘ₗ S = 1 ∧ S ∘ₗ S† = 1 :=
   (mem_unitary_iff_adjoint S).mp h
 
 /-- (a) ⟺ (d). -/
@@ -277,17 +277,17 @@ theorem mem_unitary_iff_orthonormal_image {ι : Type*} [Fintype ι] [DecidableEq
 /-- (a) ⟺ (f): {lit}`S` is unitary iff {lit}`S*` is unitary. This is
 {name}`Unitary.star_mem_iff` for the star ring {lit}`ℒ(V)`. -/
 theorem mem_unitary_adjoint_iff (S : V →ₗ[𝕜] V) :
-    S ∈ unitary (V →ₗ[𝕜] V) ↔ LinearMap.adjoint S ∈ unitary (V →ₗ[𝕜] V) :=
+    S ∈ unitary (V →ₗ[𝕜] V) ↔ S† ∈ unitary (V →ₗ[𝕜] V) :=
   Unitary.star_mem_iff.symm
 
 /-- (b) ⟺ (c): the two-sided-inverse reading of {lit}`S* S = S S* = I`. -/
 theorem adjoint_comp_iff_isUnit (S : V →ₗ[𝕜] V) :
-    (LinearMap.adjoint S ∘ₗ S = 1 ∧ S ∘ₗ LinearMap.adjoint S = 1) ↔
-      (IsUnit S ∧ Ring.inverse S = LinearMap.adjoint S) := by
+    (S† ∘ₗ S = 1 ∧ S ∘ₗ S† = 1) ↔
+      (IsUnit S ∧ Ring.inverse S = S†) := by
   constructor
   · rintro ⟨h1, h2⟩
-    exact ⟨⟨⟨S, LinearMap.adjoint S, h2, h1⟩, rfl⟩,
-      Ring.inverse_unit ⟨S, LinearMap.adjoint S, h2, h1⟩⟩
+    exact ⟨⟨⟨S, S†, h2, h1⟩, rfl⟩,
+      Ring.inverse_unit ⟨S, S†, h2, h1⟩⟩
   · rintro ⟨hu, hinv⟩
     exact ⟨by rw [← hinv]; exact Ring.inverse_mul_cancel S hu,
       by rw [← hinv]; exact Ring.mul_inverse_cancel S hu⟩
@@ -330,13 +330,13 @@ theorem orthonormal_rows_iff {n m : Type*} [Fintype n] [DecidableEq m]
 theorem tfae_mem_unitary {ι : Type*} [Fintype ι] [DecidableEq ι]
     (e : OrthonormalBasis ι 𝕜 V) (S : V →ₗ[𝕜] V) :
     [S ∈ unitary (V →ₗ[𝕜] V),
-      LinearMap.adjoint S ∘ₗ S = 1 ∧ S ∘ₗ LinearMap.adjoint S = 1,
-      IsUnit S ∧ Ring.inverse S = LinearMap.adjoint S,
+      S† ∘ₗ S = 1 ∧ S ∘ₗ S† = 1,
+      IsUnit S ∧ Ring.inverse S = S†,
       (Orthonormal 𝕜 fun i => S (e i)),
       (Orthonormal 𝕜 fun i =>
         (WithLp.toLp 2 ((LinearMap.toMatrix e.toBasis e.toBasis S).row i) :
           EuclideanSpace 𝕜 ι)),
-      LinearMap.adjoint S ∈ unitary (V →ₗ[𝕜] V)].TFAE := by
+      S† ∈ unitary (V →ₗ[𝕜] V)].TFAE := by
   tfae_have 1 ↔ 2 := mem_unitary_iff_adjoint S
   tfae_have 2 ↔ 3 := adjoint_comp_iff_isUnit S
   tfae_have 1 ↔ 4 := mem_unitary_iff_orthonormal_image e S
@@ -975,7 +975,7 @@ The book says {lit}`S⁻¹`; we say {lit}`S*`. These name the same operator: a u
 name the inverse, and loses nothing: {lit}`S*` *is* the inverse whose unitarity the
 exercise asks about. -/
 theorem exercise_7D_3b {S : V →ₗ[𝕜] V} (hS : S ∈ unitary (V →ₗ[𝕜] V)) :
-    LinearMap.adjoint S ∈ unitary (V →ₗ[𝕜] V) := by
+    S† ∈ unitary (V →ₗ[𝕜] V) := by
   sorry
 
 /-- 7D.4 Over {lit}`ℂ`, for self-adjoint {lit}`A, B`, the operator {lit}`A + iB` is
@@ -992,7 +992,7 @@ theorem exercise_7D_4 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ 
 some {lit}`U` and {lit}`S = −1` on {lit}`U⟂`. -/
 theorem exercise_7D_5 (S : V →ₗ[𝕜] V) :
     [LinearMap.IsSymmetric S ∧ S ∈ unitary (V →ₗ[𝕜] V),
-      ∃ P : V →ₗ[𝕜] V, LinearMap.adjoint P = P ∧ P ∘ₗ P = P ∧ S = 2 • P - 1,
+      ∃ P : V →ₗ[𝕜] V, P† = P ∧ P ∘ₗ P = P ∧ S = 2 • P - 1,
       ∃ U : Submodule 𝕜 V, (∀ u ∈ U, S u = u) ∧ ∀ w ∈ Uᗮ, S w = -w].TFAE := by
   sorry
 
@@ -1005,7 +1005,7 @@ theorem exercise_7D_6
     (he2 : ∀ μ : 𝕜, HasEigenvalue T₂ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7) :
     ∃ S : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3),
       S ∈ unitary (EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3)) ∧
-        T₁ = LinearMap.adjoint S ∘ₗ T₂ ∘ₗ S := by
+        T₁ = S† ∘ₗ T₂ ∘ₗ S := by
   sorry
 
 /-- 7D.7 The student supplies two operators on {lit}`𝔽⁴` (replacing the
@@ -1038,7 +1038,7 @@ eigenvalues leaves the multiplicities free). -/
 theorem exercise_7D_7 :
     ¬ ∃ S : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4),
       S ∈ unitary (EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4)) ∧
-        exercise_7D_7_T₁ = LinearMap.adjoint S ∘ₗ exercise_7D_7_T₂ ∘ₗ S := by
+        exercise_7D_7_T₁ = S† ∘ₗ exercise_7D_7_T₂ ∘ₗ S := by
   sorry
 
 /-- 7D.8 *Prove or counterexample.* If {lit}`S ∈ ℒ(V)` and there is an orthonormal
@@ -1106,7 +1106,7 @@ theorem exercise_7D_14 (h : 2 ≤ finrank 𝕜 V) (v : V) (hv : ‖v‖ = 1) (b 
 (a) {lit}`(T + I)(T − I)⁻¹` is skew. -/
 theorem exercise_7D_15a (T : V →ₗ[𝕜] V) (hT : T ∈ unitary (V →ₗ[𝕜] V)) (Tinv : V →ₗ[𝕜] V)
     (hi1 : Tinv ∘ₗ (T - 1) = 1) (hi2 : (T - 1) ∘ₗ Tinv = 1) :
-    LinearMap.adjoint ((T + 1) ∘ₗ Tinv) = -((T + 1) ∘ₗ Tinv) := by
+    ((T + 1) ∘ₗ Tinv)† = -((T + 1) ∘ₗ Tinv) := by
   sorry
 
 /-- 7D.15 (b) Over {lit}`ℂ`, {lit}`i(T + I)(T − I)⁻¹` is self-adjoint. -/

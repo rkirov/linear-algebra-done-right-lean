@@ -141,13 +141,13 @@ theorem opNorm_eq_iSup_singularValues (T : V →ₗ[𝕜] W) :
   set e := svdBasis T with he
   set M := ⨆ i, singularValues T i with hM
   have hsym := (adjComp_self_isPositive T).isSymmetric
-  have hTvadj : ⟪T v, T v⟫_𝕜 = ⟪v, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜 :=
+  have hTvadj : ⟪T v, T v⟫_𝕜 = ⟪v, (T† ∘ₗ T) v⟫_𝕜 :=
     (LinearMap.adjoint_inner_right T v (T v)).symm
-  have hq : ⟪v, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+  have hq : ⟪v, (T† ∘ₗ T) v⟫_𝕜
       = ∑ i, (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
-    rw [← e.sum_inner_mul_inner v ((LinearMap.adjoint T ∘ₗ T) v)]
+    rw [← e.sum_inner_mul_inner v ((T† ∘ₗ T) v)]
     refine Finset.sum_congr rfl (fun i _ => ?_)
-    have h1 : ⟪e i, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+    have h1 : ⟪e i, (T† ∘ₗ T) v⟫_𝕜
         = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪e i, v⟫_𝕜 := by
       rw [← hsym (e i) v, adjComp_apply_svdBasis, inner_smul_left, RCLike.conj_ofReal]
     rw [h1]
@@ -205,7 +205,7 @@ theorem opNorm_id [Nontrivial V] : opNorm (LinearMap.id : V →ₗ[𝕜] V) = 1 
   rw [h, ContinuousLinearMap.norm_id]
 
 /-- 7.91 A linear map and its adjoint have the same norm: {lit}`‖T*‖ = ‖T‖`. -/
-theorem opNorm_adjoint (T : V →ₗ[𝕜] W) : opNorm (LinearMap.adjoint T) = opNorm T := by
+theorem opNorm_adjoint (T : V →ₗ[𝕜] W) : opNorm T† = opNorm T := by
   have := FiniteDimensional.complete 𝕜 V
   have := FiniteDimensional.complete 𝕜 W
   rw [opNorm, opNorm, LinearMap.adjoint_toContinuousLinearMap]
@@ -488,7 +488,7 @@ we have {lit}`(S ∘ R) eₖ = sₖ S eₖ`. Extending the orthonormal list
 an orthonormal basis) with {lit}`(S ∘ R) eₖ = sₖ fₖ = T eₖ`. -/
 theorem polarDecomposition (T : V →ₗ[𝕜] V) :
     ∃ S R : V →ₗ[𝕜] V, Isometry S ∧ R.IsPositive ∧
-      R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R := by
+      R ∘ₗ R = T† ∘ₗ T ∧ T = S ∘ₗ R := by
   obtain ⟨R, hRpos, hRR⟩ := exists_positive_sqrt (adjComp_self_isPositive T)
   -- `R eₖ = sₖ eₖ`.
   have hRe : ∀ i, R (svdBasis T i) = (singularValues T i : 𝕜) • svdBasis T i := by
@@ -530,7 +530,7 @@ theorem polarDecomposition (T : V →ₗ[𝕜] V) :
 unitary {lit}`S` and positive {lit}`R = √(T* T)` with {lit}`T = S ∘ R`. -/
 theorem polarDecomposition_unitary (T : V →ₗ[𝕜] V) :
     ∃ S R : V →ₗ[𝕜] V, S ∈ unitary (V →ₗ[𝕜] V) ∧ R.IsPositive ∧
-      R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R := by
+      R ∘ₗ R = T† ∘ₗ T ∧ T = S ∘ₗ R := by
   obtain ⟨S, R, hS, hRpos, hRR, hT⟩ := polarDecomposition T
   exact ⟨S, R, (mem_unitary_iff_isometry S).mpr hS, hRpos, hRR, hT⟩
 
@@ -781,7 +781,7 @@ theorem exercise_7F_2 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
 /-- 7F.3 {lit}`‖T v‖ = ‖T‖ ‖v‖ ⟺ T* T v = ‖T‖² v`. -/
 theorem exercise_7F_3 (T : V →ₗ[𝕜] W) (v : V) :
     ‖T v‖ = opNorm T * ‖v‖ ↔
-      (LinearMap.adjoint T ∘ₗ T) v = ((opNorm T ^ 2 : ℝ) : 𝕜) • v := by
+      (T† ∘ₗ T) v = ((opNorm T ^ 2 : ℝ) : 𝕜) • v := by
   sorry
 
 /-- 7F.4 If {lit}`‖T v‖ = ‖T‖ ‖v‖` and {lit}`⟨u, v⟩ = 0`, then
@@ -868,7 +868,7 @@ theorem exercise_7F_15 (T : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSp
     (hT : ∀ z : EuclideanSpace 𝕜 (Fin 3), T z = !₂[z 2, 2 * z 0, 3 * z 1]) :
     ∃ S R : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3),
       S ∈ unitary (EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3)) ∧ R.IsPositive ∧
-        R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R := by
+        R ∘ₗ R = T† ∘ₗ T ∧ T = S ∘ₗ R := by
   sorry
 
 /-- 7F.16 If {lit}`S` is positive invertible, there is {lit}`δ > 0` such that every
@@ -901,12 +901,12 @@ theorem exercise_7F_18b (T : V →ₗ[𝕜] W) (e : OrthonormalBasis (Fin (finra
 theory of C-star-algebras. -/
 @[avoiding ContinuousLinearMap.norm_adjoint_comp_self]
 theorem exercise_7F_19 (T : V →ₗ[𝕜] W) :
-    opNorm (LinearMap.adjoint T ∘ₗ T) = opNorm T ^ 2 := by
+    opNorm (T† ∘ₗ T) = opNorm T ^ 2 := by
   sorry
 
 /-- 7F.20 For a normal operator {lit}`T` and {lit}`k ≥ 1`, {lit}`‖Tᵏ‖ = ‖T‖ᵏ`. -/
 theorem exercise_7F_20 {T : V →ₗ[𝕜] V}
-    (hT : LinearMap.adjoint T ∘ₗ T = T ∘ₗ LinearMap.adjoint T) (k : ℕ) (hk : 0 < k) :
+    (hT : T† ∘ₗ T = T ∘ₗ T†) (k : ℕ) (hk : 0 < k) :
     opNorm (T ^ k) = opNorm T ^ k := by
   sorry
 
@@ -943,7 +943,7 @@ theorem exercise_7F_24 (T : V ≃ₗ[𝕜] V) :
 {lit}`√(T*T) v = (‖x‖/‖u‖) ⟨v, u⟩ u`. -/
 theorem exercise_7F_25 (u x : V) (hu : u ≠ 0) (T : V →ₗ[𝕜] V)
     (hT : ∀ v, T v = ⟪u, v⟫_𝕜 • x) (R : V →ₗ[𝕜] V) (hR : R.IsPositive)
-    (hRT : R ∘ₗ R = LinearMap.adjoint T ∘ₗ T) (v : V) :
+    (hRT : R ∘ₗ R = T† ∘ₗ T) (v : V) :
     R v = ((((‖x‖ / ‖u‖ : ℝ) : 𝕜)) * ⟪u, v⟫_𝕜) • u := by
   sorry
 
@@ -952,7 +952,7 @@ theorem exercise_7F_25 (u x : V) (hu : u ≠ 0) (T : V →ₗ[𝕜] V)
 theorem exercise_7F_26 (T : V →ₗ[𝕜] V) :
     Function.Bijective T ↔
       ∃! S : V →ₗ[𝕜] V, S ∈ unitary (V →ₗ[𝕜] V) ∧ ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧
-        R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R := by
+        R ∘ₗ R = T† ∘ₗ T ∧ T = S ∘ₗ R := by
   sorry
 
 /-- 7F.27 The unitary {lit}`S v = ∑ ⟨v, eₖ⟩ fₖ` from an SVD of {lit}`T` is unitary
@@ -969,26 +969,26 @@ theorem exercise_7F_27 {n : ℕ} (T : V →ₗ[𝕜] V) (e f : Fin n → V) (s :
 {lit}`S`. Here {lit}`R` is the positive square root of {lit}`T T*`. -/
 theorem exercise_7F_28 (T : V →ₗ[𝕜] V) :
     ∃ S R : V →ₗ[𝕜] V, S ∈ unitary (V →ₗ[𝕜] V) ∧ R.IsPositive ∧
-      R ∘ₗ R = T ∘ₗ LinearMap.adjoint T ∧ T = R ∘ₗ S := by
+      R ∘ₗ R = T ∘ₗ T† ∧ T = R ∘ₗ S := by
   sorry
 
 /-- 7F.29(a) There is a unitary {lit}`S` with {lit}`T T* = S (T* T) S*`. -/
 theorem exercise_7F_29a (T : V →ₗ[𝕜] V) :
     ∃ S : V →ₗ[𝕜] V, S ∈ unitary (V →ₗ[𝕜] V) ∧
-      T ∘ₗ LinearMap.adjoint T =
-        S ∘ₗ (LinearMap.adjoint T ∘ₗ T) ∘ₗ LinearMap.adjoint S := by
+      T ∘ₗ T† =
+        S ∘ₗ (T† ∘ₗ T) ∘ₗ S† := by
   sorry
 
 /-- 7F.29(b) {lit}`T` and {lit}`T*` have the same singular values. -/
 theorem exercise_7F_29b (T : V →ₗ[𝕜] V) :
     {r : ℝ | ∃ i, LADR.Section_7E.singularValues T i = r} =
-      {r : ℝ | ∃ i, LADR.Section_7E.singularValues (LinearMap.adjoint T) i = r} := by
+      {r : ℝ | ∃ i, LADR.Section_7E.singularValues T† i = r} := by
   sorry
 
 /-- 7F.30 Uniqueness of the positive factor: if {lit}`S` is unitary, {lit}`R` is
 positive, and {lit}`T = S R`, then {lit}`R = √(T* T)`, i.e. {lit}`R ∘ R = T* T`. -/
 theorem exercise_7F_30 {T S R : V →ₗ[𝕜] V} (hS : S ∈ unitary (V →ₗ[𝕜] V)) (hR : R.IsPositive)
-    (hT : T = S ∘ₗ R) : R ∘ₗ R = LinearMap.adjoint T ∘ₗ T := by
+    (hT : T = S ∘ₗ R) : R ∘ₗ R = T† ∘ₗ T := by
   sorry
 
 /-- 7F.31 Over {lit}`ℂ`, a normal {lit}`T` has a polar decomposition {lit}`T = SR`
@@ -996,7 +996,7 @@ where {lit}`S` and {lit}`R = √(T*T)` are simultaneously diagonalizable. -/
 theorem exercise_7F_31 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
     [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hN : IsStarNormal T) :
     ∃ (S R : E →ₗ[ℂ] E) (m : ℕ) (b : OrthonormalBasis (Fin m) ℂ E),
-      S ∈ unitary (E →ₗ[ℂ] E) ∧ R.IsPositive ∧ R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R ∧
+      S ∈ unitary (E →ₗ[ℂ] E) ∧ R.IsPositive ∧ R ∘ₗ R = T† ∘ₗ T ∧ T = S ∘ₗ R ∧
         (∀ i, ∃ μ : ℂ, S (b i) = μ • b i) ∧ (∀ i, ∃ ν : ℂ, R (b i) = ν • b i) := by
   sorry
 

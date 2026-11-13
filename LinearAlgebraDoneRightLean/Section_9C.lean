@@ -240,10 +240,10 @@ Following Axler: in an orthonormal basis the matrix of {lit}`T*` is the conjugat
 transpose of the matrix of {lit}`T` ({name}`LinearMap.toMatrix_adjoint`), so the
 result follows from part (a) via {name}`Matrix.det_conjTranspose`. -/
 theorem det_adjoint_eq_conj (T : E →ₗ[𝕜] E) :
-    LinearMap.det (LinearMap.adjoint T) = conj (LinearMap.det T) := by
+    LinearMap.det T† = conj (LinearMap.det T) := by
   classical
   let b := stdOrthonormalBasis 𝕜 E
-  rw [← LinearMap.det_toMatrix b.toBasis (LinearMap.adjoint T),
+  rw [← LinearMap.det_toMatrix b.toBasis T†,
     LinearMap.toMatrix_adjoint b b T, Matrix.det_conjTranspose,
     ← LinearMap.det_toMatrix b.toBasis T]
   rfl
@@ -304,7 +304,7 @@ Following Axler: {lit}`S* S = I` (7.53), so {lit}`conj(det S)·det S = det(S*)·
 {lit}`‖det S‖² = 1`. -/
 theorem det_unitary_norm_eq_one {S : E →ₗ[𝕜] E} (h : S ∈ unitary (E →ₗ[𝕜] E)) :
     ‖LinearMap.det S‖ = 1 := by
-  have hSS : LinearMap.adjoint S ∘ₗ S = 1 :=
+  have hSS : S† ∘ₗ S = 1 :=
     ((LADR.Section_7D.mem_unitary_iff_adjoint S).mp h).1
   have hdet : conj (LinearMap.det S) * LinearMap.det S = 1 := by
     rw [← det_adjoint_eq_conj, ← LinearMap.det_comp, hSS, Module.End.one_eq_id,
@@ -321,7 +321,7 @@ a positive {lit}`T` has a positive (hence self-adjoint) square root {lit}`R` wit
 theorem det_positive_nonneg {T : E →ₗ[𝕜] E} (hT : T.IsPositive) :
     ∃ c : ℝ, 0 ≤ c ∧ LinearMap.det T = (c : 𝕜) := by
   obtain ⟨R, hR, hRT⟩ := LADR.Section_7C.exists_positive_sqrt hT
-  have hsym : LinearMap.adjoint R = R :=
+  have hsym : R† = R :=
     (LinearMap.isSymmetric_iff_isSelfAdjoint R).mp hR.1
   have hreal : conj (LinearMap.det R) = LinearMap.det R := by
     rw [← det_adjoint_eq_conj, hsym]
@@ -346,13 +346,13 @@ the SVD eigenbasis (7.72, Section 7E), {lit}`det(T* T) = ∏ sₖ²`. -/
 
 /-- 9.60 auxiliary: {lit}`det(T* T) = ‖det T‖²` (a nonnegative real). -/
 theorem det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
-    LinearMap.det (LinearMap.adjoint T ∘ₗ T) = ((‖LinearMap.det T‖ ^ 2 : ℝ) : 𝕜) := by
+    LinearMap.det (T† ∘ₗ T) = ((‖LinearMap.det T‖ ^ 2 : ℝ) : 𝕜) := by
   rw [LinearMap.det_comp, det_adjoint_eq_conj, RCLike.conj_mul]; push_cast; ring
 
 /-- 9.60 ({lit}`√det(T*T)` form): {lit}`‖det T‖ = √det(T* T)`. -/
 theorem norm_det_eq_sqrt_det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
     ‖LinearMap.det T‖ =
-      Real.sqrt (RCLike.re (LinearMap.det (LinearMap.adjoint T ∘ₗ T))) := by
+      Real.sqrt (RCLike.re (LinearMap.det (T† ∘ₗ T))) := by
   rw [det_adjoint_comp_self, RCLike.ofReal_re, Real.sqrt_sq (norm_nonneg _)]
 
 /-- The determinant of an operator diagonal on a basis is the product of its
@@ -375,13 +375,13 @@ of the singular values. Since {lit}`T* T` acts as {lit}`sₖ²` on the SVD eigen
 theorem norm_det_eq_prod_singularValues (T : E →ₗ[𝕜] E) :
     ‖LinearMap.det T‖ = ∏ i, LADR.Section_7E.singularValues T i := by
   set b := (LADR.Section_7E.svdBasis T).toBasis with hb
-  have hf : ∀ i, (LinearMap.adjoint T ∘ₗ T) (b i)
+  have hf : ∀ i, (T† ∘ₗ T) (b i)
       = (((LADR.Section_7E.singularValues T i) ^ 2 : ℝ) : 𝕜) • b i := by
     intro i
     rw [hb, OrthonormalBasis.coe_toBasis]
     exact LADR.Section_7E.adjComp_apply_svdBasis T i
   rw [norm_det_eq_sqrt_det_adjoint_comp_self,
-    det_eq_prod_of_apply_eq_smul b (LinearMap.adjoint T ∘ₗ T) _ hf,
+    det_eq_prod_of_apply_eq_smul b (T† ∘ₗ T) _ hf,
     ← RCLike.ofReal_prod, RCLike.ofReal_re, Finset.prod_pow,
     Real.sqrt_sq (Finset.prod_nonneg fun i _ => LADR.Section_7E.singularValues_nonneg T i)]
 
@@ -664,7 +664,7 @@ theorem exercise_9C_14 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
 theorem exercise_9C_15 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
     [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (T : E →ₗ[𝕜] E) :
     ‖LinearMap.det T‖ =
-      Real.sqrt (RCLike.re (LinearMap.det (LinearMap.adjoint T ∘ₗ T))) := by
+      Real.sqrt (RCLike.re (LinearMap.det (T† ∘ₗ T))) := by
   sorry
 
 /-- 9C.16 For {lit}`g(x) = det(I + xT)`, {lit}`g′(0) = tr T`. -/

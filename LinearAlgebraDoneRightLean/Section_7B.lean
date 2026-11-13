@@ -386,15 +386,15 @@ theorem normal_ut_diagonal {n : ℕ} (T : V →ₗ[𝕜] V) (hN : IsStarNormal T
     intro k
     simp only [ha]
     exact (OrthonormalBasis.sum_sq_norm_inner_right e (T (e k))).symm
-  have hParsA : ∀ k, ‖LinearMap.adjoint T (e k)‖ ^ 2 = ∑ i, ‖a k i‖ ^ 2 := by
+  have hParsA : ∀ k, ‖T† (e k)‖ ^ 2 = ∑ i, ‖a k i‖ ^ 2 := by
     intro k
-    rw [← OrthonormalBasis.sum_sq_norm_inner_right e (LinearMap.adjoint T (e k))]
+    rw [← OrthonormalBasis.sum_sq_norm_inner_right e (T† (e k))]
     refine Finset.sum_congr rfl fun i _ => ?_
     simp only [ha]
     rw [LinearMap.adjoint_inner_right]
     congr 1
     exact norm_inner_symm (T (e i)) (e k)
-  have hN2 : ∀ v, ‖T v‖ = ‖LinearMap.adjoint T v‖ := (LADR.Section_7A.normal_iff_norm T).mp hN
+  have hN2 : ∀ v, ‖T v‖ = ‖T† v‖ := (LADR.Section_7A.normal_iff_norm T).mp hN
   have hQaux : ∀ m : ℕ, ∀ k : Fin n, k.val = m → ∀ j : Fin n, k < j → a k j = 0 := by
     intro m
     induction m using Nat.strong_induction_on with
@@ -536,7 +536,7 @@ theorem exercise_7B_3 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
 ({lit}`T* = −T`) iff all its eigenvalues are purely imaginary. -/
 theorem exercise_7B_4 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
-    LinearMap.adjoint T = -T ↔ ∀ μ : ℂ, HasEigenvalue T μ → μ.re = 0 := by
+    T† = -T ↔ ∀ μ : ℂ, HasEigenvalue T μ → μ.re = 0 := by
   sorry
 
 /-- 7B.5 Prove or give a counterexample: if {lit}`T ∈ ℒ(ℂ³)` is diagonalizable,
@@ -576,14 +576,14 @@ also an eigenvector of {lit}`T*`. -/
 theorem exercise_7B_8 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
     IsStarNormal T ↔ ∀ (v : V) (μ : ℂ), HasEigenvector T μ v →
-      ∃ ν : ℂ, HasEigenvector (LinearMap.adjoint T) ν v := by
+      ∃ ν : ℂ, HasEigenvector T† ν v := by
   sorry
 
 /-- 7B.9 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff {lit}`T* = p(T)` for some
 polynomial {lit}`p ∈ 𝒫(ℂ)`. -/
 theorem exercise_7B_9 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
-    IsStarNormal T ↔ ∃ p : Polynomial ℂ, LinearMap.adjoint T = Polynomial.aeval T p := by
+    IsStarNormal T ↔ ∃ p : Polynomial ℂ, T† = Polynomial.aeval T p := by
   sorry
 
 /-- 7B.10 Every normal operator on a complex inner product space has a square
@@ -603,7 +603,7 @@ theorem exercise_7B_11 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
 theorem exercise_7B_12 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T S : V →ₗ[ℂ] V) (hN : IsStarNormal T)
     (h : S ∘ₗ T = T ∘ₗ S) :
-    S ∘ₗ LinearMap.adjoint T = LinearMap.adjoint T ∘ₗ S := by
+    S ∘ₗ T† = T† ∘ₗ S := by
   sorry
 
 /-- 7B.13 (Via Schur for two commuting operators) Every normal operator on a
@@ -707,15 +707,15 @@ theorem exercise_7B_20a (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
 /-- 7B.20 (b) {lit}`U` is invariant under {lit}`T*`. -/
 theorem exercise_7B_20b (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
-    ∀ u ∈ U, LinearMap.adjoint T u ∈ U := by
+    ∀ u ∈ U, T† u ∈ U := by
   sorry
 
 /-- 7B.20 (c) {lit}`(T|U)* = (T*)|U`. The invariance of {lit}`U` under {lit}`T*`
 needed to form the right-hand restriction is part (b). -/
 theorem exercise_7B_20c (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
-    LinearMap.adjoint (T.restrict hU) =
-      (LinearMap.adjoint T).restrict (exercise_7B_20b T hN U hU) := by
+    (T.restrict hU)† =
+      T†.restrict (exercise_7B_20b T hN U hU) := by
   sorry
 
 /-- 7B.20 (d) Both {lit}`T|U ∈ ℒ(U)` and {lit}`T|U⟂ ∈ ℒ(U⟂)` are normal. -/
