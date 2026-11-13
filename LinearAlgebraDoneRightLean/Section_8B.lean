@@ -263,7 +263,7 @@ theorem charpoly_T_8_24 :
     intro i j h
     fin_cases i <;> fin_cases j <;> first | exact absurd h (by decide) | simp
   rw [← LinearMap.charpoly_toMatrix T_8_24 (Pi.basisFun ℂ (Fin 3)), toMatrix_T_8_24,
-    Matrix.charpoly_of_upperTriangular _ hUT, Fin.prod_univ_three]
+    Matrix.charpoly_of_isUpperTriangular _ hUT, Fin.prod_univ_three]
   norm_num [Matrix.cons_val_two, Matrix.tail_cons, sq]
 
 /-- 8.24 Example: the multiplicities of the eigenvalues {lit}`6` and {lit}`7` of
@@ -280,7 +280,7 @@ theorem multiplicity_T_8_24 : multiplicity T_8_24 6 = 2 ∧ multiplicity T_8_24 
   · rw [multiplicity_eq_rootMultiplicity, charpoly_T_8_24,
       Polynomial.rootMultiplicity_mul hne, Polynomial.rootMultiplicity_X_sub_C,
       Polynomial.rootMultiplicity_eq_zero (by norm_num [Polynomial.IsRoot]), zero_add,
-      if_pos rfl]
+      ite_eq_left rfl]
 
 /-- 8.24 Example: the generalized eigenspaces of {name}`T_8_24` are
 {lit}`G(6, T) = span((1,0,0), (0,1,0))` and {lit}`G(7, T) = span((10,2,1))`. Each
@@ -436,7 +436,7 @@ theorem multiplicity_eq_diagonal_count {V : Type*} [AddCommGroup V] [Module ℂ 
   rw [multiplicity_eq_rootMultiplicity,
     show LinearMap.charpoly T = (matrixOf hv hv T).charpoly from
       (LinearMap.charpoly_toMatrix T hv.toModuleBasis).symm,
-    Matrix.charpoly_of_upperTriangular _ hUT, ← Polynomial.count_roots]
+    Matrix.charpoly_of_isUpperTriangular _ hUT, ← Polynomial.count_roots]
   have hroots : (∏ i : Fin n, (X - C (matrixOf hv hv T i i))).roots
       = Finset.univ.val.map fun i => matrixOf hv hv T i i := by
     rw [show (∏ i : Fin n, (X - C (matrixOf hv hv T i i)))
@@ -500,16 +500,16 @@ theorem exists_upperTriangular_restrict_maxGenEigenspace [Finite F V] (T : V →
         rw [← matrixOf_apply]; exact hUT i j hji
       have he0 : he.toModuleBasis.repr (e j) i = 0 := by
         rw [← IsBasis.toModuleBasis_apply he j, he.toModuleBasis.repr_self_apply,
-          if_neg (ne_of_lt hji)]
+          ite_eq_right (ne_of_lt hji)]
       rw [hN0, he0, smul_zero, add_zero]
     · rw [matrixOf_apply, hvec (e k)]
       simp only [map_add, map_smul, Finsupp.add_apply, Finsupp.smul_apply]
       have hN0 : he.toModuleBasis.repr (N (e k)) k = 0 := by
         rw [← matrixOf_apply]; exact hdiag k
       have he1 : he.toModuleBasis.repr (e k) k = 1 := by
-        rw [← IsBasis.toModuleBasis_apply he k, he.toModuleBasis.repr_self_apply, if_pos rfl]
+        rw [← IsBasis.toModuleBasis_apply he k, he.toModuleBasis.repr_self_apply, ite_eq_left rfl]
       rw [hN0, he1, smul_eq_mul, mul_one, zero_add]
-  · haveI : Subsingleton (maxGenEigenspace T μ) := not_nontrivial_iff_subsingleton.mp hnt
+  · have : Subsingleton (maxGenEigenspace T μ) := not_nontrivial_iff_subsingleton.mp hnt
     refine ⟨0, Fin.elim0, ⟨linearIndependent_empty_type, ?_⟩, fun i j _ => i.elim0,
       fun k => k.elim0⟩
     show Submodule.span F (Set.range (Fin.elim0 : Fin 0 → maxGenEigenspace T μ)) = ⊤

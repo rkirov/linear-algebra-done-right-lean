@@ -468,7 +468,7 @@ private lemma simul_upperTriangular_aux :
             · rw [Submodule.span_le]
               rintro x ⟨j, hj, rfl⟩
               refine Submodule.subset_span ⟨j.succ, ?_, rfl⟩
-              rw [Set.mem_setOf_eq]
+              rw [Set.mem_ofPred_eq]
               exact Fin.succ_le_succ_iff.mpr hj
           exact hle hmem
       -- Thus {lit}`S` and {lit}`T` are upper triangular w.r.t. {lit}`v₁, …, vₙ`.

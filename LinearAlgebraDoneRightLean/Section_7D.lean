@@ -75,11 +75,11 @@ theorem isometry_of_orthonormal_image {ι : Type*} [Fintype ι] [DecidableEq ι]
   rw [hSu, hSv, sum_inner, ← b.sum_inner_mul_inner u v]
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [inner_sum, Finset.sum_eq_single i]
-  · rw [inner_smul_left, inner_smul_right, (orthonormal_iff_ite.mp h) i i, if_pos rfl,
+  · rw [inner_smul_left, inner_smul_right, (orthonormal_iff_ite.mp h) i i, ite_eq_left rfl,
       mul_one, inner_conj_symm]
   · intro j _ hij
     rw [inner_smul_left, inner_smul_right, (orthonormal_iff_ite.mp h) i j,
-      if_neg (Ne.symm hij), mul_zero, mul_zero]
+      ite_eq_right (Ne.symm hij), mul_zero, mul_zero]
   · intro hi; exact absurd (Finset.mem_univ i) hi
 
 omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
@@ -400,13 +400,13 @@ theorem unitary_iff_orthonormal_eigenbasis
       · subst hEq
         obtain ⟨μi, hi, hni⟩ := he i
         have he1 : ⟪e i, e i⟫_ℂ = 1 := by
-          rw [(orthonormal_iff_ite.mp e.orthonormal) i i, if_pos rfl]
-        rw [hi, inner_smul_left, inner_smul_right, he1, mul_one, RCLike.conj_mul, hni, if_pos rfl]
+          rw [(orthonormal_iff_ite.mp e.orthonormal) i i, ite_eq_left rfl]
+        rw [hi, inner_smul_left, inner_smul_right, he1, mul_one, RCLike.conj_mul, hni, ite_eq_left rfl]
         norm_num
       · obtain ⟨μi, hi, hni⟩ := he i
         obtain ⟨μj, hj, hnj⟩ := he j
         rw [hi, hj, inner_smul_left, inner_smul_right, (orthonormal_iff_ite.mp e.orthonormal) i j]
-        simp only [if_neg hNe, mul_zero]
+        simp only [ite_eq_right hNe, mul_zero]
     exact (mem_unitary_iff_isometry S).mpr
       (isometry_of_orthonormal_image_isometry e S horth)
 
@@ -588,7 +588,7 @@ theorem unitary_upperTri_eq_one {N : ℕ} (U : Matrix (Fin N) (Fin N) 𝕜)
     (hdiag : HasPosRealDiag U) : U = 1 := by
   have hmem1 : star U * U = 1 := (Matrix.mem_unitaryGroup_iff').mp hU
   have hmem2 : U * star U = 1 := (Matrix.mem_unitaryGroup_iff).mp hU
-  letI : Invertible U := ⟨star U, hmem1, hmem2⟩
+  let : Invertible U := ⟨star U, hmem1, hmem2⟩
   have hUinv : U⁻¹ = star U := Matrix.inv_eq_left_inv hmem1
   have hup : U⁻¹.BlockTriangular id := Matrix.blockTriangular_inv_of_blockTriangular hUT
   rw [hUinv] at hup
@@ -639,9 +639,9 @@ theorem QR_unique {N : ℕ} (A Q₁ R₁ Q₂ R₂ : Matrix (Fin N) (Fin N) 𝕜
   have hR₁ne : ∀ i, R₁ i i ≠ 0 := by
     intro i h; have := (hR₁d i).1; rw [h] at this; simp at this
   have hdet1 : R₁.det ≠ 0 := by
-    rw [Matrix.det_of_upperTriangular hR₁t]
+    rw [Matrix.det_of_isUpperTriangular hR₁t]
     exact Finset.prod_ne_zero_iff.mpr (fun i _ => hR₁ne i)
-  letI : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
+  let : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
   set U := star Q₂ * Q₁ with hUdef
   have hQ₂s1 : star Q₂ * Q₂ = 1 := (Matrix.mem_unitaryGroup_iff').mp hQ₂
   have hQ₂s2 : Q₂ * star Q₂ = 1 := (Matrix.mem_unitaryGroup_iff).mp hQ₂
@@ -891,9 +891,9 @@ theorem cholesky_unique {N : ℕ} (B R₁ R₂ : Matrix (Fin N) (Fin N) 𝕜)
     rw [hz, RCLike.ofReal_zero, zero_mul, add_zero]
   have hR₁ne : ∀ i, R₁ i i ≠ 0 := fun i h => by have := (hR₁d i).1; rw [h] at this; simp at this
   have hdet1 : R₁.det ≠ 0 := by
-    rw [Matrix.det_of_upperTriangular hR₁t]
+    rw [Matrix.det_of_isUpperTriangular hR₁t]
     exact Finset.prod_ne_zero_iff.mpr (fun i _ => hR₁ne i)
-  letI : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
+  let : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
   set U := R₂ * R₁⁻¹ with hUdef
   have hUR : U * R₁ = R₂ := by
     rw [hUdef, Matrix.mul_assoc, Matrix.inv_mul_of_invertible, Matrix.mul_one]

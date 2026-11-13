@@ -160,8 +160,8 @@ theorem apply_eq_smul_of_toMatrixOrthonormal_eq_diagonal {n : ℕ} {T : V →ₗ
     · simp
     · simp [hji]
   conv_lhs => rw [← e.sum_repr' (T (e i))]
-  rw [Finset.sum_eq_single i (fun j _ hj => by rw [hentry j, if_neg hj, zero_smul])
-    (fun hi => absurd (Finset.mem_univ i) hi), hentry i, if_pos rfl]
+  rw [Finset.sum_eq_single i (fun j _ hj => by rw [hentry j, ite_eq_right hj, zero_smul])
+    (fun hi => absurd (Finset.mem_univ i) hi), hentry i, ite_eq_left rfl]
 
 /-- The converse reading: eigenvalue equations along an orthonormal basis make the
 matrix diagonal. -/

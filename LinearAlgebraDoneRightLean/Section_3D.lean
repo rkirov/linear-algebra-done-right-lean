@@ -224,7 +224,7 @@ example : Function.Surjective (LADR.Section_3A.backwardShift (F := F)) := by
   refine ⟨fun i => if i = 0 then 0 else x (i - 1), ?_⟩
   funext i
   show (if i + 1 = 0 then (0 : F) else x (i + 1 - 1)) = x i
-  rw [if_neg (Nat.succ_ne_zero i)]
+  rw [ite_eq_right (Nat.succ_ne_zero i)]
   simp
 
 example : ¬ Function.Injective (LADR.Section_3A.backwardShift (F := F)) := by
@@ -234,7 +234,7 @@ example : ¬ Function.Injective (LADR.Section_3A.backwardShift (F := F)) := by
     funext i
     show e (i + 1) = 0
     show Pi.single (0 : ℕ) (1 : F) (i + 1) = 0
-    rw [Pi.single_apply, if_neg (Nat.succ_ne_zero i)]
+    rw [Pi.single_apply, ite_eq_right (Nat.succ_ne_zero i)]
   have h0 : LADR.Section_3A.backwardShift (F := F) (0 : ℕ → F) = 0 := by
     funext _; rfl
   have heq : LADR.Section_3A.backwardShift (F := F) e =
@@ -351,10 +351,10 @@ example (q : Polynomial ℝ) :
     have hgnd : (c * (z : Polynomial ℝ)).natDegree = 2 + (z : Polynomial ℝ).natDegree := by
       rw [Polynomial.natDegree_mul hc0 hzz, hc2]
     have hnd' : (c * (z : Polynomial ℝ)).derivative.natDegree = 0 :=
-      Polynomial.natDegree_eq_zero_of_derivative_eq_zero hz0
+      Polynomial.derivative_eq_zero.1 hz0
     have h1 : (c * (z : Polynomial ℝ)).derivative.degree =
         ↑((c * (z : Polynomial ℝ)).natDegree - 1) :=
-      Polynomial.degree_derivative_eq _ (by omega)
+      Polynomial.degree_derivative (by omega)
     have h2 : (c * (z : Polynomial ℝ)).derivative.degree ≤
         ↑(c * (z : Polynomial ℝ)).derivative.natDegree := Polynomial.degree_le_natDegree
     rw [hnd', h1] at h2
@@ -556,12 +556,12 @@ theorem matrixOfₗ_surjective {m n : ℕ}
         = A i k • hw.toModuleBasis.repr (w i) from hw.toModuleBasis.repr.map_smul _ _,
       show w i = hw.toModuleBasis i from (IsBasis.toModuleBasis_apply hw i).symm,
       hw.toModuleBasis.repr_self]
-  rw [hrepr, Finsupp.coe_finset_sum, Finset.sum_apply, Finset.sum_eq_single j]
+  rw [hrepr, Finsupp.coe_finsetSum, Finset.sum_apply, Finset.sum_eq_single j]
   · rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul, Finsupp.single_apply,
-      if_pos rfl, mul_one]
+      ite_eq_left rfl, mul_one]
   · intro i _ hij
     rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul, Finsupp.single_apply,
-      if_neg hij, mul_zero]
+      ite_eq_right hij, mul_zero]
   · intro h; exact absurd (Finset.mem_univ j) h
 
 /-- The isomorphism {lit}`ℒ(V, W) ≅ F^{m,n}`: a bijective linear map is an
@@ -635,13 +635,13 @@ example {n : ℕ} (x : Fin n → F) :
       b.repr.map_smul _ _, b.repr_self]
   rw [hreprx]
   -- Evaluate the Finsupp sum at index i.
-  rw [Finsupp.coe_finset_sum, Finset.sum_apply]
+  rw [Finsupp.coe_finsetSum, Finset.sum_apply]
   rw [Finset.sum_eq_single i]
   · rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul,
-        Finsupp.single_apply, if_pos rfl, mul_one]
+        Finsupp.single_apply, ite_eq_left rfl, mul_one]
   · intros k _ hki
     rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul,
-        Finsupp.single_apply, if_neg hki, mul_zero]
+        Finsupp.single_apply, ite_eq_right hki, mul_zero]
   · intro h; exact absurd (Finset.mem_univ i) h
 
 /-! Axler's 3.74 example proper: the matrix of the polynomial
@@ -693,7 +693,7 @@ theorem matrixOf_apply_vectorMatrixOf {m n : ℕ}
     rw [map_sum]
     refine Finset.sum_congr rfl (fun r _ => ?_)
     rw [LinearMap.map_smul]
-  rw [hTx, map_sum, Finsupp.coe_finset_sum, Finset.sum_apply]
+  rw [hTx, map_sum, Finsupp.coe_finsetSum, Finset.sum_apply]
   refine Finset.sum_congr rfl (fun r _ => ?_)
   -- LHS at index j: {lit}`b_W.repr (a_r • T v_r) j = a_r * b_W.repr (T v_r) j`.
   rw [show hw.toModuleBasis.repr ((hv.toModuleBasis.repr x r) • T (v r)) =
@@ -829,7 +829,7 @@ theorem matrixOf_id_self {n : ℕ} {v : Fin n → V} (hv : IsBasis F v) :
   rw [Module.Basis.repr_self, Finsupp.single_apply, Matrix.one_apply]
   by_cases hjk : j = k
   · subst hjk; simp
-  · rw [if_neg hjk, if_neg (fun heq => hjk heq.symm)]
+  · rw [ite_eq_right hjk, ite_eq_right (fun heq => hjk heq.symm)]
 
 theorem matrixOf_id_mul_matrixOf_id {n : ℕ}
     {u v : Fin n → V} (hu : IsBasis F u) (hv : IsBasis F v) :

@@ -114,7 +114,7 @@ diagonal entries. -/
 
 theorem det_of_upperTriangular {n : ℕ} (M : Matrix (Fin n) (Fin n) F)
     (h : M.BlockTriangular id) : M.det = ∏ i, M i i :=
-  Matrix.det_of_upperTriangular h
+  Matrix.det_of_isUpperTriangular h
 
 /-! 9.49 Determinant is multiplicative.
 
@@ -367,7 +367,7 @@ theorem det_eq_prod_of_apply_eq_smul {K W : Type*} [Field K] [AddCommGroup W] [M
     smul_eq_mul, mul_one, Finsupp.single_apply, Matrix.diagonal_apply]
   rcases eq_or_ne i j with h | h
   · subst h; simp
-  · rw [if_neg (Ne.symm h), if_neg h]
+  · rw [ite_eq_right (Ne.symm h), ite_eq_right h]
 
 /-- 9.60 (product-of-singular-values form): {lit}`‖det T‖ = s₁ ⋯ sₙ`, the product
 of the singular values. Since {lit}`T* T` acts as {lit}`sₖ²` on the SVD eigenbasis
@@ -509,7 +509,7 @@ theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
       rw [← Real.sqrt_sq (norm_nonneg Q.det), h2, Real.sqrt_one]
     have hnormdet : ‖A.det‖ = ∏ i, ‖R i i‖ := by
       rw [hAQR, Matrix.det_mul, norm_mul, hQdet, one_mul,
-        Matrix.det_of_upperTriangular hRupper, norm_prod]
+        Matrix.det_of_isUpperTriangular hRupper, norm_prod]
     rw [hnormdet]
     refine Finset.prod_le_prod₀ (fun i _ => norm_nonneg _) (fun i _ => ?_)
     -- ‖R i i‖ ≤ ‖col i‖
@@ -525,7 +525,6 @@ theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
       simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, RCLike.star_def,
         RCLike.conj_mul] at hdiag
       have := congrArg RCLike.re hdiag
-      push_cast at this ⊢
       simpa using this
     have hge : ‖R i i‖ ^ 2 ≤ ‖col i‖ ^ 2 := by
       rw [hcolsq, hARentry]

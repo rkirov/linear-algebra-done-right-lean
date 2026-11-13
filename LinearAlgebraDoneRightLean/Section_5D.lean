@@ -116,7 +116,7 @@ theorem isDiag_matrixOf_of_eigenvectors {n : ℕ} {v : Fin n → V}
   rw [matrixOf_apply, hmu, map_smul]
   have hbasis : v j = hv.toModuleBasis j := (hv.toModuleBasis_apply j).symm
   rw [hbasis, Module.Basis.repr_self]
-  rw [Finsupp.smul_apply, Finsupp.single_apply, if_neg (fun h => hij h.symm),
+  rw [Finsupp.smul_apply, Finsupp.single_apply, ite_eq_right (fun h => hij h.symm),
     smul_zero]
 
 /-- If an operator has a diagonal matrix with respect to some basis, then the
@@ -993,7 +993,7 @@ theorem gershgorin {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
       exact Finset.sum_congr rfl fun k _ => map_smul T _ _
     have h1 : hv.toModuleBasis.repr (T w) j =
         ∑ k, hv.toModuleBasis.repr w k * matrixOf hv hv T j k := by
-      rw [hTw, map_sum, Finsupp.finset_sum_apply]
+      rw [hTw, map_sum, Finsupp.finsetSum_apply]
       refine Finset.sum_congr rfl fun k _ => ?_
       rw [map_smul, Finsupp.smul_apply, smul_eq_mul, matrixOf_apply,
         hv.toModuleBasis_apply]
@@ -1016,7 +1016,7 @@ theorem gershgorin {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
   have hcj_pos : 0 < ‖hv.toModuleBasis.repr w j‖ :=
     lt_of_lt_of_le (norm_pos_iff.mpr hk₀) (hj_max k₀ (Finset.mem_univ k₀))
   refine ⟨j, ?_⟩
-  rw [gershgorinDisk, Set.mem_setOf_eq]
+  rw [gershgorinDisk, Set.mem_ofPred_eq]
   -- Subtract {lit}`A_{j,j}cⱼ` from both sides of 5.69 and estimate.
   have hsplit : lam * hv.toModuleBasis.repr w j -
       matrixOf hv hv T j j * hv.toModuleBasis.repr w j =

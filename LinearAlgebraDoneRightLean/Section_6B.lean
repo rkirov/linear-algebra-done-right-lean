@@ -127,8 +127,8 @@ theorem L2C_inner_restrict {a b : ℝ} [Fact (a < b)] (f g : C(ℝ, ℝ)) :
 /-- The same bridge for functions that are only continuous on {lit}`[a,b]`. -/
 theorem L2C_inner_of_continuousOn {a b : ℝ} [Fact (a < b)] (f g : ℝ → ℝ)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : ContinuousOn g (Set.Icc a b)) :
-    ⟪(show L2C a b from (⟨(Set.Icc a b).restrict f, hf.restrict⟩ : C(Set.Icc a b, ℝ))),
-      (show L2C a b from (⟨(Set.Icc a b).restrict g, hg.restrict⟩ : C(Set.Icc a b, ℝ)))⟫_ℝ
+    ⟪(show L2C a b from (⟨(Set.Icc a b).domRestrict f, hf.domRestrict⟩ : C(Set.Icc a b, ℝ))),
+      (show L2C a b from (⟨(Set.Icc a b).domRestrict g, hg.domRestrict⟩ : C(Set.Icc a b, ℝ)))⟫_ℝ
       = ∫ x in a..b, f x * g x := by
   have hab : a ≤ b := le_of_lt Fact.out
   calc _ = ∫ x : ↥(Set.Icc a b), (fun y => f y * g y) (x : ℝ) := rfl
@@ -402,6 +402,7 @@ theorem gramSchmidt_orthogonal_of_lt (f : ι → V) {a b : ι} (h : a < b) :
     · rw [inner_eq_zero_symm.mp (ih a h hlt), mul_zero]
     · rw [ih i (Finset.mem_Iio.mp hi) hgt, mul_zero]
 
+omit [IsWellOrder ι (· < ·)] in
 /-- {lit}`vᵢ ∈ span(f₁, …, fⱼ)` for {lit}`i ≤ j`: rearrange the recursion as
 {lit}`vᵢ = fᵢ + ∑_{l<i} (multiple of fₗ)`. -/
 @[avoiding mem_span_gramSchmidt]
@@ -644,7 +645,7 @@ theorem orthonormal_extends [FiniteDimensional 𝕜 V] {s : Set V}
   classical
   -- list the (finitely many, by 6.25) vectors of `s` as `e₁, …, eₘ`
   have hli := orthonormal_linearIndependent hs
-  haveI : Fintype s := @Fintype.ofFinite s hli.finite
+  have : Fintype s := @Fintype.ofFinite s hli.finite
   set σ := Fintype.equivFin s
   set e : Fin (Fintype.card s) → V := fun i => (σ.symm i : V) with he_def
   have he : Orthonormal 𝕜 e := hs.comp _ σ.symm.injective

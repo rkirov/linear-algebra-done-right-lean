@@ -132,11 +132,11 @@ theorem exists_eigenvalue {V : Type*} [AddCommGroup V] [Module ℂ V]
     with hp_def
   have hp_coeff : ∀ j : Fin (n + 1), p.coeff (j : ℕ) = g j := by
     intro j
-    rw [hp_def, Polynomial.finset_sum_coeff]
+    rw [hp_def, Polynomial.finsetSum_coeff]
     rw [Finset.sum_eq_single j]
-    · rw [Polynomial.coeff_monomial, if_pos rfl]
+    · rw [Polynomial.coeff_monomial, ite_eq_left rfl]
     · intro i _ hij
-      rw [Polynomial.coeff_monomial, if_neg (fun h => hij (Fin.val_injective h))]
+      rw [Polynomial.coeff_monomial, ite_eq_right (fun h => hij (Fin.val_injective h))]
     · intro h
       exact absurd (Finset.mem_univ j) h
   have hp_ne : p ≠ 0 := fun h =>
@@ -241,10 +241,10 @@ private noncomputable def polyOfCoeffs {N : ℕ} (g : Fin N → F) : Polynomial 
 private lemma polyOfCoeffs_coeff {N : ℕ} (g : Fin N → F) (j : Fin N) :
     (polyOfCoeffs g).coeff (j : ℕ) = g j := by
   unfold polyOfCoeffs
-  rw [Polynomial.finset_sum_coeff, Finset.sum_eq_single j]
-  · rw [Polynomial.coeff_monomial, if_pos rfl]
+  rw [Polynomial.finsetSum_coeff, Finset.sum_eq_single j]
+  · rw [Polynomial.coeff_monomial, ite_eq_left rfl]
   · intro i _ hij
-    rw [Polynomial.coeff_monomial, if_neg (fun h => hij (Fin.val_injective h))]
+    rw [Polynomial.coeff_monomial, ite_eq_right (fun h => hij (Fin.val_injective h))]
   · intro h
     exact absurd (Finset.mem_univ j) h
 
@@ -276,9 +276,9 @@ private lemma minpoly_natDegree_le_aux (n : ℕ) (W : Type u) [AddCommGroup W]
     · -- {lit}`dim W = 0`: the constant polynomial {lit}`1` annihilates the
       -- (subsingleton) space.
       subst h0
-      haveI : Subsingleton W := (Module.finrank_eq_zero_iff_of_free F W).mp hW
+      have : Subsingleton W := (Module.finrank_eq_zero_iff_of_free F W).mp hW
       exact ⟨1, Polynomial.monic_one, Subsingleton.elim _ _, by simp⟩
-    · haveI : Nontrivial W :=
+    · have : Nontrivial W :=
         Module.nontrivial_of_finrank_pos (R := F) (by omega)
       obtain ⟨u, hu⟩ := exists_ne (0 : W)
       -- A monic polynomial of degree ≤ n annihilates {lit}`u`, from the

@@ -109,11 +109,12 @@ example : Type _ := V ⊗[F] W
 example (v : V) (w : W) : V ⊗[F] W := v ⊗ₜ[F] w
 
 /-- Every element of {lit}`V ⊗ W` is a finite sum of elementary tensors, the
-induction principle {name}`TensorProduct.induction_on`. -/
+induction principle {name}`TensorProduct.inductionOn` (no zero case is needed:
+{lit}`0 = 0 ⊗ 0`). -/
 example (x : V ⊗[F] W) (motive : V ⊗[F] W → Prop)
-    (h0 : motive 0) (htmul : ∀ v w, motive (v ⊗ₜ[F] w))
+    (htmul : ∀ v w, motive (v ⊗ₜ[F] w))
     (hadd : ∀ x y, motive x → motive y → motive (x + y)) : motive x :=
-  TensorProduct.induction_on x h0 htmul hadd
+  TensorProduct.inductionOn x htmul hadd
 
 /-! 9.72 Dimension of the tensor product of two vector spaces:
 {lit}`dim(V ⊗ W) = (dim V)(dim W)`.
@@ -318,7 +319,7 @@ theorem finrank_multilinearForms {m : ℕ} {Vi : Fin m → Type*}
     finrank F (MultilinearMap F Vi F) = ∏ i, finrank F (Vi i) := by
   classical
   have hb := Basis.piTensorProduct (fun i => Module.finBasis F (Vi i))
-  haveI : Module.Finite F (⨂[F] i, Vi i) := Module.Finite.of_basis hb
+  have : Module.Finite F (⨂[F] i, Vi i) := Module.Finite.of_basis hb
   rw [LinearEquiv.finrank_eq PiTensorProduct.lift, LADR.Section_3D.finrank_linearMap,
     Module.finrank_self, mul_one, Module.finrank_eq_card_basis hb, Fintype.card_pi]
   simp [Fintype.card_fin]

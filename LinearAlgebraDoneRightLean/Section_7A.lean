@@ -410,7 +410,7 @@ theorem isCompl_ker_range {T : V →ₗ[𝕜] V} (hT : IsStarNormal T) :
     IsCompl (LinearMap.ker T) (LinearMap.range T) := by
   have h1 : (LinearMap.range T)ᗮ = LinearMap.ker T := by
     rw [← ker_adjoint, ← ker_eq_ker_adjoint hT]
-  have := (LinearMap.range T).isCompl_orthogonal_of_hasOrthogonalProjection
+  have := (LinearMap.range T).isCompl_orthogonal
   rw [h1] at this
   exact this.symm
 

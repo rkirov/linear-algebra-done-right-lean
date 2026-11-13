@@ -166,7 +166,7 @@ theorem isBasis_dualBasis [Finite F V] {n : ℕ} (v : Fin n → V)
       rw [ha]; rfl
     simp only [LinearMap.coe_sum, Finset.sum_apply, LinearMap.smul_apply,
       smul_eq_mul, dualBasis_apply_self, mul_ite, mul_one, mul_zero,
-      Finset.sum_ite_eq, Finset.mem_univ, if_true] at hk
+      Finset.sum_ite_eq, Finset.mem_univ, ite_true] at hk
     exact hk
   -- A linearly independent list of length {lit}`dim V' = dim V = n` is a basis.
   have hcard : n = finrank F (Module.Dual F V) := by

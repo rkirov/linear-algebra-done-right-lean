@@ -76,7 +76,7 @@ operator form of {name}`Matrix.trace_eq_neg_charpoly_coeff`. -/
 theorem trace_eq_neg_charpoly_coeff [Nontrivial V] (T : V →ₗ[F] V) :
     LinearMap.trace F V T = -(T.charpoly).coeff (finrank F V - 1) := by
   classical
-  haveI : Nonempty (Fin (finrank F V)) := ⟨⟨0, Module.finrank_pos⟩⟩
+  have : Nonempty (Fin (finrank F V)) := ⟨⟨0, Module.finrank_pos⟩⟩
   let b := Module.finBasis F V
   have hcard : Fintype.card (Fin (finrank F V)) = finrank F V := by simp
   rw [trace_eq_toMatrix_trace b, Matrix.trace_eq_neg_charpoly_coeff,

@@ -327,7 +327,7 @@ private theorem finrank_U_2_41 : finrank ℝ U_2_41 = 3 := by
   have hP : Finite ℝ (Polynomial.degreeLT ℝ 4) :=
     Module.Finite.equiv (Polynomial.degreeLTEquiv ℝ 4).symm
   have hge : 3 ≤ finrank ℝ U_2_41 := by
-    haveI : FiniteDimensional ℝ U_2_41 := inferInstance
+    have : FiniteDimensional ℝ U_2_41 := inferInstance
     have := hLI.fintype_card_le_finrank
     simpa using this
   -- Upper bound: {lit}`dim U_2_41 ≤ dim P₃(ℝ) = 4`. We exclude {lit}`= 4`

@@ -206,8 +206,8 @@ theorem opNorm_id [Nontrivial V] : opNorm (LinearMap.id : V →ₗ[𝕜] V) = 1 
 
 /-- 7.91 A linear map and its adjoint have the same norm: {lit}`‖T*‖ = ‖T‖`. -/
 theorem opNorm_adjoint (T : V →ₗ[𝕜] W) : opNorm (LinearMap.adjoint T) = opNorm T := by
-  haveI := FiniteDimensional.complete 𝕜 V
-  haveI := FiniteDimensional.complete 𝕜 W
+  have := FiniteDimensional.complete 𝕜 V
+  have := FiniteDimensional.complete 𝕜 W
   rw [opNorm, opNorm, LinearMap.adjoint_toContinuousLinearMap]
   exact ContinuousLinearMap.adjoint.norm_map _
 
@@ -336,8 +336,8 @@ theorem sub_truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
     ← Finset.sum_sub_distrib]
   refine Finset.sum_congr rfl fun j _ => ?_
   by_cases h : (j : ℕ) < k
-  · rw [if_pos h, if_neg (not_le.mpr h), sub_self, zero_smul]
-  · rw [if_neg h, if_pos (not_lt.mp h), sub_zero]
+  · rw [ite_eq_left h, ite_eq_right (not_le.mpr h), sub_self, zero_smul]
+  · rw [ite_eq_right h, ite_eq_left (not_lt.mp h), sub_zero]
 
 /-- `‖T v‖² = ∑ⱼ sⱼ² ‖⟨eⱼ,v⟩‖²`. -/
 theorem normSq_apply (T : V →ₗ[𝕜] V) (v : V) :
@@ -384,11 +384,11 @@ theorem le_opNorm_sub_truncSVD (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finran
   have hnorm : ‖(T - truncSVD T k) (svdBasis T (svSortPerm T ⟨k, hk⟩))‖
       = singularValues T (svSortPerm T ⟨k, hk⟩) := by
     rw [sub_truncSVD_apply, Finset.sum_eq_single (⟨k, hk⟩ : Fin (finrank 𝕜 V))]
-    · rw [if_pos (le_refl k), orthonormal_iff_ite.mp (svdBasis T).orthonormal, if_pos rfl,
+    · rw [ite_eq_left (le_refl k), orthonormal_iff_ite.mp (svdBasis T).orthonormal, ite_eq_left rfl,
         mul_one, ← svdBasis_image_eq, norm_image_svdBasis]
     · intro j _ hj
       rw [orthonormal_iff_ite.mp (svdBasis T).orthonormal,
-        if_neg (fun hh => hj ((svSortPerm T).injective hh)), mul_zero, ite_self, zero_smul]
+        ite_eq_right (fun hh => hj ((svSortPerm T).injective hh)), mul_zero, ite_self, zero_smul]
     · intro h; exact absurd (Finset.mem_univ _) h
   have happ := opNorm_apply_le (T - truncSVD T k) (svdBasis T (svSortPerm T ⟨k, hk⟩))
   rw [hnorm, (svdBasis T).orthonormal.1 (svSortPerm T ⟨k, hk⟩), mul_one] at happ
@@ -429,7 +429,7 @@ theorem le_opNorm_sub_of_rank_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finr
       ?_ ?_ ?_ ?_ hvW
     · rintro _ ⟨i, rfl⟩
       rw [hfam, orthonormal_iff_ite.mp (svdBasis T).orthonormal]
-      refine if_neg (fun h => ?_)
+      refine ite_eq_right (fun h => ?_)
       have hji := (svSortPerm T).injective h
       have hi := i.isLt
       rw [hji] at hj
@@ -501,7 +501,7 @@ theorem polarDecomposition (T : V →ₗ[𝕜] V) :
   -- Extend the orthonormal image frame to a full orthonormal basis `fFull`.
   have hcard : finrank 𝕜 V = Fintype.card (Fin (finrank 𝕜 V)) := (Fintype.card_fin _).symm
   have horth : Orthonormal 𝕜
-      (Set.restrict {i | singularValues T i ≠ 0} (svdImage T)) := svdImage_orthonormal T
+      (Set.domRestrict {i | singularValues T i ≠ 0} (svdImage T)) := svdImage_orthonormal T
   obtain ⟨fFull, hfFull⟩ := horth.exists_orthonormalBasis_extension_of_card_eq hcard
   -- Define `S eₖ = fFull k`.
   set S := (svdBasis T).toBasis.constr 𝕜 (fun i => fFull i) with hS
@@ -584,9 +584,9 @@ theorem image_ball_eq_ellipsoid (T : V →ₗ[𝕜] V) (hT : Function.Bijective 
   have hinner : ∀ (v : V) (k), ⟪f k, T v⟫_𝕜 = (s k : 𝕜) * ⟪e k, v⟫_𝕜 := by
     intro v k
     rw [LADR.Section_7E.svd_apply T v, inner_sum, Finset.sum_eq_single k]
-    · rw [inner_smul_right, inner_smul_right, hON k k, if_pos rfl, mul_one]
+    · rw [inner_smul_right, inner_smul_right, hON k k, ite_eq_left rfl, mul_one]
     · intro j _ hjk
-      rw [inner_smul_right, inner_smul_right, hON k j, if_neg (Ne.symm hjk), mul_zero, mul_zero]
+      rw [inner_smul_right, inner_smul_right, hON k j, ite_eq_right (Ne.symm hjk), mul_zero, mul_zero]
     · intro h; exact absurd (Finset.mem_univ k) h
   -- the coordinate identity `∑ ‖⟪fₖ, T v⟫‖²/sₖ² = ‖v‖²`
   have hkey : ∀ v : V, ∑ k, ‖⟪f k, T v⟫_𝕜‖ ^ 2 / (s k) ^ 2 = ‖v‖ ^ 2 := by
@@ -596,7 +596,7 @@ theorem image_ball_eq_ellipsoid (T : V →ₗ[𝕜] V) (hT : Function.Bijective 
     rw [hinner v k, div_eq_iff (pow_ne_zero 2 (hspos k)), norm_mul, mul_pow,
       RCLike.norm_ofReal, sq_abs, mul_comm]
   ext w
-  simp only [ball, ellipsoid, Set.mem_image, Set.mem_setOf_eq]
+  simp only [ball, ellipsoid, Set.mem_image, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨v, hv, rfl⟩
     rw [hkey v]
@@ -621,7 +621,7 @@ theorem image_ball_eq_ellipsoid_of_diag {n : ℕ} (S : V →ₗ[𝕜] V) (hS : F
     rw [hSg v k, div_eq_iff (pow_ne_zero 2 (hr k)), norm_mul, mul_pow,
       RCLike.norm_ofReal, sq_abs, mul_comm]
   ext w
-  simp only [ball, ellipsoid, Set.mem_image, Set.mem_setOf_eq]
+  simp only [ball, ellipsoid, Set.mem_image, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨v, hv, rfl⟩
     rw [hkey v]; exact pow_lt_one₀ (norm_nonneg v) hv two_ne_zero
@@ -642,9 +642,9 @@ theorem stretchOp_inner {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin
   simp only [LinearMap.sum_apply, LinearMap.smul_apply, LinearMap.smulRight_apply,
     innerₛₗ_apply_apply, smul_smul]
   rw [inner_sum, Finset.sum_eq_single j]
-  · rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j j, if_pos rfl, mul_one]
+  · rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j j, ite_eq_left rfl, mul_one]
   · intro k _ hkj
-    rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j k, if_neg (Ne.symm hkj), mul_zero]
+    rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j k, ite_eq_right (Ne.symm hkj), mul_zero]
   · intro h; exact absurd (Finset.mem_univ j) h
 
 theorem stretchOp_bijective {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ)
@@ -702,7 +702,7 @@ the image is again a genuine parallelepiped.) -/
 theorem image_parallelepiped {n : ℕ} (T : V →ₗ[𝕜] V) (u : V) (v : Fin n → V) :
     T '' parallelepiped (𝕜 := 𝕜) u v = parallelepiped (𝕜 := 𝕜) (T u) (fun i => T (v i)) := by
   ext y
-  simp only [parallelepiped, Set.mem_image, Set.mem_setOf_eq]
+  simp only [parallelepiped, Set.mem_image, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨x, ⟨a, ha, rfl⟩, rfl⟩
     refine ⟨a, ha, ?_⟩

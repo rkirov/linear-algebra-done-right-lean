@@ -83,7 +83,7 @@ theorem setOrthogonal_singleton_235 :
       plane235 := by
   ext v
   rw [SetLike.mem_coe, mem_setOrthogonal]
-  simp only [Set.mem_singleton_iff, forall_eq, plane235, Set.mem_setOf_eq]
+  simp only [Set.mem_singleton_iff, forall_eq, plane235, Set.mem_ofPred_eq]
   rw [show ⟪(!₂[2, 3, 5] : EuclideanSpace ℝ (Fin 3)), v⟫_ℝ = 2 * v 0 + 3 * v 1 + 5 * v 2 by
     simp [PiLp.inner_apply, Fin.sum_univ_three]; ring]
 
@@ -693,7 +693,7 @@ noncomputable def restrEquiv (T : V →ₗ[𝕜] W) : (Submodule.orthogonal (Lin
 /-- The pseudoinverse {lit}`T† ∈ ℒ(W, V)`. -/
 noncomputable def pinv (T : V →ₗ[𝕜] W) : W →ₗ[𝕜] V :=
   (Submodule.orthogonal (LinearMap.ker T)).subtype ∘ₗ (restrEquiv T).symm.toLinearMap ∘ₗ
-    ((LinearMap.range T).orthogonalProjection : W →L[𝕜] (LinearMap.range T))
+    ((LinearMap.range T).orthogonalProjectionOnto : W →L[𝕜] (LinearMap.range T))
 
 @[inherit_doc] scoped postfix:max "†" => pinv
 
@@ -709,16 +709,16 @@ theorem pinv_eq_symm (e : V ≃ₗ[𝕜] W) : (e : V →ₗ[𝕜] W)† = (e.sym
     exact Submodule.mem_top
   -- `range T = W`, so `P_(range T)` fixes `w`
   have hw : w ∈ LinearMap.range (e : V →ₗ[𝕜] W) := ⟨e.symm w, by simp⟩
-  have hproj : (LinearMap.range (e : V →ₗ[𝕜] W)).orthogonalProjection w =
+  have hproj : (LinearMap.range (e : V →ₗ[𝕜] W)).orthogonalProjectionOnto w =
       (⟨w, hw⟩ : LinearMap.range (e : V →ₗ[𝕜] W)) :=
-    Submodule.orthogonalProjection_mem_subspace_eq_self
+    Submodule.orthogonalProjectionOnto_mem_subspace_eq_self
       (⟨w, hw⟩ : LinearMap.range (e : V →ₗ[𝕜] W))
   -- and `T|_(null T)⟂` sends `e.symm w` to `w`, so its inverse sends `w` back
   have hrestr : restrEquiv (e : V →ₗ[𝕜] W) ⟨e.symm w, hmem⟩ = ⟨w, hw⟩ := by
     apply Subtype.ext
     simp
   show ((restrEquiv (e : V →ₗ[𝕜] W)).symm
-    ((LinearMap.range (e : V →ₗ[𝕜] W)).orthogonalProjection w) : V) = e.symm w
+    ((LinearMap.range (e : V →ₗ[𝕜] W)).orthogonalProjectionOnto w) : V) = e.symm w
   rw [hproj, ← hrestr, LinearEquiv.symm_apply_apply]
 
 /-- 6.69 (b) {lit}`T T† = P_(range T)`. -/
@@ -736,7 +736,7 @@ theorem pinv_comp_T (T : V →ₗ[𝕜] W) :
   ext v
   simp only [LinearMap.comp_apply, pinv, Submodule.coe_subtype,
     ContinuousLinearMap.coe_coe, LinearEquiv.coe_coe]
-  set x := (Submodule.orthogonal (LinearMap.ker T)).orthogonalProjection v with hx
+  set x := (Submodule.orthogonal (LinearMap.ker T)).orthogonalProjectionOnto v with hx
   have hTx : T ((x : V)) = T v := by
     have hmem : v - (x : V) ∈ LinearMap.ker T := by
       have h1 : (x : V) = (Submodule.orthogonal (LinearMap.ker T)).starProjection v :=
@@ -748,11 +748,11 @@ theorem pinv_comp_T (T : V →ₗ[𝕜] W) :
       rw [h3]; exact (LinearMap.ker T).starProjection_apply_mem v
     rw [LinearMap.mem_ker, map_sub, sub_eq_zero] at hmem
     exact hmem.symm
-  have hproj : (LinearMap.range T).orthogonalProjection (T v) = restr T x := by
+  have hproj : (LinearMap.range T).orthogonalProjectionOnto (T v) = restr T x := by
     apply Subtype.ext
     rw [restr_coe, hTx]
     exact congrArg Subtype.val
-      (Submodule.orthogonalProjection_mem_subspace_eq_self (⟨T v, ⟨v, rfl⟩⟩ : LinearMap.range T))
+      (Submodule.orthogonalProjectionOnto_mem_subspace_eq_self (⟨T v, ⟨v, rfl⟩⟩ : LinearMap.range T))
   rw [hproj, ← restrEquiv_coe, LinearEquiv.symm_apply_apply, Submodule.starProjection_apply]
 
 
@@ -815,7 +815,7 @@ theorem pinv_minimal_norm (T : V →ₗ[𝕜] W) (w : W) (v : V)
     (hv : v ∈ T† w +ᵥ (LinearMap.ker T : Set V)) (hne : v ≠ T† w) : ‖T† w‖ < ‖v‖ := by
   -- T†w ∈ (null T)⟂ and v − T†w ∈ null T, so they are orthogonal
   have hpinv_mem : T† w ∈ Submodule.orthogonal (LinearMap.ker T) := by
-    show ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjection w) : V) ∈ _
+    show ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjectionOnto w) : V) ∈ _
     exact SetLike.coe_mem _
   have hsub_mem : v - T† w ∈ LinearMap.ker T := mem_vadd_coe_iff.mp hv
   have horth : ⟪T† w, v - T† w⟫_𝕜 = 0 := by
@@ -838,7 +838,7 @@ the characterization it expresses: {lit}`T† w` is *the* vector
 {lit}`v ∈ (null T)⟂` with {lit}`T v = P_(range T) w`. -/
 
 theorem pinv_apply (T : V →ₗ[𝕜] W) (w : W) :
-    T† w = ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjection w) : V) := rfl
+    T† w = ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjectionOnto w) : V) := rfl
 
 theorem pinv_mem_orthogonal (T : V →ₗ[𝕜] W) (w : W) :
     T† w ∈ Submodule.orthogonal (LinearMap.ker T) := by

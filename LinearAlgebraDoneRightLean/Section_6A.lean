@@ -315,7 +315,7 @@ roots, {lit}`p′` is the zero polynomial, so {lit}`p` is constant, and
       Polynomial.eq_zero_of_infinite_isRoot _
         ((Set.Icc_infinite (by norm_num)).mono (fun x hx => hderiv_zero x hx))
     rw [Polynomial.eq_C_of_natDegree_eq_zero
-        (Polynomial.natDegree_eq_zero_of_derivative_eq_zero hderiv),
+        (Polynomial.derivative_eq_zero.1 hderiv),
       show p.coeff 0 = 0 from by rw [Polynomial.coeff_zero_eq_eval_zero]; exact heval0]
     simp
 

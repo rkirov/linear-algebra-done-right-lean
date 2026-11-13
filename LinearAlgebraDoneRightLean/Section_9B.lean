@@ -232,7 +232,7 @@ theorem alternating_formula {n : ℕ} (e : Fin n → V) (he : IsBasis F e)
       Equiv.Perm.sign σ • ∏ k, b.repr (v k) (σ k) := by
     simp only [Module.Basis.det_apply, Matrix.det_apply, Module.Basis.toMatrix_apply]
   have happ := DFunLike.congr_fun (AlternatingMap.eq_smul_basis_det (e := b) α) v
-  rw [AlternatingMap.smul_apply] at happ
+  rw [smul_apply] at happ
   rw [happ, hbe, hexp]
 
 /-! 9.37 `dim V⁽ᵈⁱᵐ ⱽ⁾ₐₗₜ = 1`

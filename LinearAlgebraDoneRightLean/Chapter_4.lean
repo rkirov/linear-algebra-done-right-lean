@@ -741,7 +741,7 @@ private lemma quad_roots_filter (b c : ℝ) (h : b ^ 2 < 4 * c) :
     simp only [Complex.conj_im]; exact not_lt.mpr (by linarith [upperRoot_im_pos b c h])
   rw [quad_map_C_eq b c h, roots_mul (mul_ne_zero (X_sub_C_ne_zero _) (X_sub_C_ne_zero _)),
     roots_X_sub_C, roots_X_sub_C, Multiset.filter_add, Multiset.filter_singleton,
-    Multiset.filter_singleton, if_pos (upperRoot_im_pos b c h), if_neg hneg]
+    Multiset.filter_singleton, ite_eq_left (upperRoot_im_pos b c h), ite_eq_right hneg]
   simp
 
 /-- The upper-half-plane roots of {lit}`∏ (X² + bₖX + cₖ)` mapped to {lit}`ℂ[X]`

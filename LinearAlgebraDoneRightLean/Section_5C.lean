@@ -236,7 +236,7 @@ theorem aeval_prod_diag_eq_zero {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
       · -- {lit}`k = 0`: the image is in {lit}`span ∅ = {0}`.
         have hempty : {i : Fin n | i < k} = ∅ := by
           ext i
-          simp only [Set.mem_setOf_eq, Set.mem_empty_iff_false, iff_false,
+          simp only [Set.mem_ofPred_eq, Set.mem_empty_iff_false, iff_false,
             not_lt, Fin.le_def]
           omega
         rw [hempty, Set.image_empty, Submodule.span_empty,
@@ -289,7 +289,7 @@ theorem aeval_prod_diag_eq_zero {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
     have hx : x ∈ Submodule.span F (v '' {i | i ≤ klast}) := by
       have hall : {i : Fin n | i ≤ klast} = Set.univ := by
         ext i
-        simp only [Set.mem_setOf_eq, Set.mem_univ, iff_true]
+        simp only [Set.mem_ofPred_eq, Set.mem_univ, iff_true]
         rw [Fin.le_def]
         simp only [hklast_def]
         omega
@@ -340,7 +340,7 @@ theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
         exact ⟨⟨(j : ℕ), by have := Fin.le_def.mp hj; omega⟩, rfl⟩
       · rintro ⟨i, rfl⟩
         refine ⟨Fin.castLE _ i, ?_, rfl⟩
-        rw [Set.mem_setOf_eq, Fin.le_def]
+        rw [Set.mem_ofPred_eq, Fin.le_def]
         simp only [Fin.val_castLE]
         omega
     have himg_lt : v '' {i | i < k} =
@@ -351,7 +351,7 @@ theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
         exact ⟨⟨(j : ℕ), Fin.lt_def.mp hj⟩, rfl⟩
       · rintro ⟨i, rfl⟩
         refine ⟨Fin.castLE _ i, ?_, rfl⟩
-        rw [Set.mem_setOf_eq, Fin.lt_def]
+        rw [Set.mem_ofPred_eq, Fin.lt_def]
         simp only [Fin.val_castLE]
         omega
     have hli := hv.1
@@ -678,7 +678,7 @@ private lemma exists_upperTriangular_of_minpoly_prod :
         rintro x ⟨i, rfl⟩
         apply Submodule.subset_span
         exact ⟨Fin.castLE hMn i, by
-          simp only [Set.mem_setOf_eq, Fin.val_castLE]
+          simp only [Set.mem_ofPred_eq, Fin.val_castLE]
           exact i.isLt, hpre i⟩
       intro k
       by_cases hkM : (k : ℕ) < M
@@ -701,7 +701,7 @@ private lemma exists_upperTriangular_of_minpoly_prod :
         refine Submodule.span_mono ?_ hcoe
         rintro x ⟨y, ⟨i, hi, rfl⟩, rfl⟩
         refine ⟨Fin.castLE hMn i, ?_, (hpre i).symm ▸ rfl⟩
-        rw [Set.mem_setOf_eq, Fin.le_def]
+        rw [Set.mem_ofPred_eq, Fin.le_def]
         simp only [Fin.val_castLE]
         exact Fin.le_def.mp hi
       · -- {lit}`k ≥ M`: write {lit}`Twₖ = (T − γₘI)wₖ + γₘwₖ`, with the
@@ -712,8 +712,8 @@ private lemma exists_upperTriangular_of_minpoly_prod :
             (hU_le (LinearMap.mem_range_self f (w k)))
           rintro x ⟨i, hi, rfl⟩
           refine ⟨i, ?_, rfl⟩
-          rw [Set.mem_setOf_eq, Fin.le_def]
-          rw [Set.mem_setOf_eq] at hi
+          rw [Set.mem_ofPred_eq, Fin.le_def]
+          rw [Set.mem_ofPred_eq] at hi
           omega
         · exact Submodule.smul_mem _ _
             (Submodule.subset_span ⟨k, le_refl k, rfl⟩)

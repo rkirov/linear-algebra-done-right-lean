@@ -173,7 +173,7 @@ theorem exists_sqComp_of_bijective {V : Type*} [AddCommGroup V] [Module ℂ V]
       fμ ∘ₗ fμ = T.restrict (hmaps μ) := by
     intro μ
     by_cases hb : maxGenEigenspace T μ = ⊥
-    · haveI : Subsingleton (maxGenEigenspace T μ) := by rw [hb]; infer_instance
+    · have : Subsingleton (maxGenEigenspace T μ) := by rw [hb]; infer_instance
       exact ⟨0, Subsingleton.elim _ _⟩
     · have hμ : μ ≠ 0 := by
         rintro rfl
@@ -383,7 +383,7 @@ theorem coe_restrict_pow {W : Submodule ℂ V} (T : V →ₗ[ℂ] V) (h : ∀ x 
   | succ k ih =>
     intro x
     rw [pow_succ, Module.End.mul_apply, ih, pow_succ, Module.End.mul_apply,
-      LinearMap.restrict_coe_apply]
+      LinearMap.coe_restrict_apply]
 
 /-- A *Jordan basis* for a nilpotent {lit}`T`, stated matrix-free: a finite family
 of cyclic chains {lit}`(v i, T (v i), …, Tᴹ⁻¹ (v i))` that together form a basis of
@@ -459,7 +459,7 @@ theorem jordan_glue (T : V →ₗ[ℂ] V) (m : ℕ) (hm0 : 0 < m) (u : V)
   · rw [hFeq]
     exact (LinearIndependent.sum_type hLIgU hLIhW hdisjspan).comp e e.injective
   · have hre : Set.range (Sum.elim gU hWfam ∘ ⇑e) = Set.range (Sum.elim gU hWfam) := by
-      ext y; simp only [Set.mem_range, Function.comp_apply]
+      ext y; simp only [Set.mem_range]
       constructor
       · rintro ⟨x, rfl⟩; exact ⟨e x, rfl⟩
       · rintro ⟨z, rfl⟩; obtain ⟨x, rfl⟩ := e.surjective z; exact ⟨x, rfl⟩
@@ -486,10 +486,10 @@ theorem hasNilpotentJordanBasis (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) :
     intro V _ _ _ T hdim hnil
     rcases Nat.eq_zero_or_pos n with hn0 | hnpos
     · subst hn0
-      haveI : Subsingleton V := Module.finrank_zero_iff.mp hdim
+      have : Subsingleton V := Module.finrank_zero_iff.mp hdim
       refine ⟨Empty, inferInstance, Empty.elim, Empty.elim, fun i => i.elim, fun i => i.elim,
         ?_, ?_⟩
-      · haveI : IsEmpty (Σ i : Empty, Fin ((Empty.elim : Empty → ℕ) i)) := ⟨fun p => p.1.elim⟩
+      · have : IsEmpty (Σ i : Empty, Fin ((Empty.elim : Empty → ℕ) i)) := ⟨fun p => p.1.elim⟩
         exact linearIndependent_empty_type
       · rw [eq_top_iff]; intro x _; rw [Subsingleton.elim x 0]; exact Submodule.zero_mem _
     · classical
@@ -502,7 +502,7 @@ theorem hasNilpotentJordanBasis (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) :
           rw [h, pow_zero] at hmop
           have hall : ∀ x : V, x = 0 := fun x => by
             have := LinearMap.congr_fun hmop x; simpa using this
-          haveI : Subsingleton V := ⟨fun a b => by rw [hall a, hall b]⟩
+          have : Subsingleton V := ⟨fun a b => by rw [hall a, hall b]⟩
           rw [show finrank ℂ V = 0 from Module.finrank_zero_iff.mpr this] at hdim; omega
         · exact h
       have hm1 : (T ^ (m - 1) : V →ₗ[ℂ] V) ≠ 0 :=
@@ -557,14 +557,14 @@ theorem hasJordanBasis (T : V →ₗ[ℂ] V) : HasJordanBasis T := by
         (fun p : Σ i, Fin (Mμ i) => (N μ ^ (p.2 : ℕ)) (vμ p.1))) = ⊤ :=
     fun μ => hasNilpotentJordanBasis (N μ) (hNnil μ)
   choose ιμ instμ Mμ vμ hposμ hkillμ hLIμ hspanμ using hJB
-  haveI : ∀ μ, Fintype (ιμ μ) := instμ
+  have : ∀ μ, Fintype (ιμ μ) := instμ
   set bμ : ∀ μ, Module.Basis (Σ i : ιμ μ, Fin (Mμ μ i)) ℂ ↥(A μ) :=
     fun μ => Module.Basis.mk (hLIμ μ) (hspanμ μ).ge with hbμ
   set B := hInt.collectedBasis bμ with hB
   set e := Equiv.sigmaAssoc (fun (μ : ℂ) (i : ιμ μ) => Fin (Mμ μ i)) with he
-  haveI hFin : Fintype ((μ : ℂ) × (i : ιμ μ) × Fin (Mμ μ i)) :=
+  have hFin : Fintype ((μ : ℂ) × (i : ιμ μ) × Fin (Mμ μ i)) :=
     FiniteDimensional.fintypeBasisIndex B
-  haveI : Fintype (Σ μ : ℂ, ιμ μ) :=
+  have : Fintype (Σ μ : ℂ, ιμ μ) :=
     Fintype.ofSurjective (fun p : (μ : ℂ) × (i : ιμ μ) × Fin (Mμ μ i) => (⟨p.1, p.2.1⟩ : Σ μ, ιμ μ))
       (by rintro ⟨μ, i⟩; exact ⟨⟨μ, i, ⟨0, hposμ μ i⟩⟩, rfl⟩)
   have hbridge : ∀ (μ : ℂ) (i : ιμ μ) (j : ℕ),

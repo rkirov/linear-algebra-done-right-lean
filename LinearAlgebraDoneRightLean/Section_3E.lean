@@ -383,16 +383,16 @@ def slope2 : Submodule ℝ (ℝ × ℝ) where
   carrier := {p | p.2 = 2 * p.1}
   zero_mem' := by simp
   add_mem' {a b} ha hb := by
-    simp only [Set.mem_setOf_eq, Prod.fst_add, Prod.snd_add] at *
+    simp only [Set.mem_ofPred_eq, Prod.fst_add, Prod.snd_add] at *
     rw [ha, hb]; ring
   smul_mem' c a ha := by
-    simp only [Set.mem_setOf_eq, Prod.smul_fst, Prod.smul_snd, smul_eq_mul] at *
+    simp only [Set.mem_ofPred_eq, Prod.smul_fst, Prod.smul_snd, smul_eq_mul] at *
     rw [ha]; ring
 
 example : translate ((17, 20) : ℝ × ℝ) (slope2 : Set (ℝ × ℝ)) =
     {p : ℝ × ℝ | p.2 = 2 * p.1 - 14} := by
   ext p
-  simp only [translate, SetLike.mem_coe, Set.mem_setOf_eq]
+  simp only [translate, SetLike.mem_coe, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨u, hu, rfl⟩
     -- {lit}`u ∈ U` means {lit}`u.2 = 2 * u.1`; read off the second coordinate.
@@ -421,7 +421,7 @@ planes parallel to it.) -/
 line through {lit}`v`, with intercept {lit}`v.2 − 2·v.1`. -/
 private theorem mem_translate_slope2 (v p : ℝ × ℝ) :
     p ∈ translate v (slope2 : Set (ℝ × ℝ)) ↔ p.2 = 2 * p.1 + (v.2 - 2 * v.1) := by
-  simp only [translate, SetLike.mem_coe, Set.mem_setOf_eq]
+  simp only [translate, SetLike.mem_coe, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨u, hu, rfl⟩
     show v.2 + u.2 = 2 * (v.1 + u.1) + (v.2 - 2 * v.1)

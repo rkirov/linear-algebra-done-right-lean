@@ -49,7 +49,7 @@ theorem totalDegree_pderiv_le (i : Fin n) (p : MvPolynomial (Fin n) ℝ) :
   -- monomial by monomial: ∂ᵢ x^s = sᵢ x^(s - eᵢ)
   conv_lhs => rw [p.as_sum]
   rw [map_sum]
-  refine (totalDegree_finset_sum _ _).trans (Finset.sup_le fun s hs => ?_)
+  refine (totalDegree_finsetSum _ _).trans (Finset.sup_le fun s hs => ?_)
   rw [pderiv_monomial]
   by_cases hsi : s i = 0
   · simp [hsi]
@@ -220,7 +220,7 @@ theorem eq_zero_of_harmonic (hn : 0 < n) (u : MvPolynomial (Fin n) ℝ)
     intro t ht
     have ht0 := ht.1
     have ht1 : t * (1 + s) ≤ 1 := (le_div_iff₀ (by positivity)).mp ht.2
-    simp only [Set.mem_setOf_eq, Polynomial.IsRoot, eval_line, zero_add]
+    simp only [Set.mem_ofPred_eq, Polynomial.IsRoot, eval_line, zero_add]
     apply hball
     simp only [Pi.smul_apply, smul_eq_mul, mul_pow, ← Finset.mul_sum]
     nlinarith

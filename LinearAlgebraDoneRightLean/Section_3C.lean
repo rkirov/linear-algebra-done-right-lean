@@ -492,7 +492,7 @@ theorem column_row_factorization {m n : ℕ} (A : Matrix (Fin m) (Fin n) F)
   let cols : Fin n → Matrix (Fin m) (Fin 1) F := column A
   let U : Submodule F (Matrix (Fin m) (Fin 1) F) :=
     Submodule.span F (Set.range cols)
-  haveI : Module.Finite F U :=
+  have : Module.Finite F U :=
     Module.Finite.of_injective U.subtype Subtype.val_injective
   -- A basis b of U.
   obtain ⟨c, b, hb_basis⟩ :=
@@ -552,7 +552,7 @@ private theorem mul_row_in_row_span {m c n : ℕ}
 private theorem columnRank_zero_iff_eq_zero {m n : ℕ}
     (A : Matrix (Fin m) (Fin n) F) : columnRank A = 0 ↔ A = 0 := by
   classical
-  haveI : Module.Finite F (Submodule.span F (Set.range (column A))) :=
+  have : Module.Finite F (Submodule.span F (Set.range (column A))) :=
     Module.Finite.of_injective (Submodule.span F (Set.range (column A))).subtype
       Subtype.val_injective
   constructor

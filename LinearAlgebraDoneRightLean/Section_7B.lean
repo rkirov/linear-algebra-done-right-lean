@@ -266,11 +266,11 @@ theorem A_7_30_eigenvalue_neg15 :
   ext i; fin_cases i <;> simp [A_7_30, v_7_30_c, Matrix.toEuclideanLin] <;> norm_num
 
 theorem v_7_30_ortho_ab : ⟪v_7_30_a, v_7_30_b⟫_ℝ = 0 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_b, Fin.sum_univ_three]
+  rw [PiLp.inner_apply]; simp [v_7_30_a, v_7_30_b, Fin.sum_univ_three]
 theorem v_7_30_ortho_ac : ⟪v_7_30_a, v_7_30_c⟫_ℝ = 0 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_c, Fin.sum_univ_three]
+  rw [PiLp.inner_apply]; simp [v_7_30_a, v_7_30_c, Fin.sum_univ_three]
 theorem v_7_30_ortho_bc : ⟪v_7_30_b, v_7_30_c⟫_ℝ = 0 := by
-  rw [PiLp.inner_apply]; simp [rinner, v_7_30_b, v_7_30_c, Fin.sum_univ_three]; norm_num
+  rw [PiLp.inner_apply]; simp [v_7_30_b, v_7_30_c, Fin.sum_univ_three]; norm_num
 theorem v_7_30_normSq_a : ⟪v_7_30_a, v_7_30_a⟫_ℝ = 2 := by
   rw [PiLp.inner_apply]; simp [v_7_30_a, Fin.sum_univ_three]; norm_num
 theorem v_7_30_normSq_b : ⟪v_7_30_b, v_7_30_b⟫_ℝ = 3 := by
@@ -308,7 +308,7 @@ theorem e_7_30_orthonormal : Orthonormal ℝ e_7_30 := by
       real_inner_comm v_7_30_a v_7_30_c, real_inner_comm v_7_30_b v_7_30_c,
       v_7_30_ortho_ab, v_7_30_ortho_ac, v_7_30_ortho_bc, v_7_30_normSq_a, v_7_30_normSq_b,
       v_7_30_normSq_c] <;>
-    norm_num <;> first | decide | (field_simp; linarith [s2, s3, s6])
+    norm_num <;> (field_simp; linarith [s2, s3, s6])
 
 /-- The orthonormal basis of eigenvectors of Example 7.30. -/
 noncomputable def b_7_30 : OrthonormalBasis (Fin 3) ℝ (EuclideanSpace ℝ (Fin 3)) :=

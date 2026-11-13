@@ -233,14 +233,14 @@ theorem inner_image_svdBasis (T : V →ₗ[𝕜] W) (j k : Fin (finrank 𝕜 V))
     inner_smul_left, RCLike.conj_ofReal,
     orthonormal_iff_ite.mp (svdBasis T).orthonormal j k]
   rcases eq_or_ne j k with h | h
-  · subst h; rw [if_pos rfl, if_pos rfl, mul_one]
-  · rw [if_neg h, if_neg h, mul_zero]
+  · subst h; rw [ite_eq_left rfl, ite_eq_left rfl, mul_one]
+  · rw [ite_eq_right h, ite_eq_right h, mul_zero]
 
 /-- {lit}`‖T eₖ‖ = sₖ`. -/
 theorem norm_image_svdBasis (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
     ‖T (svdBasis T i)‖ = singularValues T i := by
   have h := inner_image_svdBasis T i i
-  rw [if_pos rfl, inner_self_eq_norm_sq_to_K] at h
+  rw [ite_eq_left rfl, inner_self_eq_norm_sq_to_K] at h
   have h2 : (‖T (svdBasis T i)‖) ^ 2 = (singularValues T i) ^ 2 := by
     have hre := congrArg RCLike.re h
     rwa [← RCLike.ofReal_pow, RCLike.ofReal_re, RCLike.ofReal_re] at hre
@@ -364,7 +364,7 @@ theorem finrank_eigenspace_adjComp_T_7_66 :
     · ext i
       fin_cases i <;>
         norm_num [Matrix.cons_val_two, Matrix.cons_val_three, Matrix.vecHead,
-          Matrix.vecTail] <;> decide
+          Matrix.vecTail]
   · rw [key, Fintype.card_subtype,
       show (Finset.univ.filter fun i => ![(9 : 𝕜), 4, 0, 9] i = 4) = {1} from ?_]
     · decide
@@ -378,7 +378,7 @@ theorem finrank_eigenspace_adjComp_T_7_66 :
     · ext i
       fin_cases i <;>
         norm_num [Matrix.cons_val_two, Matrix.cons_val_three, Matrix.vecHead,
-          Matrix.vecTail] <;> decide
+          Matrix.vecTail]
 
 /-- 7.66 The singular values of {lit}`T` are {lit}`3, 3, 2, 0` — as a multiset, i.e. with
 multiplicity, which is how 7.65 lists them. (This pin's
@@ -571,7 +571,7 @@ theorem eigenvalues_adjComp_T_7_67 :
     · ext i
       fin_cases i <;>
         norm_num [RCLike.ofReal_ofNat, RCLike.ofReal_zero, Matrix.cons_val_two,
-          Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail] <;> decide
+          Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail]
   · rw [hfilter 2 {0} ?_]
     · decide
     · ext i
@@ -583,7 +583,7 @@ theorem eigenvalues_adjComp_T_7_67 :
     · ext i
       fin_cases i <;>
         norm_num [RCLike.ofReal_ofNat, RCLike.ofReal_zero, Matrix.cons_val_two,
-          Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail] <;> decide
+          Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail]
 
 /-- 7.67 The singular values of {lit}`T` are {lit}`5, √2, 0, 0`, as a multiset. -/
 theorem singularValues_T_7_67 :
@@ -748,7 +748,7 @@ theorem isometry_iff_singularValues_eq_one (S : V →ₗ[𝕜] W) :
   constructor
   · intro hS i
     have hself : ⟪svdBasis S i, svdBasis S i⟫_𝕜 = 1 := by
-      rw [orthonormal_iff_ite.mp (svdBasis S).orthonormal i i, if_pos rfl]
+      rw [orthonormal_iff_ite.mp (svdBasis S).orthonormal i i, ite_eq_left rfl]
     have h1 : (((singularValues S i) ^ 2 : ℝ) : 𝕜) * ⟪svdBasis S i, svdBasis S i⟫_𝕜
         = ⟪svdBasis S i, svdBasis S i⟫_𝕜 := by
       rw [← inner_smul_right, ← adjComp_apply_svdBasis, hS, Module.End.one_apply]
@@ -776,10 +776,10 @@ theorem svdBasis_image_eq (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
     T (svdBasis T i) = (singularValues T i : 𝕜) • svdImage T i := by
   rw [svdImage]
   by_cases h : singularValues T i = 0
-  · rw [if_pos h, smul_zero]
+  · rw [ite_eq_left h, smul_zero]
     have : ‖T (svdBasis T i)‖ = 0 := by rw [norm_image_svdBasis, h]
     exact norm_eq_zero.mp this
-  · rw [if_neg h, smul_smul,
+  · rw [ite_eq_right h, smul_smul,
       mul_inv_cancel₀ (by exact_mod_cast h : (singularValues T i : 𝕜) ≠ 0), one_smul]
 
 /-- 7.73 The vectors {lit}`fₖ = svdImage T k` with {lit}`sₖ ≠ 0` form an
@@ -789,15 +789,15 @@ theorem svdImage_orthonormal (T : V →ₗ[𝕜] W) :
       svdImage T i.1) := by
   rw [orthonormal_iff_ite]
   rintro ⟨i, hi⟩ ⟨j, hj⟩
-  simp only [svdImage, if_neg hi, if_neg hj]
+  simp only [svdImage, ite_eq_right hi, ite_eq_right hj]
   rw [inner_smul_left, inner_smul_right, inner_image_svdBasis, map_inv₀, RCLike.conj_ofReal]
   rcases eq_or_ne i j with h | h
   · subst h
-    rw [if_pos rfl, if_pos (by rfl : (⟨i, hi⟩ : {i // singularValues T i ≠ 0}) = ⟨i, hj⟩),
+    rw [ite_eq_left rfl, ite_eq_left (by rfl : (⟨i, hi⟩ : {i // singularValues T i ≠ 0}) = ⟨i, hj⟩),
       RCLike.ofReal_pow]
     have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
     field_simp
-  · rw [if_neg h, if_neg (fun hh => h (Subtype.ext_iff.mp hh)), mul_zero, mul_zero]
+  · rw [ite_eq_right h, ite_eq_right (fun hh => h (Subtype.ext_iff.mp hh)), mul_zero, mul_zero]
 
 /-! 7.70 Singular value decomposition
 
@@ -885,7 +885,7 @@ theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
   have hTf : ∀ i, singularValues T i ≠ 0 →
       LinearMap.adjoint T (svdImage T i) = (singularValues T i : 𝕜) • svdBasis T i := by
     intro i hi
-    rw [svdImage, if_neg hi, map_smul, ← LinearMap.comp_apply, adjComp_apply_svdBasis, smul_smul]
+    rw [svdImage, ite_eq_right hi, map_smul, ← LinearMap.comp_apply, adjComp_apply_svdBasis, smul_smul]
     congr 1
     have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
     rw [RCLike.ofReal_pow]; field_simp
@@ -928,7 +928,7 @@ theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
   -- pinv w and S both lie in (ker T)ᗮ and T maps both to P_(range T) w.
   have hpinv_mem : LADR.Section_6C.pinv T w ∈ (LinearMap.ker T)ᗮ := by
     show ((LADR.Section_6C.restrEquiv T).symm
-      ((LinearMap.range T).orthogonalProjection w) : V) ∈ _
+      ((LinearMap.range T).orthogonalProjectionOnto w) : V) ∈ _
     exact SetLike.coe_mem _
   have hTeq : T (LADR.Section_6C.pinv T w) = T S := by
     rw [hTS, ← LinearMap.comp_apply]

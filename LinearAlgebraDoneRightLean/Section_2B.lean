@@ -75,7 +75,7 @@ theorem isBasis_stdBasis (n : ℕ) :
     rw [Finset.sum_eq_single j] at hj
     · simpa using hj
     · intros i _ hij
-      rw [if_neg (fun h => hij h.symm)]; ring
+      rw [ite_eq_right (fun h => hij h.symm)]; ring
     · intro h; exact absurd (Finset.mem_univ j) h
   · rw [Spans, eq_top_iff]
     intro v _
@@ -112,12 +112,12 @@ theorem isBasis_stdBasis (n : ℕ) :
     refine Finset.sum_congr rfl (fun k _ => ?_)
     rw [show b.repr (x k • b k) = x k • b.repr (b k) from
       b.repr.map_smul _ _, b.repr_self]
-  rw [hreprx, Finsupp.coe_finset_sum, Finset.sum_apply, Finset.sum_eq_single i]
+  rw [hreprx, Finsupp.coe_finsetSum, Finset.sum_apply, Finset.sum_eq_single i]
   · rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul,
-        Finsupp.single_apply, if_pos rfl, mul_one]
+        Finsupp.single_apply, ite_eq_left rfl, mul_one]
   · intros k _ hki
     rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul,
-        Finsupp.single_apply, if_neg hki, mul_zero]
+        Finsupp.single_apply, ite_eq_right hki, mul_zero]
   · intro h; exact absurd (Finset.mem_univ i) h
 
 /-- The monomial basis {lit}`1, x, …, x^{n-1}` of {lit}`Polynomial.degreeLT F n`
@@ -462,14 +462,14 @@ theorem exists_isCompl [Module.Finite F V] (U : Submodule F V) :
       intro i
       show (if h : (Fin.castLE hmn i).val < m then a ⟨_, h⟩ else _) = a i
       have hlt : (Fin.castLE hmn i).val < m := by rw [Fin.val_castLE]; exact i.isLt
-      rw [dif_pos hlt]
+      rw [dite_eq_left hlt]
       congr 1
     have hc_tail : ∀ j : Fin (n - m),
         c ⟨m + j.val, by have := j.isLt; omega⟩ = -b j := by
       intro j
       show (if h : _ < m then _ else _) = -b j
       have hge : ¬ m + j.val < m := by omega
-      rw [dif_neg hge]
+      rw [dite_eq_right hge]
       congr
       show m + j.val - m = j.val
       omega

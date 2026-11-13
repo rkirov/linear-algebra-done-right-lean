@@ -337,7 +337,7 @@ example (m : ℕ) [Infinite F] :
   rw [Fintype.linearIndependent_iff]
   intro a ha i
   have hi := congrArg (fun p : Polynomial F => p.coeff (i : ℕ)) ha
-  simp only [Polynomial.finset_sum_coeff, Polynomial.coeff_smul, smul_eq_mul,
+  simp only [Polynomial.finsetSum_coeff, Polynomial.coeff_smul, smul_eq_mul,
     Polynomial.coeff_X_pow, Polynomial.coeff_zero] at hi
   rw [Finset.sum_eq_single i] at hi
   · simpa using hi
@@ -580,12 +580,12 @@ theorem linearIndependent_le_spanning {m n : ℕ} (u : Fin m → V) (w : Fin n �
       else w (r ⟨i - (k + 1), by have := i.isLt; omega⟩)
     have hLu : ∀ (i : ℕ) (hi : i < n + 1) (hi' : i ≤ k),
         L ⟨i, hi⟩ = u ⟨i, by omega⟩ := by
-      intros i _ hi'; exact dif_pos hi'
+      intros i _ hi'; exact dite_eq_left hi'
     have hLw : ∀ (i : ℕ) (hi : i < n + 1) (hi' : k + 1 ≤ i),
         L ⟨i, hi⟩ = w (r ⟨i - (k + 1), by omega⟩) := by
       intros i _ hi'
       have hnot : ¬ i ≤ k := by omega
-      exact dif_neg hnot
+      exact dite_eq_right hnot
     -- {lit}`u_k` sits at position {lit}`k` of {lit}`L`.
     let pos_k : Fin (n + 1) := ⟨k, by omega⟩
     let pos_k_m : Fin m := ⟨k, hkm⟩
@@ -672,7 +672,7 @@ theorem linearIndependent_le_spanning {m n : ℕ} (u : Fin m → V) (w : Fin n �
           right
           rw [hLw i.val i.isLt hi_le]
           refine ⟨_, ?_, rfl⟩
-          simp only [T', Finset.coe_erase, Set.mem_diff, Set.mem_singleton_iff]
+          simp only [T', Finset.coe_erase, Set.mem_sdiff, Set.mem_singleton_iff]
           refine ⟨?_, ?_⟩
           · have : r ⟨i.val - (k + 1), by have := i.isLt; omega⟩ ∈ Set.range ⇑r :=
               ⟨_, rfl⟩
@@ -694,7 +694,7 @@ theorem linearIndependent_le_spanning {m n : ℕ} (u : Fin m → V) (w : Fin n �
             omega
           · rw [hLu i.val (by have := i.isLt; omega) (by omega)]
         · -- {lit}`j' ∈ T'` so {lit}`j' ∈ T` and {lit}`j' ≠ j`.
-          simp only [T', Finset.coe_erase, Set.mem_diff, Set.mem_singleton_iff] at hj'T'
+          simp only [T', Finset.coe_erase, Set.mem_sdiff, Set.mem_singleton_iff] at hj'T'
           obtain ⟨hj'_T, hj'_ne⟩ := hj'T'
           have h_range : j' ∈ Set.range ⇑r := by rw [hr_range]; exact hj'_T
           obtain ⟨idx', hidx'⟩ := h_range
@@ -813,7 +813,7 @@ example (U : Submodule F V) [Module.Finite F V] : Module.Finite F U := by
   have hspan_U : Submodule.span F (Set.range u) = ⊤ := by
     by_contra hne
     have hlt : Submodule.span F (Set.range u) < ⊤ := lt_top_iff_ne_top.mpr hne
-    obtain ⟨y, _, hy_not⟩ := SetLike.exists_of_lt hlt
+    obtain ⟨y, _, hy_not⟩ := IsConcreteLE.exists_of_lt hlt
     have hsnoc_LI : LinearIndependent F (Fin.snoc u y : Fin (m + 1) → U) := by
       -- In a relation on the extended list, the coefficient {lit}`A` of {lit}`y` must
       -- vanish: otherwise {lit}`y = -A⁻¹ (∑ gᵢ uᵢ)` would lie in {lit}`span (range u)`.
