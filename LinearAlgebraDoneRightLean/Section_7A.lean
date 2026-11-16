@@ -1173,13 +1173,18 @@ theorem exercise_7A_15b (T : V ≃ₗ[𝕜] V) :
         (T.symm : V →ₗ[𝕜] V)† * T.symm := Units.ext_iff
     _ ↔ _ := eq_comm
 
+/-- The dimension asked for in 7A.16(b), as a function of {lit}`n = dim V`. -/
+def exercise_7A_16_sol (n : ℕ) : ℕ :=
+  (n + 1) * n / 2
+
 /-- 7A.16 For {lit}`𝔽 = ℝ`: (a) the self-adjoint operators form a subspace of
 {lit}`ℒ(V)`; (b) what is the dimension of this subspace. -/
 theorem exercise_7A_16 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
     [FiniteDimensional ℝ V] :
     ∃ U : Submodule ℝ (V →ₗ[ℝ] V),
       (∀ T, T ∈ U ↔ LinearMap.IsSymmetric T) ∧
-        finrank ℝ U = (finrank ℝ V + 1) * finrank ℝ V / 2 := by
+        finrank ℝ U = exercise_7A_16_sol (finrank ℝ V) := by
+  rw [exercise_7A_16_sol]
   -- we showed (S + T)* = S* + T* and (c • T)* = conj c • T*, so the self-adjoint operators form a subspace.
   -- pick a basis and argue about dimension using matrices
   -- the subspace is spanned by matrices that zero except Aij=Aji=1 for some i ≤ j
