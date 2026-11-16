@@ -7,6 +7,7 @@ public import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
 public import Mathlib.Analysis.InnerProductSpace.PiL2
 public import Mathlib.Analysis.InnerProductSpace.Adjoint
 public import Mathlib.LinearAlgebra.Dual.Lemmas
+public import Mathlib.Topology.Algebra.Polynomial
 public import Mathlib.Tactic.Linarith
 public import Mathlib.Tactic.Linter.Style
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
@@ -1103,6 +1104,31 @@ theorem exercise_6C_16b (U : Submodule ℝ (L2C (-1) 1))
       (L2C.toCont f) ⟨0, Set.mem_Icc.mpr ⟨by norm_num, by norm_num⟩⟩ = 0) :
     ¬ IsCompl U Uᗮ ∧ Uᗮᗮ ≠ U := by
   sorry
+
+/-! Bridge for 6C.17: polynomials as elements of the inner product space
+{lit}`C[a, b]`, so that 6.61 applies to an integral minimization problem. -/
+
+instance : Fact ((0 : ℝ) < 1) := ⟨by norm_num⟩
+
+/-- A real polynomial, restricted to {lit}`[a, b]`, as an element of {lit}`C[a, b]`. -/
+noncomputable def polyL2 (a b : ℝ) : Polynomial ℝ →ₗ[ℝ] L2C a b where
+  toFun p := (⟨fun x : Set.Icc a b => p.eval (x : ℝ),
+    p.continuous.comp continuous_subtype_val⟩ : C(Set.Icc a b, ℝ))
+  map_add' p q := ContinuousMap.ext fun x => Polynomial.eval_add
+  map_smul' c p := ContinuousMap.ext fun x => by
+    show Polynomial.eval (x : ℝ) (c • p) = c • Polynomial.eval (x : ℝ) p
+    simp
+
+open MeasureTheory in
+/-- The inner product of two polynomials in {lit}`C[a, b]` is {lit}`∫ₐᵇ p q`. -/
+theorem inner_polyL2 {a b : ℝ} [Fact (a < b)] (p q : Polynomial ℝ) :
+    ⟪polyL2 a b p, polyL2 a b q⟫_ℝ = ∫ x in a..b, p.eval x * q.eval x := by
+  have hab : a ≤ b := le_of_lt Fact.out
+  calc _ = ∫ x : ↥(Set.Icc a b), (fun y => p.eval y * q.eval y) (x : ℝ) := rfl
+    _ = ∫ x in Set.Icc a b, p.eval x * q.eval x :=
+        integral_subtype_comap measurableSet_Icc (fun y => p.eval y * q.eval y)
+    _ = ∫ x in a..b, p.eval x * q.eval x := by
+        rw [integral_Icc_eq_integral_Ioc, intervalIntegral.integral_of_le hab]
 
 /-- 6C.17 answer: the minimizing {lit}`p ∈ 𝒫₃(ℝ)` — a concrete polynomial to be
 supplied. -/

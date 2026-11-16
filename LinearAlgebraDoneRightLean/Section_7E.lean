@@ -1205,8 +1205,8 @@ noncomputable def singularValues_7E_6 : Fin 3 → ℝ := sorry
 
 /-- 7E.6 Find the singular values of the differentiation operator {lit}`D p = p′`
 on {lit}`𝒫₂(ℝ)` with the {lit}`L²` inner product {lit}`⟨p, q⟩ = ∫₀¹ pq` of Example
-6.34 (the space is {name}`LADR.Section_7A.l2Core_7A14`'s
-{lit}`Polynomial.degreeLT ℝ 3`). The answer is {name}`singularValues_7E_6`. -/
+6.34 (the space is {lit}`Polynomial.degreeLT ℝ 3` with the inner product of 7A.14,
+{name}`LADR.Section_7A.inner_p2`). The answer is {name}`singularValues_7E_6`. -/
 theorem exercise_7E_6 (D : Polynomial.degreeLT ℝ 3 →ₗ[ℝ] Polynomial.degreeLT ℝ 3)
     (hD : ∀ p : Polynomial.degreeLT ℝ 3,
       (D p : Polynomial ℝ) = (p : Polynomial ℝ).derivative) :
