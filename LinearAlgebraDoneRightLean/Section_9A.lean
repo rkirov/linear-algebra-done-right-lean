@@ -17,6 +17,7 @@ public import Mathlib.Analysis.InnerProductSpace.PiL2
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.Algebra.Polynomial.Derivative
 public import Mathlib.Tactic.Linarith
+public import LinearAlgebraDoneRightLean.Section_7B
 public import Mathlib.Tactic.Linter.Style
 public import CompanionHelper
 
@@ -287,7 +288,7 @@ Axler's proof: on a real inner product space, represent the symmetric bilinear
 form {lit}`ρ` by the self-adjoint operator {lit}`T` with {lit}`⟨T u, w⟩ = ρ(u, w)`
 (Riesz representation, {name}`InnerProductSpace.toDual`), diagonalize {lit}`T` by an
 orthonormal eigenbasis via the real spectral theorem (7.29,
-{name}`LinearMap.IsSymmetric.eigenvectorBasis`), and read off
+{name}`LADR.Section_7B.exists_orthonormalBasis_eigenvectors_antitone`), and read off
 {lit}`ρ(eᵢ, eⱼ) = ⟨T eᵢ, eⱼ⟩ = λᵢ⟨eᵢ, eⱼ⟩ = λᵢ δᵢⱼ`, a diagonal matrix. -/
 
 section SpectralBilinear
@@ -317,15 +318,17 @@ theorem bilinOp_isSymmetric {B : LinearMap.BilinForm ℝ W} (hB : B.IsSymm) :
 
 /-- 9.13 On a real inner product space, every symmetric bilinear form has a
 diagonal matrix with respect to some orthonormal basis. -/
+@[avoiding LinearMap.IsSymmetric.eigenvectorBasis]
 theorem exists_orthonormal_diag (B : LinearMap.BilinForm ℝ W) (hB : B.IsSymm) :
     ∃ e : OrthonormalBasis (Fin (finrank ℝ W)) ℝ W,
       Matrix.IsDiag (LinearMap.BilinForm.toMatrix e.toBasis B) := by
   have hT : LinearMap.IsSymmetric (bilinOp B) := bilinOp_isSymmetric hB
-  refine ⟨hT.eigenvectorBasis rfl, ?_⟩
+  obtain ⟨e, μ, -, he⟩ :=
+    LADR.Section_7B.exists_orthonormalBasis_eigenvectors_antitone (bilinOp B) hT
+  refine ⟨e, ?_⟩
   intro i j hij
   rw [LinearMap.BilinForm.toMatrix_apply, OrthonormalBasis.coe_toBasis,
-    ← bilinOp_inner, hT.apply_eigenvectorBasis rfl i, inner_smul_left,
-    (hT.eigenvectorBasis rfl).orthonormal.2 hij]
+    ← bilinOp_inner, he i, inner_smul_left, e.orthonormal.2 hij]
   simp
 
 end SpectralBilinear
