@@ -77,37 +77,94 @@ theorem quadratic_isInvertible (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetri
   rw [map_sub, hxy, sub_self, inner_zero_left, map_zero] at hpos
   exact lt_irrefl 0 hpos
 
-/-! 7.27 The minimal polynomial of a self-adjoint operator (over {lit}`ℝ`) is a
-product of the linear factors {lit}`(z − λ₁) ⋯ (z − λₘ)` — i.e. it splits over
-{lit}`ℝ`. -/
+/-! 7.27 Minimal polynomial of a self-adjoint operator
+
+If {lit}`T ∈ ℒ(V)` is self-adjoint, then the minimal polynomial of {lit}`T` equals
+{lit}`(z − λ₁) ⋯ (z − λₘ)` for some {lit}`λ₁, …, λₘ ∈ ℝ`.
+
+Axler's proof splits on {lit}`𝔽`, and so do we: {name}`RCLike.I_eq_zero_or_im_I_eq_one`
+says {lit}`𝕜` is (isomorphic to) {lit}`ℝ` or {lit}`ℂ`.
+
+* {lit}`𝔽 = ℂ`: by the fundamental theorem of algebra (4.13) the minimal polynomial is a
+  product of linear factors {lit}`z − λₖ`; each {lit}`λₖ` is a zero of the minimal
+  polynomial, hence an eigenvalue (5.27(a)), hence real (7.12).
+* {lit}`𝔽 = ℝ`: by 4.16 the minimal polynomial is
+  {lit}`c (z − λ₁) ⋯ (z − λₘ)(z² + b₁z + c₁) ⋯ (z² + b_Nz + c_N)` with {lit}`bₖ² < 4cₖ`.
+  If {lit}`N > 0`, multiplying {lit}`p(T) = 0` on the right by the inverse of
+  {lit}`T² + b_NT + c_NI` (invertible by 7.26) gives a polynomial of smaller degree
+  annihilating {lit}`T`, contradicting minimality. So {lit}`N = 0`, and {lit}`c = 1`
+  because the minimal polynomial is monic. -/
 
 open Polynomial in
-theorem minpoly_symmetric_splits {V : Type*} [NormedAddCommGroup V]
-    [InnerProductSpace ℝ V] [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V)
-    (hT : T.IsSymmetric) :
-    (minpoly ℝ T).Splits := by
-  set b := hT.eigenvectorBasis (rfl : Module.finrank ℝ V = Module.finrank ℝ V) with hb
-  set μ := hT.eigenvalues (rfl : Module.finrank ℝ V = Module.finrank ℝ V) with hμ
-  set S := Finset.image μ Finset.univ with hS
-  set p := ∏ lam ∈ S, (X - C lam) with hp
-  have hp0 : p ≠ 0 := by
-    rw [hp]; exact Finset.prod_ne_zero_iff.mpr fun lam _ => X_sub_C_ne_zero lam
-  have hpsplit : p.Splits :=
-    Polynomial.Splits.prod (fun lam _ => Polynomial.Splits.X_sub_C lam)
-  have haeval : (aeval T) p = 0 := by
-    apply b.toBasis.ext
-    intro i
-    simp only [LinearMap.zero_apply]
-    have hiS : μ i ∈ S := Finset.mem_image_of_mem μ (Finset.mem_univ i)
-    rw [hp, ← Finset.prod_erase_mul S _ hiS, map_mul, Module.End.mul_apply]
-    have hkill : (aeval T) (X - C (μ i)) (b.toBasis i) = 0 := by
-      simp only [OrthonormalBasis.coe_toBasis]
-      simp only [map_sub, aeval_X, aeval_C, LinearMap.sub_apply,
-        Algebra.algebraMap_eq_smul_one, LinearMap.smul_apply, Module.End.one_apply]
-      rw [hT.apply_eigenvectorBasis (rfl : Module.finrank ℝ V = Module.finrank ℝ V) i]
-      simp [hb, hμ]
-    rw [hkill, map_zero]
-  exact Polynomial.Splits.of_dvd hpsplit hp0 (minpoly.dvd ℝ T haeval)
+@[avoiding LinearMap.IsSymmetric.eigenvectorBasis, LinearMap.IsSymmetric.eigenvalues]
+theorem minpoly_isSymmetric_eq_prod (T : V →ₗ[𝕜] V) (hT : T.IsSymmetric) :
+    ∃ (m : ℕ) (lams : Fin m → ℝ), minpoly 𝕜 T = ∏ k, (X - C ((lams k : ℝ) : 𝕜)) := by
+  set p := minpoly 𝕜 T with hp_def
+  have hp_ne : p ≠ 0 := minpoly.ne_zero (Algebra.IsIntegral.isIntegral T)
+  have hmon : p.Monic := minpoly.monic (Algebra.IsIntegral.isIntegral T)
+  rcases RCLike.I_eq_zero_or_im_I_eq_one (K := 𝕜) with hI | hI
+  · -- 𝔽 = ℝ: factor over ℝ (4.16) and rule out quadratic factors with 7.26.
+    set e := RCLike.realRingEquiv hI
+    obtain ⟨c, m, M, lams, bs, cs, hdisc, hfact⟩ :=
+      LADR.Chapter_4.real_polynomial_factorization (p.map (e : 𝕜 →+* ℝ))
+        ((Polynomial.map_ne_zero_iff e.injective).mpr hp_ne)
+    have hfact' : p = C (c : 𝕜) * (∏ k, (X - C ((lams k : ℝ) : 𝕜))) *
+        ∏ k, (X ^ 2 + C ((bs k : ℝ) : 𝕜) * X + C ((cs k : ℝ) : 𝕜)) := by
+      have := congrArg (Polynomial.map (e.symm : ℝ →+* 𝕜)) hfact
+      rw [Polynomial.map_map, show ((e.symm : ℝ →+* 𝕜).comp (e : 𝕜 →+* ℝ)) = RingHom.id 𝕜 from
+        RingHom.ext e.symm_apply_apply, Polynomial.map_id] at this
+      rw [this]
+      simp [Polynomial.map_prod, e]
+    clear hfact
+    have hM : M = 0 := by
+      by_contra hM0
+      set k0 : Fin M := ⟨0, Nat.pos_of_ne_zero hM0⟩
+      set q : 𝕜[X] := X ^ 2 + C ((bs k0 : ℝ) : 𝕜) * X + C ((cs k0 : ℝ) : 𝕜) with hq_def
+      obtain ⟨s, hps⟩ : q ∣ p := by
+        rw [hfact']
+        exact Dvd.dvd.mul_left (Finset.dvd_prod_of_mem _ (Finset.mem_univ k0)) _
+      have hq_deg : q.natDegree = 2 := by rw [hq_def]; compute_degree!
+      have hq_ne : q ≠ 0 := fun h => by rw [h, natDegree_zero] at hq_deg; omega
+      have hs_ne : s ≠ 0 := fun h => hp_ne (by rw [hps, h, mul_zero])
+      have hqT : aeval T q = T ∘ₗ T + ((bs k0 : ℝ) : 𝕜) • T + ((cs k0 : ℝ) : 𝕜) • LinearMap.id := by
+        simp [hq_def, pow_two, Module.End.mul_eq_comp, Algebra.algebraMap_eq_smul_one,
+          Module.End.one_eq_id]
+      have hinv := quadratic_isInvertible T hT (bs k0) (cs k0) (hdisc k0)
+      rw [← hqT] at hinv
+      have hsT : aeval T s = 0 := by
+        have h0 : aeval T s ∘ₗ aeval T q = 0 := by
+          rw [← Module.End.mul_eq_comp, ← map_mul, mul_comm, ← hps, hp_def, minpoly.aeval]
+        rw [← LinearMap.comp_id (aeval T s), ← hinv.comp_inv, ← LinearMap.comp_assoc, h0,
+          LinearMap.zero_comp]
+      have h1 := Polynomial.natDegree_le_of_dvd (minpoly.dvd 𝕜 T hsT) hs_ne
+      have h2 := Polynomial.natDegree_mul hq_ne hs_ne
+      rw [← hps, hq_deg] at h2
+      rw [← hp_def] at h1
+      omega
+    subst hM
+    rw [show (∏ k : Fin 0, (X ^ 2 + C ((bs k : ℝ) : 𝕜) * X + C ((cs k : ℝ) : 𝕜))) = 1 from
+      Finset.prod_of_isEmpty _, mul_one] at hfact'
+    have hc : (c : 𝕜) = 1 := by
+      have := hmon.leadingCoeff
+      rw [hfact', leadingCoeff_mul, leadingCoeff_C,
+        (monic_prod_of_monic _ _ fun k _ => monic_X_sub_C _).leadingCoeff, mul_one] at this
+      exact this
+    exact ⟨m, lams, by rw [hfact', hc, C_1, one_mul]⟩
+  · -- 𝔽 = ℂ: split by 4.13; the zeros are eigenvalues (5.27(a)), hence real (7.12).
+    set e := RCLike.complexRingEquiv hI
+    have hsplit : p.Splits := by
+      have h := (IsAlgClosed.splits (p.map (e : 𝕜 →+* ℂ))).map (e.symm : ℂ →+* 𝕜)
+      rwa [Polynomial.map_map, show ((e.symm : ℂ →+* 𝕜).comp (e : 𝕜 →+* ℂ)) = RingHom.id 𝕜 from
+        RingHom.ext e.symm_apply_apply, Polynomial.map_id] at h
+    obtain ⟨m, γ, hγ, -⟩ := LADR.Section_5C.monic_splits_eq_prod_fin hmon hsplit
+    have hreal : ∀ k, ((RCLike.re (γ k) : ℝ) : 𝕜) = γ k := by
+      intro k
+      have hroot : p.IsRoot (γ k) := by
+        rw [hγ, IsRoot, eval_prod]
+        exact Finset.prod_eq_zero (Finset.mem_univ k) (by simp)
+      have hev := (LADR.Section_5B.isEigenvalue_iff_isRoot T (γ k)).mpr hroot
+      exact RCLike.conj_eq_iff_re.mp (LADR.Section_7A.eigenvalue_real T hT hev)
+    exact ⟨m, fun k => RCLike.re (γ k), by rw [hγ]; simp only [hreal]⟩
 
 /-! Conditions (b) and (c) of the spectral theorems.
 
@@ -173,6 +230,81 @@ theorem exists_diagonal_of_hasDiagonalMatrix {T : V →ₗ[𝕜] V} (h : HasDiag
   obtain ⟨n, e, hd⟩ := h
   exact ⟨n, e, _, ((Matrix.isDiag_iff_diagonal_diag _).mp hd).symm⟩
 
+omit [FiniteDimensional 𝕜 V] in
+/-- The (a) ⟹ (b) direction of both spectral theorems starts from an orthonormal
+basis {lit}`e` for which {lit}`T` is upper-triangular, in the form
+{lit}`T eⱼ ∈ span(e₁, …, eⱼ)` (5.39). Orthonormality then makes the entries below
+the diagonal vanish: {lit}`⟨eᵢ, T eⱼ⟩ = 0` for {lit}`j < i`. -/
+theorem inner_eq_zero_of_upperTriangular {n : ℕ} (T : V →ₗ[𝕜] V)
+    (e : OrthonormalBasis (Fin n) 𝕜 V)
+    (hUT : ∀ k, T (e k) ∈ Submodule.span 𝕜 (e '' {i | i ≤ k})) {i j : Fin n} (hji : j < i) :
+    ⟪e i, T (e j)⟫_𝕜 = 0 := by
+  have hle : Submodule.span 𝕜 (e '' {l | l ≤ j}) ≤ (𝕜 ∙ e i)ᗮ := by
+    rw [Submodule.span_le]
+    rintro _ ⟨l, hlj, rfl⟩
+    rw [SetLike.mem_coe, Submodule.mem_orthogonal_singleton_iff_inner_left]
+    exact e.orthonormal.2 (fun h => absurd (h ▸ hlj) (not_le.mpr hji))
+  exact (Submodule.mem_orthogonal_singleton_iff_inner_right).mp (hle (hUT j))
+
+/-- The (a) ⟹ (b) argument of 7.29: a self-adjoint operator has a diagonal matrix
+with respect to some orthonormal basis. By 7.27 and 6.37, {lit}`T` has an
+upper-triangular matrix with respect to some orthonormal basis; with respect to that
+basis the matrix of {lit}`T*` is the conjugate transpose of the matrix of {lit}`T`, and
+{lit}`T* = T`, so the entries above the diagonal vanish as well as those below.
+
+Axler states 7.29 for {lit}`𝔽 = ℝ` (over {lit}`ℂ`, self-adjoint operators are normal and
+7.31 applies), but this argument works verbatim over either field, since 7.27 and 6.37
+do. We record it over {lit}`𝕜` so later sections can cite "the spectral theorem" for a
+self-adjoint operator without splitting on {lit}`𝔽`. -/
+@[avoiding LinearMap.IsSymmetric.eigenvectorBasis, LinearMap.IsSymmetric.eigenvalues]
+theorem hasDiagonalMatrix_of_isSymmetric (T : V →ₗ[𝕜] V) (hT : T.IsSymmetric) :
+    HasDiagonalMatrix T := by
+  obtain ⟨m, lams, hfact⟩ := minpoly_isSymmetric_eq_prod T hT
+  obtain ⟨n, e, he, hUT⟩ := (LADR.Section_6B.exists_orthonormal_upperTriangular_iff_minpoly T).mpr
+    ⟨m, fun k => ((lams k : ℝ) : 𝕜), hfact⟩
+  have hflag : ∀ k, T (e k) ∈ Submodule.span 𝕜 (e '' {i | i ≤ k}) :=
+    ((LADR.Section_5C.tfae_upperTriangular he T).out 1 3).mp hUT
+  refine ⟨n, e, fun i j hij => ?_⟩
+  show LinearMap.toMatrixOrthonormal e T i j = 0
+  rw [LinearMap.toMatrixOrthonormal_apply_apply]
+  rcases lt_or_gt_of_ne hij with h | h
+  · -- above the diagonal: ⟨eᵢ, T eⱼ⟩ = ⟨T eᵢ, eⱼ⟩ = conj ⟨eⱼ, T eᵢ⟩, a below-diagonal entry
+    rw [← hT, ← inner_conj_symm, inner_eq_zero_of_upperTriangular T e hflag h, map_zero]
+  · exact inner_eq_zero_of_upperTriangular T e hflag h
+
+/-- The spectral theorem for a self-adjoint operator, in the form later sections use:
+an orthonormal basis of eigenvectors, with real eigenvalues. The eigenvalue of
+{lit}`eᵢ` is the diagonal entry {lit}`⟨eᵢ, T eᵢ⟩`, which is real because {lit}`T` is
+self-adjoint. -/
+@[avoiding LinearMap.IsSymmetric.eigenvectorBasis, LinearMap.IsSymmetric.eigenvalues]
+theorem exists_orthonormalBasis_eigenvectors (T : V →ₗ[𝕜] V) (hT : T.IsSymmetric) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V) (μ : Fin n → ℝ),
+      ∀ i, T (e i) = ((μ i : ℝ) : 𝕜) • e i := by
+  obtain ⟨n, e, hd⟩ := hasDiagonalMatrix_of_isSymmetric T hT
+  refine ⟨n, e, fun i => RCLike.re ⟪e i, T (e i)⟫_𝕜, fun i => ?_⟩
+  have hreal : ((RCLike.re ⟪e i, T (e i)⟫_𝕜 : ℝ) : 𝕜) = ⟪e i, T (e i)⟫_𝕜 :=
+    RCLike.conj_eq_iff_re.mp (by rw [inner_conj_symm, hT])
+  rw [hreal]
+  conv_lhs => rw [← e.sum_repr' (T (e i))]
+  refine Finset.sum_eq_single i (fun j _ hji => ?_) (fun h => absurd (Finset.mem_univ i) h)
+  rw [← LinearMap.toMatrixOrthonormal_apply_apply e T j i, hd hji, zero_smul]
+
+/-- The same, indexed by {lit}`Fin (dim V)` and with the eigenvalues listed in
+decreasing order (reorder the basis by a sorting permutation). This is the form in
+which 7.65 lists singular values. -/
+theorem exists_orthonormalBasis_eigenvectors_antitone (T : V →ₗ[𝕜] V) (hT : T.IsSymmetric) :
+    ∃ (e : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) (μ : Fin (finrank 𝕜 V) → ℝ),
+      Antitone μ ∧ ∀ i, T (e i) = ((μ i : ℝ) : 𝕜) • e i := by
+  obtain ⟨n, e, μ, he⟩ := exists_orthonormalBasis_eigenvectors T hT
+  have hn : n = finrank 𝕜 V := by
+    simpa using (Module.finrank_eq_card_basis e.toBasis).symm
+  subst hn
+  set σ := Tuple.sort (fun i => -μ i)
+  refine ⟨e.reindex σ.symm, μ ∘ σ, fun i j hij => ?_, fun i => ?_⟩
+  · have := Tuple.monotone_sort (fun i => -μ i) hij
+    simpa using this
+  · simp [OrthonormalBasis.reindex_apply, he]
+
 /-! 7.29 Real spectral theorem
 
 For {lit}`𝔽 = ℝ` and {lit}`T ∈ ℒ(V)` the following are equivalent:
@@ -180,23 +312,18 @@ For {lit}`𝔽 = ℝ` and {lit}`T ∈ ℒ(V)` the following are equivalent:
 some orthonormal basis of {lit}`V`; (c) {lit}`V` has an orthonormal basis
 consisting of eigenvectors of {lit}`T`.
 
-The substantive direction — every self-adjoint operator is orthonormally
-diagonalizable — is mathlib's spectral theorem, available uniformly over
-{lit}`ℝ` and {lit}`ℂ` (over {lit}`ℂ` it is the self-adjoint case of the complex
-spectral theorem). mathlib packages the eigenbasis as
-{name}`LinearMap.IsSymmetric.eigenvectorBasis`. The converse (b) ⟹ (a) is the
-observation that a real diagonal matrix equals its own conjugate transpose. -/
+Following Axler: (a) ⟹ (b) combines 7.27 and 6.37 to get an orthonormal basis
+for which the matrix of {lit}`T` is upper-triangular; since {lit}`T* = T` the matrix
+equals its transpose, so the entries above the diagonal vanish too. (b) ⟹ (a) is
+the observation that a real diagonal matrix equals its own transpose. (b) ⟺ (c)
+follows from the definitions. -/
 
 /-- 7.29 (real spectral theorem) The three-way equivalence. -/
 theorem tfae_real_spectral {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
     [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V) :
     [T.IsSymmetric, HasDiagonalMatrix T, HasOrthonormalEigenbasis T].TFAE := by
-  tfae_have 1 → 3 := fun hT =>
-    ⟨finrank ℝ V, hT.eigenvectorBasis rfl, fun i =>
-      ⟨(hT.eigenvalues rfl i : ℝ),
-        hasEigenvector_of_orthonormalBasis _ (hT.apply_eigenvectorBasis rfl i)⟩⟩
-  tfae_have 3 → 2 := fun h =>
-    (hasDiagonalMatrix_iff_hasOrthonormalEigenbasis T).mpr h
+  tfae_have 1 → 2 := hasDiagonalMatrix_of_isSymmetric T
+  tfae_have 2 ↔ 3 := hasDiagonalMatrix_iff_hasOrthonormalEigenbasis T
   tfae_have 2 → 1 := by
     intro h
     obtain ⟨n, e, d, hdiag⟩ := exists_diagonal_of_hasDiagonalMatrix h
@@ -215,14 +342,6 @@ theorem spectral_orthonormal_eigenbasis {V : Type*} [NormedAddCommGroup V]
     [InnerProductSpace ℝ V] [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V)
     (hT : T.IsSymmetric) : HasOrthonormalEigenbasis T :=
   ((tfae_real_spectral T).out 1 3).mp hT
-
-/-- The eigenvalues in the spectral decomposition are real, as expected for a
-self-adjoint operator (7.12). -/
-theorem spectral_eigenvalues_real (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
-    (i : Fin (finrank 𝕜 V)) :
-    T (hT.eigenvectorBasis rfl i) =
-      ((hT.eigenvalues rfl i : ℝ) : 𝕜) • hT.eigenvectorBasis rfl i :=
-  hT.apply_eigenvectorBasis rfl i
 
 /-! # Complex Spectral Theorem -/
 
@@ -357,31 +476,17 @@ through Schur's theorem (6.38, from
 is upper-triangular with respect to an orthonormal basis is in fact diagonal. -/
 
 /-- A normal operator that is upper-triangular with respect to an orthonormal
-basis {lit}`e` is diagonal: each {lit}`eₖ` is an eigenvector. The proof compares
+basis {lit}`e` has a diagonal matrix with respect to {lit}`e`. The proof compares
 {lit}`‖T eₖ‖² = ∑ᵢ ‖⟨eᵢ, T eₖ⟩‖²` (column {lit}`k`) with
 {lit}`‖T* eₖ‖² = ∑ᵢ ‖⟨eₖ, T eᵢ⟩‖²` (row {lit}`k`); equality (7.20) plus an
 induction from the top row forces every strictly-upper entry to vanish. -/
 theorem normal_ut_diagonal {n : ℕ} (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
     (e : OrthonormalBasis (Fin n) 𝕜 V)
     (hUT : ∀ k, T (e k) ∈ Submodule.span 𝕜 (e '' {i | i ≤ k})) :
-    ∀ k, T (e k) = ⟪e k, T (e k)⟫_𝕜 • e k := by
+    (LinearMap.toMatrixOrthonormal e T).IsDiag := by
   set a : Fin n → Fin n → 𝕜 := fun i j => ⟪e i, T (e j)⟫_𝕜 with ha
-  have hUTz : ∀ i j : Fin n, j < i → a i j = 0 := by
-    intro i j hji
-    have hmem : T (e j) ∈ Submodule.span 𝕜 (e '' {l | l ≤ j}) := hUT j
-    have horth : e i ∈ (Submodule.span 𝕜 (e '' {l | l ≤ j}))ᗮ := by
-      rw [Submodule.mem_orthogonal']
-      intro y hy
-      have hle : Submodule.span 𝕜 (e '' {l | l ≤ j}) ≤ (𝕜 ∙ e i)ᗮ := by
-        rw [Submodule.span_le]
-        rintro _ ⟨l, hlj, rfl⟩
-        rw [SetLike.mem_coe, Submodule.mem_orthogonal_singleton_iff_inner_left]
-        exact e.orthonormal.2 (fun h => absurd (h ▸ hlj) (not_le.mpr hji))
-      have hyi := hle hy
-      rw [Submodule.mem_orthogonal_singleton_iff_inner_right] at hyi
-      exact hyi
-    simp only [ha]
-    exact inner_eq_zero_symm.mpr (Submodule.inner_right_of_mem_orthogonal hmem horth)
+  have hUTz : ∀ i j : Fin n, j < i → a i j = 0 := fun i j hji =>
+    inner_eq_zero_of_upperTriangular T e hUT hji
   have hParsT : ∀ k, ‖T (e k)‖ ^ 2 = ∑ i, ‖a i k‖ ^ 2 := by
     intro k
     simp only [ha]
@@ -423,42 +528,29 @@ theorem normal_ut_diagonal {n : ℕ} (T : V →ₗ[𝕜] V) (hN : IsStarNormal T
       have hjn : ‖a k j‖ = 0 := by nlinarith [norm_nonneg (a k j)]
       rwa [norm_eq_zero] at hjn
   have hQ : ∀ k : Fin n, ∀ j : Fin n, k < j → a k j = 0 := fun k => hQaux k.val k rfl
-  intro k
-  have hexp : T (e k) = ∑ i, a i k • e i := by
-    simp only [ha]
-    exact (e.sum_repr' (T (e k))).symm
-  conv_lhs => rw [hexp]
-  rw [Finset.sum_eq_single k (fun i _ hik => by
-        rcases lt_or_gt_of_ne hik with h | h
-        · rw [hQ i k h, zero_smul]
-        · rw [hUTz i k h, zero_smul])
-      (fun h => absurd (Finset.mem_univ k) h)]
-
-/-- 7.31 (Complex spectral theorem) Every normal operator on a finite-dimensional
-complex inner product space has an orthonormal basis of eigenvectors. -/
-theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace ℂ W]
-    [FiniteDimensional ℂ W] (T : W →ₗ[ℂ] W) (hN : IsStarNormal T) :
-    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ W),
-      ∀ k, T (e k) = ⟪e k, T (e k)⟫_ℂ • e k := by
-  obtain ⟨n, e, he, hUT⟩ := LADR.Section_6B.exists_orthonormal_upperTriangular_complex T
-  have hflag : ∀ k, T (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) :=
-    ((LADR.Section_5C.tfae_upperTriangular he T).out 1 3).mp hUT
-  exact ⟨n, e, normal_ut_diagonal T hN e hflag⟩
+  intro i j hij
+  rw [LinearMap.toMatrixOrthonormal_apply_apply]
+  rcases lt_or_gt_of_ne hij with h | h
+  · exact hQ i j h
+  · exact hUTz i j h
 
 /-- 7.31 (complex spectral theorem) The three-way equivalence: for {lit}`𝔽 = ℂ`,
 {lit}`T` is normal iff it has a diagonal matrix with respect to some orthonormal
-basis iff {lit}`V` has an orthonormal basis of eigenvectors of {lit}`T`. The
-converse (b) ⟹ (a) is the observation that a diagonal matrix commutes with its
-conjugate transpose. -/
+basis iff {lit}`V` has an orthonormal basis of eigenvectors of {lit}`T`.
+Following Axler: (a) ⟹ (b) applies Schur's theorem (6.38) and then
+{name}`normal_ut_diagonal`; (b) ⟹ (a) is the observation that a diagonal matrix
+commutes with its conjugate transpose; (b) ⟺ (c) follows from the definitions
+({name}`hasDiagonalMatrix_iff_hasOrthonormalEigenbasis`). -/
 theorem tfae_complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace ℂ W]
     [FiniteDimensional ℂ W] (T : W →ₗ[ℂ] W) :
     [IsStarNormal T, HasDiagonalMatrix T, HasOrthonormalEigenbasis T].TFAE := by
-  tfae_have 1 → 3 := by
+  tfae_have 1 → 2 := by
     intro hN
-    obtain ⟨n, e, he⟩ := complex_spectral T hN
-    exact ⟨n, e, fun i => ⟨_, hasEigenvector_of_orthonormalBasis e (he i)⟩⟩
-  tfae_have 3 → 2 := fun h =>
-    (hasDiagonalMatrix_iff_hasOrthonormalEigenbasis T).mpr h
+    obtain ⟨n, e, he, hUT⟩ := LADR.Section_6B.exists_orthonormal_upperTriangular_complex T
+    have hflag : ∀ k, T (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) :=
+      ((LADR.Section_5C.tfae_upperTriangular he T).out 1 3).mp hUT
+    exact ⟨n, e, normal_ut_diagonal T hN e hflag⟩
+  tfae_have 2 ↔ 3 := hasDiagonalMatrix_iff_hasOrthonormalEigenbasis T
   tfae_have 2 → 1 := by
     intro h
     obtain ⟨n, e, d, hdiag⟩ := exists_diagonal_of_hasDiagonalMatrix h
@@ -472,6 +564,20 @@ theorem tfae_complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSp
       exact mul_comm _ _
     exact ⟨(LinearMap.toMatrixOrthonormal e).injective key⟩
   tfae_finish
+
+/-- 7.31 (a) ⟹ (c), the direction usually cited on its own: every normal operator
+on a finite-dimensional complex inner product space has an orthonormal basis of
+eigenvectors, with the eigenvalue of {lit}`eₖ` the diagonal entry
+{lit}`⟨eₖ, T eₖ⟩`. Read off the equivalence. -/
+theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace ℂ W]
+    [FiniteDimensional ℂ W] (T : W →ₗ[ℂ] W) (hN : IsStarNormal T) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ W),
+      ∀ k, T (e k) = ⟪e k, T (e k)⟫_ℂ • e k := by
+  obtain ⟨n, e, hd⟩ := ((tfae_complex_spectral T).out 1 2).mp hN
+  refine ⟨n, e, fun k => ?_⟩
+  conv_lhs => rw [← e.sum_repr' (T (e k))]
+  refine Finset.sum_eq_single k (fun j _ hjk => ?_) (fun h => absurd (Finset.mem_univ k) h)
+  rw [← LinearMap.toMatrixOrthonormal_apply_apply e T j k, hd hjk, zero_smul]
 
 /-! 7.33 Example: an orthonormal basis of eigenvectors (complex case). For the
 normal operator {lit}`T(w, z) = (2w - 3z, 3w + 2z)` on {lit}`ℂ²` (matrix
@@ -514,6 +620,9 @@ all its eigenvalues are real. -/
 theorem exercise_7B_1 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
     LinearMap.IsSymmetric T ↔ ∀ μ : ℂ, HasEigenvalue T μ → conj μ = μ := by
+  -- => Tv = λv, take λ ‖v‖^2 = ⟪λv, v⟫ = ⟪Tv, v⟫ = ⟪v, Tv⟫ = ⟪v, λ v⟫ = conj λ ‖v‖^2, so
+  -- so λ = conj λ, i.e., λ is real. (this was proven in chapter 6 ok to import)
+  -- <= 
   sorry
 
 /-- 7B.2 A normal operator on a complex inner product space with only one
