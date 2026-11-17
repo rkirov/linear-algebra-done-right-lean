@@ -622,8 +622,20 @@ theorem exercise_7B_1 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
     LinearMap.IsSymmetric T ↔ ∀ μ : ℂ, HasEigenvalue T μ → conj μ = μ := by
   -- => Tv = λv, take λ ‖v‖^2 = ⟪λv, v⟫ = ⟪Tv, v⟫ = ⟪v, Tv⟫ = ⟪v, λ v⟫ = conj λ ‖v‖^2, so
   -- so λ = conj λ, i.e., λ is real. (this was proven in chapter 6 ok to import)
-  -- <= 
-  sorry
+  -- <= take a basis of eigenvectors (possible by the spectral theorem for normal operators) and check that T is symmetric on each eigenvector)
+  -- If Tei = λi ei, then T*ei = conj λi ei = λi ei (by 7.21e))
+  -- since T and T* agree on the basis vectors by linearity, they must be equal on the whole space.
+  constructor
+  · exact fun hT μ hμ => LADR.Section_7A.eigenvalue_real T hT hμ
+  · intro hreal
+    obtain ⟨n, e, he⟩ := complex_spectral T hN
+    rw [LADR.Section_7A.isSelfAdjoint_iff]
+    refine e.toBasis.ext fun k => ?_
+    set μ := ⟪e k, T (e k)⟫_ℂ
+    have hμ : HasEigenvalue T μ :=
+      Module.End.hasEigenvalue_of_hasEigenvector (hasEigenvector_of_orthonormalBasis e (he k))
+    rw [OrthonormalBasis.coe_toBasis, (LADR.Section_7A.eigenvector_adjoint hN (e k) μ).mp (he k),
+      hreal μ hμ, ← he k]
 
 /-- 7B.2 A normal operator on a complex inner product space with only one
 eigenvalue is a scalar multiple of the identity. -/
@@ -631,7 +643,15 @@ theorem exercise_7B_2 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
     [FiniteDimensional ℂ V] [Nontrivial V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T)
     (μ : ℂ) (hμ : ∀ ν : ℂ, HasEigenvalue T ν ↔ ν = μ) :
     T = μ • LinearMap.id := by
-  sorry
+  -- pick an eigenvector basis by spectral theorem for normal operators
+  -- T in this basis is a diagonal matrix that has the eigenvalues on the diagonal
+  -- since they all equal μ the matrix equals μ times the identity matrix.
+  -- if the matrix is I times μ, then T = μ • LinearMap.id
+  obtain ⟨n, e, he⟩ := complex_spectral T hN
+  refine e.toBasis.ext fun k => ?_
+  have hk : ⟪e k, T (e k)⟫_ℂ = μ := (hμ _).mp
+    (Module.End.hasEigenvalue_of_hasEigenvector (hasEigenvector_of_orthonormalBasis e (he k)))
+  rw [OrthonormalBasis.coe_toBasis, LinearMap.smul_apply, LinearMap.id_apply, he k, hk]
 
 /-- 7B.3 For normal {lit}`T` on a complex inner product space, the eigenvalues lie
 in {lit}`{0, 1}` iff {lit}`T = P_U` for some subspace {lit}`U`. -/
@@ -639,14 +659,126 @@ theorem exercise_7B_3 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
     (∀ μ : ℂ, HasEigenvalue T μ → μ = 0 ∨ μ = 1) ↔
       ∃ U : Submodule ℂ V, (U.starProjection : V →ₗ[ℂ] V) = T := by
-  sorry
+  -- => pick an eigenvector basis ei, and look at the diagonal matrix of eigenvalues
+  -- take the U = span{e i | the eigenvalue of e i is 1}
+  -- if λi = 1 then ei ∈ U, so P_U ei = ei = T ei;
+  -- if λi = 0 then ei ⊥ ej for every ej spanning U, so ei ∈ U⊥ and P_U ei = 0 = T ei.
+  -- since P_U agrees with T on the eigenvector basis, T = P_U.
+  -- <= if P_U v = λ v with v ≠ 0, then P_U^2 v = P_U v, so λ^2 v = λ v,
+  -- hence λ^2 = λ (cancel v ≠ 0), i.e. λ(λ - 1) = 0, so λ = 0 or λ = 1.
+  constructor
+  · intro h01
+    obtain ⟨n, e, he⟩ := complex_spectral T hN
+    set μ : Fin n → ℂ := fun k => ⟪e k, T (e k)⟫_ℂ with hμdef
+    have hμ01 : ∀ k, μ k = 0 ∨ μ k = 1 := fun k => h01 _
+      (Module.End.hasEigenvalue_of_hasEigenvector (hasEigenvector_of_orthonormalBasis e (he k)))
+    set U := Submodule.span ℂ (e '' {k | μ k = 1})
+    refine ⟨U, e.toBasis.ext fun k => ?_⟩
+    rw [OrthonormalBasis.coe_toBasis, ContinuousLinearMap.coe_coe]
+    change _ = T (e k)
+    rw [he k]
+    change _ = μ k • e k
+    rcases hμ01 k with h0 | h1
+    · -- `e k` is orthogonal to every `e j` with `μ j = 1`, hence to `U`
+      have hle : U ≤ (ℂ ∙ e k)ᗮ := by
+        refine Submodule.span_le.mpr ?_
+        rintro _ ⟨j, hj, rfl⟩
+        have hjk : j ≠ k := by rintro rfl; rw [Set.mem_ofPred_eq, h0] at hj; exact zero_ne_one hj
+        exact Submodule.mem_orthogonal_singleton_iff_inner_left.mpr
+          (e.orthonormal.inner_eq_zero hjk)
+      have hk : e k ∈ Uᗮ := fun u hu =>
+        Submodule.mem_orthogonal_singleton_iff_inner_left.mp (hle hu)
+      rw [h0, zero_smul]
+      exact (Submodule.starProjection_apply_eq_zero_iff U).mpr hk
+    · rw [h1, one_smul]
+      exact Submodule.starProjection_eq_self_iff.mpr (Submodule.subset_span ⟨k, h1, rfl⟩)
+  · -- `P_U² = P_U`, so `P_U v = μ v` with `v ≠ 0` forces `μ² = μ`
+    rintro ⟨U, rfl⟩ μ hμ
+    obtain ⟨v, hv⟩ := hμ.exists_hasEigenvector
+    have hPv : U.starProjection v = μ • v := hv.apply_eq_smul
+    have hPP : U.starProjection (U.starProjection v) = U.starProjection v :=
+      Submodule.starProjection_eq_self_iff.mpr (Submodule.starProjection_apply_mem U v)
+    rw [hPv, map_smul, hPv, smul_smul] at hPP
+    have hμμ : μ * μ = μ * 1 := by
+      rw [mul_one]; exact smul_left_injective ℂ hv.2 hPP
+    rcases mul_eq_mul_left_iff.mp hμμ with h | h
+    · exact Or.inr h
+    · exact Or.inl h
 
 /-- 7B.4 A normal operator on a complex inner product space is skew
 ({lit}`T* = −T`) iff all its eigenvalues are purely imaginary. -/
 theorem exercise_7B_4 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
     T† = -T ↔ ∀ μ : ℂ, HasEigenvalue T μ → μ.re = 0 := by
-  sorry
+  -- => we shown that if μ eignevalue to T, then conj μ is eigenvalue to T†
+  -- if T† = -T, then conj μ = -μ, so μ is purely imaginary
+  -- <= by specral theorem, take an eigenvector basis,
+  -- T ei = λi ei with λi purely imaginary, so conj λi = -λi.
+  -- by 7.21(e), T† ei = conj λi ei = -λi ei = -T ei,
+  -- so T† and -T agree on a basis, hence T† = -T.
+  constructor
+  · intro hadj μ hμ
+    obtain ⟨v, hv⟩ := hμ.exists_hasEigenvector
+    have h1 := (LADR.Section_7A.eigenvector_adjoint hN v μ).mp hv.apply_eq_smul
+    rw [hadj, LinearMap.neg_apply, hv.apply_eq_smul, ← neg_smul] at h1
+    have h2 : -μ = conj μ := smul_left_injective ℂ hv.2 h1
+    have h3 := congrArg Complex.re h2
+    rw [Complex.neg_re, Complex.conj_re] at h3
+    linarith
+  · intro hre
+    obtain ⟨n, e, he⟩ := complex_spectral T hN
+    refine e.toBasis.ext fun k => ?_
+    set μ := ⟪e k, T (e k)⟫_ℂ
+    have hμ : HasEigenvalue T μ :=
+      Module.End.hasEigenvalue_of_hasEigenvector (hasEigenvector_of_orthonormalBasis e (he k))
+    have hconj : conj μ = -μ := Complex.ext (by simp [hre μ hμ]) (by simp)
+    rw [OrthonormalBasis.coe_toBasis, (LADR.Section_7A.eigenvector_adjoint hN (e k) μ).mp (he k),
+      LinearMap.neg_apply, hconj, neg_smul, he k]
+
+/-- The counterexample for 7B.5: the matrix with rows {lit}`(1/2, 1/2, 0), (0, 1, 0), (0, 0, 2)`. -/
+noncomputable def A_7B_5 : Matrix (Fin 3) (Fin 3) ℂ := !![1/2, 1/2, 0; 0, 1, 0; 0, 0, 2]
+/-- The operator on {lit}`ℂ³` with matrix {name}`A_7B_5`. -/
+noncomputable def T_7B_5 : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3) :=
+  Matrix.toEuclideanLin A_7B_5
+/-- The eigenvector {lit}`(1, 0, 0)` (eigenvalue {lit}`1/2`). -/
+noncomputable def u_7B_5 : EuclideanSpace ℂ (Fin 3) := (WithLp.equiv 2 _).symm ![1, 0, 0]
+/-- The eigenvector {lit}`(1, 1, 0)` (eigenvalue {lit}`1`). -/
+noncomputable def v_7B_5 : EuclideanSpace ℂ (Fin 3) := (WithLp.equiv 2 _).symm ![1, 1, 0]
+/-- The eigenvector {lit}`(0, 0, 1)` (eigenvalue {lit}`2`). -/
+noncomputable def w_7B_5 : EuclideanSpace ℂ (Fin 3) := (WithLp.equiv 2 _).symm ![0, 0, 1]
+
+theorem T_7B_5_u : T_7B_5 u_7B_5 = (1/2 : ℂ) • u_7B_5 := by
+  ext i; fin_cases i <;> simp [T_7B_5, A_7B_5, u_7B_5, Matrix.toEuclideanLin]
+theorem T_7B_5_v : T_7B_5 v_7B_5 = (1 : ℂ) • v_7B_5 := by
+  ext i; fin_cases i <;> simp [T_7B_5, A_7B_5, v_7B_5, Matrix.toEuclideanLin]; norm_num
+theorem T_7B_5_w : T_7B_5 w_7B_5 = (2 : ℂ) • w_7B_5 := by
+  ext i; fin_cases i <;> simp [T_7B_5, A_7B_5, w_7B_5, Matrix.toEuclideanLin]
+theorem inner_u_v_7B_5 : ⟪u_7B_5, v_7B_5⟫_ℂ = 1 := by
+  rw [PiLp.inner_apply]; simp [u_7B_5, v_7B_5, Fin.sum_univ_three]
+
+/-- {name}`T_7B_5` has the three distinct eigenvalues {lit}`1/2, 1, 2 = dim ℂ³`, so it is
+diagonalizable by 5.58. -/
+theorem isDiagonalizable_T_7B_5 : Section_5D.IsDiagonalizable T_7B_5 := by
+  have h3 : finrank ℂ (EuclideanSpace ℂ (Fin 3)) = 3 := finrank_euclideanSpace_fin
+  have hev : ∀ μ : ℂ, ∀ x : EuclideanSpace ℂ (Fin 3), x ≠ 0 → T_7B_5 x = μ • x →
+      HasEigenvalue T_7B_5 μ := fun μ x hx h =>
+    Module.End.hasEigenvalue_of_hasEigenvector ⟨Module.End.mem_eigenspace_iff.mpr h, hx⟩
+  have hne : ∀ f : Fin 3 → ℂ, f ≠ 0 →
+      (WithLp.equiv 2 _).symm f ≠ (0 : EuclideanSpace ℂ (Fin 3)) :=
+    fun f hf h => hf (by simpa using congrArg (WithLp.equiv 2 _) h)
+  refine Section_5D.isDiagonalizable_of_card_eigenvalues T_7B_5
+    (fun k => ![1/2, 1, 2] (k.cast h3)) ?_ fun k => ?_
+  · intro a b hab
+    apply Fin.cast_injective h3
+    simp only at hab
+    generalize a.cast h3 = a' at hab
+    generalize b.cast h3 = b' at hab
+    fin_cases a' <;> fin_cases b' <;> first | rfl | (exfalso; norm_num at hab)
+  · generalize k.cast h3 = j
+    fin_cases j
+    · exact hev _ _ (hne _ (by simp)) T_7B_5_u
+    · exact hev _ _ (hne _ (by simp)) T_7B_5_v
+    · exact hev _ _ (hne _ (by simp)) T_7B_5_w
 
 /-- 7B.5 Prove or give a counterexample: if {lit}`T ∈ ℒ(ℂ³)` is diagonalizable,
 then {lit}`T` is normal (with respect to the usual inner product). -/
@@ -654,31 +786,92 @@ def exercise_7B_5 :
     Decidable (∀ T : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3),
       Section_5D.IsDiagonalizable T → IsStarNormal T) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  -- in chapter 5 we characterized diagonalizeble as having a basis of eigenvectors.
+  -- and in ch7, normal is characterized by having an orthonormal eigenvector basis.
+  -- so construct a matrix with a basis of eigenvectors that is not orthonormal.
+  -- take (1,1) and (1, 0) - the matrix (1/2 1/2; 0 1) has both with eigenvalues 1 and 0.5
+  -- add a third vector to make it 3x3, for example (0,0,2)
+  -- then the matrix with rows (1/2,1/2,0), (0,1,0), (0,0,2) is diagonalizable
+  -- since it has E(1) = (1,1,0) and E(0.5) = (1,0,0) and E(2) = (0,0,1) which span V
+  -- if it was normal, all it's eigenvectors for distinct eigenvalues would be orthogonal (7.22)
+  -- but (1,1,0) and (1,0,0) are not orthogonal, so the matrix is not normal.
+  intro h
+  have hN := h T_7B_5 isDiagonalizable_T_7B_5
+  have h0 := LADR.Section_7A.orthogonal_eigenvectors hN (by norm_num) T_7B_5_u T_7B_5_v
+  rw [inner_u_v_7B_5] at h0
+  exact one_ne_zero h0
 
 /-- 7B.6 If {lit}`T` is normal on a complex inner product space and {lit}`T⁹ = T⁸`,
 then {lit}`T` is self-adjoint and {lit}`T² = T`. -/
 theorem exercise_7B_6 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) (h : T ^ 9 = T ^ 8) :
     LinearMap.IsSymmetric T ∧ T ^ 2 = T := by
-  sorry
+  -- assume λ is eigenvalue of T, so Tv = λv for some v ≠ 0
+  -- then λ^9 v = T^9 v = T^8 v = λ^8 v, which implies λ^9 = λ^8, hence λ = 0 or λ = 1
+  -- since eigenvalues are real => self-adjoint (by ex1.)
+  -- and T^2 = T follows from the fact that the eigenvalues are 0 or 1
+  have hpow : ∀ (ν : ℂ) (v : V), T v = ν • v → ∀ m : ℕ, (T ^ m) v = ν ^ m • v := by
+    intro ν v hv m
+    induction m with
+    | zero => simp
+    | succ m ih => rw [pow_succ', Module.End.mul_apply, ih, map_smul, hv, smul_smul, pow_succ]
+  -- every eigenvalue satisfies `ν⁹ = ν⁸`, hence is `0` or `1`
+  have h01 : ∀ ν : ℂ, HasEigenvalue T ν → ν = 0 ∨ ν = 1 := by
+    intro ν hν
+    obtain ⟨v, hv⟩ := hν.exists_hasEigenvector
+    have h98 : ν ^ 9 • v = ν ^ 8 • v := by
+      rw [← hpow ν v hv.apply_eq_smul, ← hpow ν v hv.apply_eq_smul, h]
+    have h98' : ν ^ 8 * (ν - 1) = 0 := by
+      have := smul_left_injective ℂ hv.2 h98
+      linear_combination this
+    rcases mul_eq_zero.mp h98' with h0 | h1
+    · exact Or.inl (pow_eq_zero_iff (by norm_num) |>.mp h0)
+    · exact Or.inr (sub_eq_zero.mp h1)
+  refine ⟨(exercise_7B_1 T hN).mpr fun ν hν => ?_, ?_⟩
+  · rcases h01 ν hν with rfl | rfl <;> simp
+  · obtain ⟨n, e, he⟩ := complex_spectral T hN
+    refine e.toBasis.ext fun k => ?_
+    set μ := ⟪e k, T (e k)⟫_ℂ
+    have hk : T (e k) = μ • e k := he k
+    rw [OrthonormalBasis.coe_toBasis, hpow μ _ hk 2, hk]
+    rcases h01 μ (Module.End.hasEigenvalue_of_hasEigenvector
+      (hasEigenvector_of_orthonormalBasis e hk)) with h0 | h1
+    · rw [h0]; simp
+    · rw [h1]; simp
 
 /-- Axler leaves the complex vector space free, so it is part of the answer. Only
 its dimension matters — every finite-dimensional complex vector space is
 {lit}`ℂⁿ` up to isomorphism — so the answer supplies {lit}`n`. -/
-def exercise_7B_7_n : ℕ := sorry
+def exercise_7B_7_n : ℕ := 3
 
 /-- The witness operator for 7B.7. -/
 noncomputable def exercise_7B_7_sol :
     (Fin exercise_7B_7_n → ℂ) →ₗ[ℂ] (Fin exercise_7B_7_n → ℂ) :=
-  sorry
+  -- take T (x, y, z) = (0, x, y)
+  -- T^2 = (0, 0, x), so T^2 ≠ T
+  -- but T^3 = 0, so T^9 = T^8 = 0
+  { toFun := fun x i => if h : (i : ℕ) = 0 then 0 else x ⟨i - 1, by have := i.isLt; omega⟩
+    map_add' := fun x y => by funext i; by_cases h : (i : ℕ) = 0 <;> simp [h]
+    map_smul' := fun c x => by funext i; by_cases h : (i : ℕ) = 0 <;> simp [h] }
 
 /-- 7B.7 There is an operator on a complex vector space with {lit}`T⁹ = T⁸` but
 {lit}`T² ≠ T`. -/
 theorem exercise_7B_7 :
     exercise_7B_7_sol ^ 9 = exercise_7B_7_sol ^ 8 ∧
       exercise_7B_7_sol ^ 2 ≠ exercise_7B_7_sol := by
-  sorry
+  -- `T³ = 0`: applying the shift three times pushes every coordinate out of `ℂ³`
+  have h3 : exercise_7B_7_sol ^ 3 = 0 := by
+    refine LinearMap.ext fun x => funext fun i => ?_
+    have hi : (i : ℕ) < 3 := i.isLt
+    simp only [pow_succ, pow_zero, one_mul, Module.End.mul_apply, LinearMap.zero_apply,
+      Pi.zero_apply, exercise_7B_7_sol, LinearMap.coe_mk, AddHom.coe_mk]
+    split_ifs <;> first | rfl | (exfalso; omega)
+  refine ⟨?_, fun h => ?_⟩
+  · rw [show 9 = 3 + 6 from rfl, show 8 = 3 + 5 from rfl, pow_add, pow_add, h3, zero_mul, zero_mul]
+  · -- `T e₁ = e₂` but `T² e₁ = e₃`; compare the second coordinate
+    have := congrFun (LinearMap.congr_fun h (fun i => if (i : ℕ) = 0 then 1 else 0)) ⟨1, by decide⟩
+    simp [pow_two, exercise_7B_7_sol] at this
 
 /-- 7B.8 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff every eigenvector of {lit}`T` is
 also an eigenvector of {lit}`T*`. -/
@@ -686,6 +879,8 @@ theorem exercise_7B_8 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
     IsStarNormal T ↔ ∀ (v : V) (μ : ℂ), HasEigenvector T μ v →
       ∃ ν : ℂ, HasEigenvector T† ν v := by
+  -- => proven in 7A with conj λ eigenvalue for T†
+  -- <=
   sorry
 
 /-- 7B.9 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff {lit}`T* = p(T)` for some
