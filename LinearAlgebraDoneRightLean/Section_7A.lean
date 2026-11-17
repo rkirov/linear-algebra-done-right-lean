@@ -218,10 +218,14 @@ theorem ker_adjoint (T : V →ₗ[𝕜] W) :
     rw [inner_zero_right, ← adjoint_inner]
     exact h (T v) ⟨v, rfl⟩
 
-/-- (b) {lit}`range T* = (null T)⟂`. -/
+/-- (b) {lit}`range T* = (null T)⟂`: replace {lit}`T` with {lit}`T*` in (a), getting
+{lit}`null T = (range T*)⟂`, and take orthogonal complements (6.52). -/
+@[avoiding LinearMap.orthogonal_ker]
 theorem range_adjoint (T : V →ₗ[𝕜] W) :
-    LinearMap.range T† = (LinearMap.ker T)ᗮ :=
-  (LinearMap.orthogonal_ker T).symm
+    LinearMap.range T† = (LinearMap.ker T)ᗮ := by
+  have h := ker_adjoint T†
+  rw [LinearMap.adjoint_adjoint] at h
+  rw [h, Submodule.orthogonal_orthogonal]
 
 /-- (c) {lit}`null T = (range T*)⟂`. -/
 theorem ker_eq_orthogonal_range_adjoint (T : V →ₗ[𝕜] W) :
