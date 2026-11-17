@@ -46,173 +46,6 @@ variable {𝕜 : Type*} [RCLike 𝕜]
 
 /-! # Norms of Linear Maps -/
 
-/-! 7.86 Definition: norm of a linear map, ‖·‖
-
-Axler defines the *norm* of {lit}`T ∈ ℒ(V, W)` to be
-{lit}`‖T‖ = max{‖T v‖ : v ∈ V and ‖v‖ ≤ 1}` (the maximum exists by 7.85, which
-identifies it with the largest singular value).
-
-In a finite-dimensional inner product space every linear map is continuous, so we
-define {lit}`opNorm T` as the operator norm of the associated continuous linear
-map {lit}`T.toContinuousLinearMap`. Mathlib's operator norm is *exactly* the
-supremum of {lit}`‖T v‖` over the closed unit ball
-({name}`ContinuousLinearMap.sSup_unitClosedBall_eq_norm`), so this coincides with
-Axler's definition; see {lit}`opNorm_eq_sSup_closedBall` below. -/
-noncomputable def opNorm (T : V →ₗ[𝕜] W) : ℝ := ‖LinearMap.toContinuousLinearMap T‖
-
-omit [FiniteDimensional 𝕜 W] in
-/-- {lit}`opNorm T` equals the supremum of {lit}`‖T v‖` over the closed unit ball
-{lit}`{v : ‖v‖ ≤ 1}`, which is Axler's definition 7.86 (the maximum in 7.85). -/
-theorem opNorm_eq_sSup_closedBall (T : V →ₗ[𝕜] W) :
-    opNorm T = sSup ((fun v => ‖T v‖) '' Metric.closedBall (0 : V) 1) := by
-  rw [opNorm, ← ContinuousLinearMap.sSup_unitClosedBall_eq_norm (LinearMap.toContinuousLinearMap T)]
-  simp
-
-/-! 7.82 For {lit}`T ∈ ℒ(V, W)` and {lit}`v ∈ V`, {lit}`‖Tv‖ ≤ s₁‖v‖` with
-{lit}`s₁` the largest singular value. Proved below as
-{lit}`norm_apply_le_iSup_singularValues`, once the norm and its
-singular-value characterization (7.88(a)/7.89) are available. -/
-
-/-! 7.85 The maximum in 7.86 equals the largest singular value; the "≥ each singular
-value" half is {lit}`singularValues_le_opNorm` below and the reverse bound is
-7.88(a), proved below as {lit}`opNorm_eq_iSup_singularValues`. -/
-
-omit [FiniteDimensional 𝕜 W] in
-/-- 7.89 The fundamental inequality {lit}`‖T v‖ ≤ ‖T‖ ‖v‖`. -/
-theorem opNorm_apply_le (T : V →ₗ[𝕜] W) (v : V) : ‖T v‖ ≤ opNorm T * ‖v‖ := by
-  have := (LinearMap.toContinuousLinearMap T).le_opNorm v
-  simpa [opNorm] using this
-
-omit [FiniteDimensional 𝕜 W] in
-/-- 7.87(a) {lit}`‖T‖ ≥ 0`. -/
-theorem opNorm_nonneg (T : V →ₗ[𝕜] W) : 0 ≤ opNorm T := norm_nonneg _
-
-omit [FiniteDimensional 𝕜 W] in
-/-- 7.87(b) {lit}`‖T‖ = 0 ⟺ T = 0`. -/
-theorem opNorm_eq_zero {T : V →ₗ[𝕜] W} : opNorm T = 0 ↔ T = 0 := by
-  rw [opNorm, norm_eq_zero]
-  constructor
-  · intro h; ext v
-    have : (LinearMap.toContinuousLinearMap T) v = 0 := by rw [h]; rfl
-    simpa using this
-  · intro h; rw [h]; exact map_zero _
-
-omit [FiniteDimensional 𝕜 W] in
-/-- 7.87(c) {lit}`‖λ T‖ = ‖λ‖ ‖T‖` (Axler's {lit}`|λ|` is {lit}`‖λ‖` for the
-scalar field). -/
-theorem opNorm_smul (c : 𝕜) (T : V →ₗ[𝕜] W) : opNorm (c • T) = ‖c‖ * opNorm T := by
-  rw [opNorm, opNorm, map_smul, norm_smul]
-
-omit [FiniteDimensional 𝕜 W] in
-/-- 7.87(d) Triangle inequality {lit}`‖S + T‖ ≤ ‖S‖ + ‖T‖`. -/
-theorem opNorm_add_le (S T : V →ₗ[𝕜] W) : opNorm (S + T) ≤ opNorm S + opNorm T := by
-  rw [opNorm, opNorm, opNorm, map_add]; exact norm_add_le _ _
-
-omit [FiniteDimensional 𝕜 W] in
-/-- 7.88(c) {lit}`‖T‖` is the smallest {lit}`c ≥ 0` with {lit}`‖T v‖ ≤ c ‖v‖` for
-all {lit}`v`: for {lit}`0 ≤ c`, {lit}`‖T‖ ≤ c ⟺ ∀ v, ‖T v‖ ≤ c ‖v‖`. -/
-theorem opNorm_le_iff {T : V →ₗ[𝕜] W} {c : ℝ} (hc : 0 ≤ c) :
-    opNorm T ≤ c ↔ ∀ v, ‖T v‖ ≤ c * ‖v‖ := by
-  rw [opNorm, ContinuousLinearMap.opNorm_le_iff hc]; simp
-
-/-- Each singular value is at most the norm; this is the easy half of 7.88(a)/7.85
-({lit}`‖T eₖ‖ = sₖ` and {lit}`‖eₖ‖ = 1`). -/
-theorem singularValues_le_opNorm (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
-    singularValues T i ≤ opNorm T := by
-  have h := opNorm_apply_le T (svdBasis T i)
-  rw [norm_image_svdBasis, (svdBasis T).orthonormal.1 i, mul_one] at h
-  exact h
-
-/-- 7.88(a) / 7.85: the operator norm {lit}`‖T‖` equals the supremum of the
-singular values of {lit}`T` (a supremum, so the {lit}`V = 0` case is handled).
-
-Following Axler: the easy bound {lit}`singularValues_le_opNorm` gives one
-inequality; for the reverse, expand {lit}`‖T v‖²` as {lit}`⟨v, T* T v⟩` and use
-the eigenbasis of {lit}`T* T` together with Parseval to bound it by
-{lit}`(sup s)² ‖v‖²`, then take square roots. -/
-theorem opNorm_eq_iSup_singularValues (T : V →ₗ[𝕜] W) :
-    opNorm T = ⨆ i, singularValues T i := by
-  have hop_nn : 0 ≤ opNorm T := by rw [opNorm]; exact norm_nonneg _
-  have hbdd : BddAbove (Set.range (singularValues T)) := (Set.finite_range _).bddAbove
-  have hsup_nn : 0 ≤ ⨆ i, singularValues T i := Real.iSup_nonneg (singularValues_nonneg T)
-  refine le_antisymm ?_ (Real.iSup_le (singularValues_le_opNorm T) hop_nn)
-  rw [opNorm_le_iff hsup_nn]
-  intro v
-  set e := svdBasis T with he
-  set M := ⨆ i, singularValues T i with hM
-  have hsym := (adjComp_self_isPositive T).isSymmetric
-  have hTvadj : ⟪T v, T v⟫_𝕜 = ⟪v, (T† ∘ₗ T) v⟫_𝕜 :=
-    (LinearMap.adjoint_inner_right T v (T v)).symm
-  have hq : ⟪v, (T† ∘ₗ T) v⟫_𝕜
-      = ∑ i, (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
-    rw [← e.sum_inner_mul_inner v ((T† ∘ₗ T) v)]
-    refine Finset.sum_congr rfl (fun i _ => ?_)
-    have h1 : ⟪e i, (T† ∘ₗ T) v⟫_𝕜
-        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪e i, v⟫_𝕜 := by
-      rw [← hsym (e i) v, adjComp_apply_svdBasis, inner_smul_left, RCLike.conj_ofReal]
-    rw [h1]
-    have h2 : ⟪v, e i⟫_𝕜 * ⟪e i, v⟫_𝕜 = ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
-      rw [← inner_conj_symm v (e i), RCLike.conj_mul, ← RCLike.ofReal_pow]
-    calc ⟪v, e i⟫_𝕜 * ((((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪e i, v⟫_𝕜)
-        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * (⟪v, e i⟫_𝕜 * ⟪e i, v⟫_𝕜) := by ring
-      _ = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by rw [h2]
-  have hnormsq : ‖T v‖ ^ 2 = ∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 := by
-    have hcast : ((‖T v‖ ^ 2 : ℝ) : 𝕜)
-        = ((∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
-      rw [RCLike.ofReal_pow, ← inner_self_eq_norm_sq_to_K, hTvadj, hq]; push_cast; ring
-    exact_mod_cast hcast
-  have hbound : ∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 ≤ M ^ 2 * ‖v‖ ^ 2 := by
-    rw [← e.sum_sq_norm_inner_right v, Finset.mul_sum]
-    refine Finset.sum_le_sum (fun i _ => ?_)
-    exact mul_le_mul_of_nonneg_right
-      (pow_le_pow_left₀ (singularValues_nonneg T i) (le_ciSup hbdd i) 2) (sq_nonneg _)
-  have hsq : ‖T v‖ ^ 2 ≤ (M * ‖v‖) ^ 2 := by rw [hnormsq, mul_pow]; exact hbound
-  have h1 := Real.sqrt_le_sqrt hsq
-  rwa [Real.sqrt_sq (norm_nonneg _),
-    Real.sqrt_sq (mul_nonneg hsup_nn (norm_nonneg _))] at h1
-
-/-- 7.82 For {lit}`T ∈ ℒ(V, W)` and {lit}`v ∈ V`, {lit}`‖T v‖ ≤ s₁ ‖v‖`, where
-{lit}`s₁ = ⨆ᵢ sᵢ` is the largest singular value. Immediate from the fundamental
-inequality 7.89 ({lit}`opNorm_apply_le`) and the identification of the norm with
-the largest singular value 7.88(a) ({lit}`opNorm_eq_iSup_singularValues`). -/
-theorem norm_apply_le_iSup_singularValues (T : V →ₗ[𝕜] W) (v : V) :
-    ‖T v‖ ≤ (⨆ i, singularValues T i) * ‖v‖ := by
-  rw [← opNorm_eq_iSup_singularValues]; exact opNorm_apply_le T v
-
-omit [FiniteDimensional 𝕜 W] in
-/-- 7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}`: the norm is the supremum of
-{lit}`‖T v‖` over the *unit sphere*, the restriction of 7.86 from the closed unit
-ball. This is mathlib's {name}`ContinuousLinearMap.sSup_sphere_eq_norm`. -/
-theorem opNorm_eq_sSup_sphere (T : V →ₗ[𝕜] W) :
-    opNorm T = sSup ((fun v => ‖T v‖) '' Metric.sphere (0 : V) 1) := by
-  rw [opNorm, ← ContinuousLinearMap.sSup_sphere_eq_norm (LinearMap.toContinuousLinearMap T)]
-  simp
-
-/-! 7.90 Example: norms
-
-We record the first bullet, {lit}`‖I‖ = 1` (for {lit}`V ≠ 0`). The remaining
-bullets (the all-ones matrix on {lit}`𝔽ⁿ`, the eigenvalue-maximum formula, and the
-{lit}`5×5` numerical example) are concrete computations illustrating 7.88 and are
-omitted from formalization, matching the treatment of numeric examples in
-Section 7E. -/
-
-/-- 7.90 (first bullet) The identity operator has norm {lit}`1` (when {lit}`V ≠ 0`). -/
-theorem opNorm_id [Nontrivial V] : opNorm (LinearMap.id : V →ₗ[𝕜] V) = 1 := by
-  rw [opNorm]
-  have h : LinearMap.toContinuousLinearMap (LinearMap.id : V →ₗ[𝕜] V)
-      = ContinuousLinearMap.id 𝕜 V := by
-    ext v; simp
-  rw [h, ContinuousLinearMap.norm_id]
-
-/-- 7.91 A linear map and its adjoint have the same norm: {lit}`‖T*‖ = ‖T‖`. -/
-theorem opNorm_adjoint (T : V →ₗ[𝕜] W) : opNorm T† = opNorm T := by
-  have := FiniteDimensional.complete 𝕜 V
-  have := FiniteDimensional.complete 𝕜 W
-  rw [opNorm, opNorm, LinearMap.adjoint_toContinuousLinearMap]
-  exact ContinuousLinearMap.adjoint.norm_map _
-
-/-! # 7.92 Best approximation by a linear map whose range has dimension {lit}`≤ k` -/
-
 omit [FiniteDimensional 𝕜 V] in
 /-- Pythagoras for an orthonormal family: {lit}`‖∑ aᵢ gᵢ‖² = ∑ ‖aᵢ‖²`. -/
 theorem norm_sum_smul_sq {ι : Type*} [Fintype ι] {g : ι → V} (hg : Orthonormal 𝕜 g)
@@ -237,16 +70,265 @@ theorem norm_sum_smul_sq_subtype {ι : Type*} [Fintype ι] {g : ι → V} {p : �
       by_contra hp; exact h (by simp [ha i hp])).symm
   rw [e1, e2]; exact norm_sum_smul_sq hg _
 
+/-! 7.82 Upper bound for {lit}`‖T v‖`
+
+For {lit}`T ∈ ℒ(V, W)` with largest singular value {lit}`s₁`, {lit}`‖T v‖ ≤ s₁ ‖v‖`.
+Axler's proof: by the singular value decomposition (7.83)
+{lit}`T v = s₁⟨v, e₁⟩f₁ + ⋯ + sₘ⟨v, eₘ⟩fₘ`, so
+{lit}`‖T v‖² = s₁²|⟨v, e₁⟩|² + ⋯ + sₘ²|⟨v, eₘ⟩|² ≤ s₁²(|⟨v, e₁⟩|² + ⋯) ≤ s₁²‖v‖²`. We write
+{lit}`s₁` as {lit}`⨆ᵢ sᵢ`, which also covers {lit}`V = 0`. -/
+
+@[avoiding ContinuousLinearMap.le_opNorm]
+theorem norm_apply_le_iSup_singularValues (T : V →ₗ[𝕜] W) (v : V) :
+    ‖T v‖ ≤ (⨆ i, singularValues T i) * ‖v‖ := by
+  set e := svdBasis T
+  set M := ⨆ i, singularValues T i with hM
+  have hbdd : BddAbove (Set.range (singularValues T)) := (Set.finite_range _).bddAbove
+  have hM0 : 0 ≤ M := Real.iSup_nonneg (singularValues_nonneg T)
+  -- 7.83 and Pythagoras: ‖T v‖² = ∑ sᵢ² |⟨v, eᵢ⟩|²
+  have hnormsq : ‖T v‖ ^ 2 = ∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 := by
+    have hTv : T v = ∑ i, ((singularValues T i : 𝕜) * ⟪e i, v⟫_𝕜) • svdImage T i := by
+      rw [svd_apply T v]
+      exact Finset.sum_congr rfl fun i _ => (smul_smul _ _ _)
+    rw [hTv, norm_sum_smul_sq_subtype (svdImage_orthonormal T)
+      (fun i hi => by simp only [ne_eq, not_not] at hi; simp [hi])]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [norm_mul, mul_pow, RCLike.norm_ofReal, sq_abs]
+  -- ≤ s₁² ∑ |⟨v, eᵢ⟩|² = s₁² ‖v‖²
+  have hbound : ‖T v‖ ^ 2 ≤ (M * ‖v‖) ^ 2 := by
+    rw [hnormsq, mul_pow, LADR.Section_6B.parseval e v, Finset.mul_sum]
+    refine Finset.sum_le_sum fun i _ => ?_
+    exact mul_le_mul_of_nonneg_right
+      (pow_le_pow_left₀ (singularValues_nonneg T i) (le_ciSup hbdd i) 2) (sq_nonneg _)
+  exact (pow_le_pow_iff_left₀ (norm_nonneg _) (mul_nonneg hM0 (norm_nonneg _))
+    two_ne_zero).mp hbound
+
+/-! 7.85 The maximum of {lit}`‖T v‖` over {lit}`‖v‖ ≤ 1` exists and is the largest singular
+value: 7.82 bounds every such {lit}`‖T v‖` by {lit}`s₁`, and {lit}`‖T e₁‖ = s₁`. -/
+
+theorem isGreatest_norm_image_closedBall (T : V →ₗ[𝕜] W) :
+    IsGreatest ((fun v => ‖T v‖) '' Metric.closedBall (0 : V) 1) (⨆ i, singularValues T i) := by
+  have hbdd : BddAbove (Set.range (singularValues T)) := (Set.finite_range _).bddAbove
+  have hM0 : 0 ≤ ⨆ i, singularValues T i := Real.iSup_nonneg (singularValues_nonneg T)
+  refine ⟨?_, ?_⟩
+  · by_cases hV : finrank 𝕜 V = 0
+    · -- `V = 0`: no singular values, and the maximum is `‖T 0‖ = 0`
+      have hE : IsEmpty (Fin (finrank 𝕜 V)) := by rw [hV]; infer_instance
+      refine ⟨0, Metric.mem_closedBall_self zero_le_one, ?_⟩
+      simp
+    · -- the largest singular value is `s₁ = ‖T e₁‖`
+      set i0 : Fin (finrank 𝕜 V) := ⟨0, Nat.pos_of_ne_zero hV⟩
+      have : Nonempty (Fin (finrank 𝕜 V)) := ⟨i0⟩
+      have hmax : (⨆ i, singularValues T i) = singularValues T i0 :=
+        le_antisymm (ciSup_le fun i => singularValues_antitone T (Fin.le_def.mpr (Nat.zero_le _)))
+          (le_ciSup hbdd i0)
+      refine ⟨svdBasis T i0, ?_, ?_⟩
+      · rw [mem_closedBall_zero_iff, (svdBasis T).orthonormal.1 i0]
+      · rw [hmax]; exact norm_image_svdBasis T i0
+  · rintro _ ⟨v, hv, rfl⟩
+    calc ‖T v‖ ≤ (⨆ i, singularValues T i) * ‖v‖ := norm_apply_le_iSup_singularValues T v
+      _ ≤ (⨆ i, singularValues T i) * 1 :=
+          mul_le_mul_of_nonneg_left (mem_closedBall_zero_iff.mp hv) hM0
+      _ = _ := mul_one _
+
+/-! 7.86 Definition: norm of a linear map, ‖·‖
+
+Axler defines {lit}`‖T‖ = max{‖T v‖ : v ∈ V and ‖v‖ ≤ 1}`; by 7.85 the maximum exists, so we
+define {lit}`opNorm T` as the supremum and record that it is attained
+({lit}`opNorm_isGreatest`). (mathlib's operator norm of {lit}`T.toContinuousLinearMap` is
+the same number, but we work from Axler's definition.) -/
+noncomputable def opNorm (T : V →ₗ[𝕜] W) : ℝ :=
+  sSup ((fun v => ‖T v‖) '' Metric.closedBall (0 : V) 1)
+
+omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
+/-- {lit}`opNorm T` is Axler's definition 7.86. -/
+theorem opNorm_eq_sSup_closedBall (T : V →ₗ[𝕜] W) :
+    opNorm T = sSup ((fun v => ‖T v‖) '' Metric.closedBall (0 : V) 1) := rfl
+
+/-- The maximum in 7.86 is attained (7.85). -/
+theorem opNorm_isGreatest (T : V →ₗ[𝕜] W) :
+    IsGreatest ((fun v => ‖T v‖) '' Metric.closedBall (0 : V) 1) (opNorm T) := by
+  rw [opNorm, (isGreatest_norm_image_closedBall T).csSup_eq]
+  exact isGreatest_norm_image_closedBall T
+
+theorem norm_apply_le_opNorm (T : V →ₗ[𝕜] W) {v : V} (hv : ‖v‖ ≤ 1) : ‖T v‖ ≤ opNorm T :=
+  (opNorm_isGreatest T).2 ⟨v, mem_closedBall_zero_iff.mpr hv, rfl⟩
+
+theorem exists_norm_apply_eq_opNorm (T : V →ₗ[𝕜] W) :
+    ∃ v : V, ‖v‖ ≤ 1 ∧ ‖T v‖ = opNorm T := by
+  obtain ⟨v, hv, h⟩ := (opNorm_isGreatest T).1
+  exact ⟨v, mem_closedBall_zero_iff.mp hv, h⟩
+
+/-- 7.88(a) / 7.85: {lit}`‖T‖` is the largest singular value of {lit}`T`. -/
+theorem opNorm_eq_iSup_singularValues (T : V →ₗ[𝕜] W) :
+    opNorm T = ⨆ i, singularValues T i :=
+  (isGreatest_norm_image_closedBall T).csSup_eq
+
+/-- Each singular value is at most the norm ({lit}`‖T eₖ‖ = sₖ` and {lit}`‖eₖ‖ = 1`). -/
+theorem singularValues_le_opNorm (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
+    singularValues T i ≤ opNorm T := by
+  rw [← norm_image_svdBasis]
+  exact norm_apply_le_opNorm T ((svdBasis T).orthonormal.1 i).le
+
+/-- 7.87(a) {lit}`‖T‖ ≥ 0`: every {lit}`‖T v‖ ≥ 0`. -/
+@[avoiding norm_nonneg']
+theorem opNorm_nonneg (T : V →ₗ[𝕜] W) : 0 ≤ opNorm T :=
+  (norm_nonneg _).trans (norm_apply_le_opNorm T (v := 0) (by simp))
+
+/-- 7.87(b) {lit}`‖T‖ = 0 ⟺ T = 0`. Axler's proof: if {lit}`‖T‖ = 0` and {lit}`u ≠ 0`, then
+{lit}`T u = ‖u‖ T(u/‖u‖) = 0` because {lit}`u/‖u‖` has norm 1. -/
+theorem opNorm_eq_zero {T : V →ₗ[𝕜] W} : opNorm T = 0 ↔ T = 0 := by
+  constructor
+  · intro h
+    ext u
+    rcases eq_or_ne u 0 with rfl | hu
+    · simp
+    have hn : (‖u‖ : 𝕜) ≠ 0 := RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr hu)
+    have h1 : ‖T ((‖u‖ : 𝕜)⁻¹ • u)‖ ≤ 0 := by
+      rw [← h]
+      refine norm_apply_le_opNorm T (le_of_eq ?_)
+      rw [norm_smul, norm_inv, RCLike.norm_ofReal, abs_norm, inv_mul_cancel₀ (norm_ne_zero_iff.mpr hu)]
+    have h2 : T ((‖u‖ : 𝕜)⁻¹ • u) = 0 := norm_le_zero_iff.mp h1
+    rw [map_smul, smul_eq_zero, inv_eq_zero] at h2
+    rw [LinearMap.zero_apply]
+    exact h2.resolve_left hn
+  · rintro rfl
+    obtain ⟨v, -, hv⟩ := exists_norm_apply_eq_opNorm (0 : V →ₗ[𝕜] W)
+    rw [← hv, LinearMap.zero_apply, norm_zero]
+
+/-- 7.87(c) {lit}`‖λ T‖ = |λ| ‖T‖` (Axler's {lit}`|λ|` is {lit}`‖λ‖` for the scalar field):
+{lit}`max{‖λ T v‖} = |λ| max{‖T v‖}`. -/
+theorem opNorm_smul (c : 𝕜) (T : V →ₗ[𝕜] W) : opNorm (c • T) = ‖c‖ * opNorm T := by
+  apply le_antisymm
+  · obtain ⟨v, hv, h⟩ := exists_norm_apply_eq_opNorm (c • T)
+    rw [← h, LinearMap.smul_apply, norm_smul]
+    exact mul_le_mul_of_nonneg_left (norm_apply_le_opNorm T hv) (norm_nonneg c)
+  · obtain ⟨v, hv, h⟩ := exists_norm_apply_eq_opNorm T
+    rw [← h, ← norm_smul, ← LinearMap.smul_apply]
+    exact norm_apply_le_opNorm (c • T) hv
+
+/-- 7.87(d) Triangle inequality {lit}`‖S + T‖ ≤ ‖S‖ + ‖T‖`. Axler's proof: take {lit}`v`
+with {lit}`‖v‖ ≤ 1` and {lit}`‖S + T‖ = ‖(S + T) v‖ ≤ ‖S v‖ + ‖T v‖`. -/
+theorem opNorm_add_le (S T : V →ₗ[𝕜] W) : opNorm (S + T) ≤ opNorm S + opNorm T := by
+  obtain ⟨v, hv, h⟩ := exists_norm_apply_eq_opNorm (S + T)
+  rw [← h, LinearMap.add_apply]
+  exact (norm_add_le _ _).trans (add_le_add (norm_apply_le_opNorm S hv) (norm_apply_le_opNorm T hv))
+
+/-- 7.89 The fundamental inequality {lit}`‖T v‖ ≤ ‖T‖ ‖v‖`: for {lit}`v ≠ 0`,
+{lit}`‖T(v/‖v‖)‖ ≤ ‖T‖`. -/
+theorem opNorm_apply_le (T : V →ₗ[𝕜] W) (v : V) : ‖T v‖ ≤ opNorm T * ‖v‖ := by
+  rcases eq_or_ne v 0 with rfl | hv
+  · simp
+  have hpos : 0 < ‖v‖ := norm_pos_iff.mpr hv
+  have h := norm_apply_le_opNorm T (v := (‖v‖ : 𝕜)⁻¹ • v) (le_of_eq (by
+    rw [norm_smul, norm_inv, RCLike.norm_ofReal, abs_norm, inv_mul_cancel₀ hpos.ne']))
+  rw [map_smul, norm_smul, norm_inv, RCLike.norm_ofReal, abs_norm, inv_mul_le_iff₀ hpos] at h
+  linarith
+
+/-- 7.88(c) {lit}`‖T‖` is the smallest {lit}`c ≥ 0` with {lit}`‖T v‖ ≤ c ‖v‖` for all
+{lit}`v`: for {lit}`0 ≤ c`, {lit}`‖T‖ ≤ c ⟺ ∀ v, ‖T v‖ ≤ c ‖v‖`. -/
+@[avoiding ContinuousLinearMap.opNorm_le_iff]
+theorem opNorm_le_iff {T : V →ₗ[𝕜] W} {c : ℝ} (hc : 0 ≤ c) :
+    opNorm T ≤ c ↔ ∀ v, ‖T v‖ ≤ c * ‖v‖ := by
+  constructor
+  · intro h v
+    exact (opNorm_apply_le T v).trans (mul_le_mul_of_nonneg_right h (norm_nonneg v))
+  · intro h
+    obtain ⟨v, hv, hTv⟩ := exists_norm_apply_eq_opNorm T
+    rw [← hTv]
+    exact (h v).trans (by simpa using mul_le_mul_of_nonneg_left hv hc)
+
+/-- A nonzero space has a unit vector: normalize any nonzero vector. -/
+theorem exists_norm_eq_one (𝕜 : Type*) {V : Type*} [RCLike 𝕜] [NormedAddCommGroup V]
+    [NormedSpace 𝕜 V] [Nontrivial V] : ∃ u : V, ‖u‖ = 1 := by
+  obtain ⟨v, hv⟩ := exists_ne (0 : V)
+  refine ⟨(‖v‖ : 𝕜)⁻¹ • v, ?_⟩
+  rw [norm_smul, norm_inv, RCLike.norm_ofReal, abs_norm, inv_mul_cancel₀ (norm_ne_zero_iff.mpr hv)]
+
+/-- 7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}`. Axler's proof: for {lit}`0 < ‖v‖ ≤ 1`, the unit
+vector {lit}`u = v/‖v‖` has {lit}`‖T u‖ = ‖T v‖/‖v‖ ≥ ‖T v‖`, so the maximum over the ball is
+attained on the sphere. (When {lit}`V = 0` the sphere is empty and both sides are {lit}`0`.) -/
+@[avoiding ContinuousLinearMap.sSup_sphere_eq_norm]
+theorem opNorm_eq_sSup_sphere (T : V →ₗ[𝕜] W) :
+    opNorm T = sSup ((fun v => ‖T v‖) '' Metric.sphere (0 : V) 1) := by
+  rcases subsingleton_or_nontrivial V with hV | hV
+  · have hT : T = 0 := LinearMap.ext fun v => by rw [Subsingleton.elim v 0, map_zero]; rfl
+    have hs : Metric.sphere (0 : V) 1 = ∅ := by
+      ext v; simp [Subsingleton.elim v 0]
+    rw [hs, Set.image_empty, Real.sSup_empty, opNorm_eq_zero]
+    exact hT
+  refine ((IsGreatest.csSup_eq ⟨?_, ?_⟩).symm)
+  · obtain ⟨v, hv, hTv⟩ := exists_norm_apply_eq_opNorm T
+    rcases eq_or_ne v 0 with rfl | hv0
+    · -- the maximum is 0; any unit vector attains it
+      obtain ⟨u, hu⟩ := exists_norm_eq_one 𝕜 (V := V)
+      refine ⟨u, mem_sphere_zero_iff_norm.mpr hu, le_antisymm ?_ ?_⟩
+      · exact norm_apply_le_opNorm T hu.le
+      · rw [← hTv, map_zero, norm_zero]; exact norm_nonneg _
+    · have hpos : 0 < ‖v‖ := norm_pos_iff.mpr hv0
+      refine ⟨(‖v‖ : 𝕜)⁻¹ • v, mem_sphere_zero_iff_norm.mpr ?_, le_antisymm ?_ ?_⟩
+      · rw [norm_smul, norm_inv, RCLike.norm_ofReal, abs_norm, inv_mul_cancel₀ hpos.ne']
+      · exact norm_apply_le_opNorm T (le_of_eq (by
+          rw [norm_smul, norm_inv, RCLike.norm_ofReal, abs_norm, inv_mul_cancel₀ hpos.ne']))
+      · -- ‖T u‖ = ‖T v‖ / ‖v‖ ≥ ‖T v‖ = ‖T‖
+        show opNorm T ≤ ‖T ((‖v‖ : 𝕜)⁻¹ • v)‖
+        rw [map_smul, norm_smul, norm_inv, RCLike.norm_ofReal, abs_norm, ← hTv,
+          le_inv_mul_iff₀ hpos]
+        exact mul_le_of_le_one_left (norm_nonneg _) hv
+  · rintro _ ⟨v, hv, rfl⟩
+    exact norm_apply_le_opNorm T (mem_sphere_zero_iff_norm.mp hv).le
+
+/-! 7.90 Example: norms
+
+We record the first bullet, {lit}`‖I‖ = 1` (for {lit}`V ≠ 0`). The remaining
+bullets (the all-ones matrix on {lit}`𝔽ⁿ`, the eigenvalue-maximum formula, and the
+{lit}`5×5` numerical example) are concrete computations illustrating 7.88 and are
+omitted from formalization, matching the treatment of numeric examples in
+Section 7E. -/
+
+/-- 7.90 (first bullet) The identity operator has norm {lit}`1` (when {lit}`V ≠ 0`). -/
+@[avoiding ContinuousLinearMap.norm_id]
+theorem opNorm_id [Nontrivial V] : opNorm (LinearMap.id : V →ₗ[𝕜] V) = 1 := by
+  apply le_antisymm
+  · exact (opNorm_le_iff zero_le_one).mpr fun v => by simp
+  · obtain ⟨u, hu⟩ := exists_norm_eq_one 𝕜 (V := V)
+    have := norm_apply_le_opNorm (LinearMap.id : V →ₗ[𝕜] V) hu.le
+    rwa [LinearMap.id_apply, hu] at this
+
+/-- 7.91 half: {lit}`‖T*‖ ≤ ‖T‖`, from
+{lit}`‖T* w‖² = ⟨T T* w, w⟩ ≤ ‖T T* w‖ ‖w‖ ≤ ‖T‖ ‖T* w‖ ‖w‖` and 7.88(c). -/
+theorem opNorm_adjoint_le (T : V →ₗ[𝕜] W) : opNorm T† ≤ opNorm T := by
+  refine (opNorm_le_iff (opNorm_nonneg T)).mpr fun w => ?_
+  have h : ‖T† w‖ * ‖T† w‖ ≤ ‖T† w‖ * (opNorm T * ‖w‖) := by
+    calc ‖T† w‖ * ‖T† w‖ = RCLike.re ⟪T (T† w), w⟫_𝕜 := by
+          rw [← LinearMap.adjoint_inner_right T (T† w) w, ← sq, ← @inner_self_eq_norm_sq 𝕜]
+      _ ≤ ‖⟪T (T† w), w⟫_𝕜‖ := RCLike.re_le_norm _
+      _ ≤ ‖T (T† w)‖ * ‖w‖ := norm_inner_le_norm _ _
+      _ ≤ (opNorm T * ‖T† w‖) * ‖w‖ :=
+          mul_le_mul_of_nonneg_right (opNorm_apply_le T _) (norm_nonneg w)
+      _ = ‖T† w‖ * (opNorm T * ‖w‖) := by ring
+  rcases (norm_nonneg (T† w)).eq_or_lt with h0 | hpos
+  · rw [← h0]; exact mul_nonneg (opNorm_nonneg T) (norm_nonneg w)
+  · exact le_of_mul_le_mul_left h hpos
+
+/-- 7.91 A linear map and its adjoint have the same norm: {lit}`‖T*‖ = ‖T‖`. Apply
+{name}`opNorm_adjoint_le` to {lit}`T` and to {lit}`T*`, using {lit}`(T*)* = T`. -/
+@[avoiding ContinuousLinearMap.adjoint.norm_map]
+theorem opNorm_adjoint (T : V →ₗ[𝕜] W) : opNorm T† = opNorm T :=
+  le_antisymm (opNorm_adjoint_le T) (by simpa using opNorm_adjoint_le T†)
+
+/-! # 7.92 Best approximation by a linear map whose range has dimension {lit}`≤ k` -/
+
 /-- The permutation sorting the singular values of {lit}`T` into decreasing order. -/
-noncomputable def svSortPerm (T : V →ₗ[𝕜] V) : Equiv.Perm (Fin (finrank 𝕜 V)) :=
+noncomputable def svSortPerm (T : V →ₗ[𝕜] W) : Equiv.Perm (Fin (finrank 𝕜 V)) :=
   Tuple.sort (fun i => -(singularValues T i))
 
-theorem singularValues_svSortPerm_antitone (T : V →ₗ[𝕜] V) {j k : Fin (finrank 𝕜 V)}
+theorem singularValues_svSortPerm_antitone (T : V →ₗ[𝕜] W) {j k : Fin (finrank 𝕜 V)}
     (hjk : j ≤ k) : singularValues T (svSortPerm T k) ≤ singularValues T (svSortPerm T j) := by
   have h := Tuple.monotone_sort (fun i => -(singularValues T i)) hjk
   exact le_of_neg_le_neg h
 
-theorem svd_apply_sorted (T : V →ₗ[𝕜] V) (v : V) :
+theorem svd_apply_sorted (T : V →ₗ[𝕜] W) (v : V) :
     T v = ∑ j, ((singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜) •
       svdImage T (svSortPerm T j) := by
   rw [svd_apply T v]
@@ -255,13 +337,13 @@ theorem svd_apply_sorted (T : V →ₗ[𝕜] V) (v : V) :
   rw [smul_smul]
 
 /-- The truncated SVD keeping the top {lit}`k` singular directions. -/
-noncomputable def truncSVD (T : V →ₗ[𝕜] V) (k : ℕ) : V →ₗ[𝕜] V :=
+noncomputable def truncSVD (T : V →ₗ[𝕜] W) (k : ℕ) : V →ₗ[𝕜] W :=
   ∑ j ∈ Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k),
     (singularValues T (svSortPerm T j) : 𝕜) •
       LinearMap.smulRight (innerₛₗ 𝕜 (svdBasis T (svSortPerm T j)))
         (svdImage T (svSortPerm T j))
 
-theorem truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
+theorem truncSVD_apply (T : V →ₗ[𝕜] W) (k : ℕ) (v : V) :
     truncSVD T k v = ∑ j ∈ Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k),
       ((singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜) •
         svdImage T (svSortPerm T j) := by
@@ -269,7 +351,7 @@ theorem truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
   refine Finset.sum_congr rfl fun j _ => ?_
   rw [LinearMap.smul_apply, LinearMap.smulRight_apply, innerₛₗ_apply_apply, smul_smul]
 
-theorem finrank_range_truncSVD_le (T : V →ₗ[𝕜] V) (k : ℕ) :
+theorem finrank_range_truncSVD_le (T : V →ₗ[𝕜] W) (k : ℕ) :
     finrank 𝕜 (LinearMap.range (truncSVD T k)) ≤ k := by
   classical
   have hsub : LinearMap.range (truncSVD T k) ≤
@@ -294,20 +376,20 @@ theorem finrank_range_truncSVD_le (T : V →ₗ[𝕜] V) (k : ℕ) :
   rwa [Finset.card_range] at h
 
 /-- The image vectors reindexed by the sort, orthonormal on positive singular values. -/
-theorem svdImage_sorted_orthonormal (T : V →ₗ[𝕜] V) :
+theorem svdImage_sorted_orthonormal (T : V →ₗ[𝕜] W) :
     Orthonormal 𝕜 (fun j : {j : Fin (finrank 𝕜 V) // singularValues T (svSortPerm T j) ≠ 0} =>
       svdImage T (svSortPerm T j.1)) :=
   (svdImage_orthonormal T).comp (fun j => ⟨svSortPerm T j.1, j.2⟩)
     (fun _ _ h => Subtype.ext ((svSortPerm T).injective (congrArg Subtype.val h)))
 
 /-- Parseval in the sorted eigenbasis: {lit}`∑ⱼ ‖⟨eⱼ,v⟩‖² = ‖v‖²`. -/
-theorem sum_sq_norm_inner_sorted (T : V →ₗ[𝕜] V) (v : V) :
+theorem sum_sq_norm_inner_sorted (T : V →ₗ[𝕜] W) (v : V) :
     ∑ j, ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 = ‖v‖ ^ 2 := by
   rw [Equiv.sum_comp (svSortPerm T) (fun i => ‖⟪svdBasis T i, v⟫_𝕜‖ ^ 2)]
   exact (svdBasis T).sum_sq_norm_inner_right v
 
 /-- The squared norm of a partial SVD sum: {lit}`‖∑ⱼ [P j] sⱼ⟨eⱼ,v⟩ fⱼ‖² = ∑ⱼ [P j] sⱼ²‖⟨eⱼ,v⟩‖²`. -/
-theorem partialSVD_normSq (T : V →ₗ[𝕜] V) (v : V) (P : Fin (finrank 𝕜 V) → Prop)
+theorem partialSVD_normSq (T : V →ₗ[𝕜] W) (v : V) (P : Fin (finrank 𝕜 V) → Prop)
     [DecidablePred P] :
     ‖∑ j, (if P j then (singularValues T (svSortPerm T j) : 𝕜) *
         ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0) • svdImage T (svSortPerm T j)‖ ^ 2
@@ -323,12 +405,12 @@ theorem partialSVD_normSq (T : V →ₗ[𝕜] V) (v : V) (P : Fin (finrank 𝕜 
   · simp
 
 /-- The operator-norm upper bound from a pointwise bound. -/
-theorem opNorm_le_of_forall {T : V →ₗ[𝕜] V} {c : ℝ} (hc : 0 ≤ c)
+theorem opNorm_le_of_forall {T : V →ₗ[𝕜] W} {c : ℝ} (hc : 0 ≤ c)
     (h : ∀ v, ‖T v‖ ≤ c * ‖v‖) : opNorm T ≤ c := by
-  rw [opNorm]; exact ContinuousLinearMap.opNorm_le_bound _ hc h
+  exact (opNorm_le_iff hc).mpr h
 
 /-- `(T − Tₖ) v = ∑ⱼ [k ≤ j] sⱼ ⟨eⱼ,v⟩ fⱼ` (the tail of the SVD). -/
-theorem sub_truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
+theorem sub_truncSVD_apply (T : V →ₗ[𝕜] W) (k : ℕ) (v : V) :
     (T - truncSVD T k) v = ∑ j : Fin (finrank 𝕜 V),
       (if k ≤ (j : ℕ) then (singularValues T (svSortPerm T j) : 𝕜) *
         ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0) • svdImage T (svSortPerm T j) := by
@@ -340,7 +422,7 @@ theorem sub_truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
   · rw [ite_eq_right h, ite_eq_left (not_lt.mp h), sub_zero]
 
 /-- `‖T v‖² = ∑ⱼ sⱼ² ‖⟨eⱼ,v⟩‖²`. -/
-theorem normSq_apply (T : V →ₗ[𝕜] V) (v : V) :
+theorem normSq_apply (T : V →ₗ[𝕜] W) (v : V) :
     ‖T v‖ ^ 2 = ∑ j, (singularValues T (svSortPerm T j)) ^ 2 *
       ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 := by
   rw [svd_apply_sorted, norm_sum_smul_sq_subtype (svdImage_sorted_orthonormal T)
@@ -350,7 +432,7 @@ theorem normSq_apply (T : V →ₗ[𝕜] V) (v : V) :
   rw [norm_mul, mul_pow, RCLike.norm_ofReal, sq_abs]
 
 /-- Upper bound: `opNorm (T − truncSVD T k) ≤ s'_k`. -/
-theorem opNorm_sub_truncSVD_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+theorem opNorm_sub_truncSVD_le (T : V →ₗ[𝕜] W) {k : ℕ} (hk : k < finrank 𝕜 V) :
     opNorm (T - truncSVD T k) ≤ singularValues T (svSortPerm T ⟨k, hk⟩) := by
   classical
   refine opNorm_le_of_forall (singularValues_nonneg T _) fun v => ?_
@@ -378,7 +460,7 @@ theorem opNorm_sub_truncSVD_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finran
     Real.sqrt_sq (singularValues_nonneg T _), Real.sqrt_sq (norm_nonneg _)] at hb
 
 /-- Lower bound (achieved): `s'_k ≤ opNorm (T − truncSVD T k)`, witnessed by {lit}`eₖ`. -/
-theorem le_opNorm_sub_truncSVD (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+theorem le_opNorm_sub_truncSVD (T : V →ₗ[𝕜] W) {k : ℕ} (hk : k < finrank 𝕜 V) :
     singularValues T (svSortPerm T ⟨k, hk⟩) ≤ opNorm (T - truncSVD T k) := by
   classical
   have hnorm : ‖(T - truncSVD T k) (svdBasis T (svSortPerm T ⟨k, hk⟩))‖
@@ -394,34 +476,38 @@ theorem le_opNorm_sub_truncSVD (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finran
   rw [hnorm, (svdBasis T).orthonormal.1 (svSortPerm T ⟨k, hk⟩), mul_one] at happ
   exact happ
 
-/-- Lower bound: any {lit}`S` with {lit}`dim range S ≤ k` has `opNorm (T − S) ≥ s'_k`. On the
-{lit}`(k+1)`-dimensional span {lit}`W` of the top eigen-directions, {lit}`ker S ⊓ W ≠ ⊥` (dimensions),
-so a nonzero {lit}`v` there has `(T − S) v = T v` with {lit}`‖T v‖ ≥ s'_k ‖v‖`. -/
-theorem le_opNorm_sub_of_rank_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V)
-    (S : V →ₗ[𝕜] V) (hrank : finrank 𝕜 (LinearMap.range S) ≤ k) :
+/-- Lower bound: any {lit}`S` with {lit}`dim range S ≤ k` has `opNorm (T − S) ≥ s'_k`.
+Following Axler, {lit}`S e₁, …, S e_{k+1}` is linearly dependent, which gives a nonzero
+{lit}`v = a₁e₁ + ⋯ + a_{k+1}e_{k+1}` with {lit}`S v = 0`; then `(T − S) v = T v` and
+{lit}`‖T v‖ ≥ s'_k ‖v‖`. -/
+theorem le_opNorm_sub_of_rank_le (T : V →ₗ[𝕜] W) {k : ℕ} (hk : k < finrank 𝕜 V)
+    (S : V →ₗ[𝕜] W) (hrank : finrank 𝕜 (LinearMap.range S) ≤ k) :
     singularValues T (svSortPerm T ⟨k, hk⟩) ≤ opNorm (T - S) := by
   classical
   have hle : k + 1 ≤ finrank 𝕜 V := hk
   set family := fun i : Fin (k + 1) => svdBasis T (svSortPerm T (Fin.castLE hle i)) with hfam
   set W := Submodule.span 𝕜 (Set.range family) with hWdef
-  have hWdim : finrank 𝕜 W = k + 1 := by
-    have hli : LinearIndependent 𝕜 family :=
-      (svdBasis T).orthonormal.linearIndependent.comp _
-        ((svSortPerm T).injective.comp (Fin.castLE_injective hle))
-    rw [hWdef, finrank_span_eq_card hli, Fintype.card_fin]
-  have hkerdim : finrank 𝕜 V - k ≤ finrank 𝕜 (LinearMap.ker S) := by
-    have h := LinearMap.finrank_range_add_finrank_ker S
+  have hli : LinearIndependent 𝕜 family :=
+    (svdBasis T).orthonormal.linearIndependent.comp _
+      ((svSortPerm T).injective.comp (Fin.castLE_injective hle))
+  -- Axler: `S e₁, …, S e_{k+1}` is a list of length `k + 1` in `range S`, which has dimension
+  -- `≤ k`, so it is linearly dependent (2.22): `a₁ S e₁ + ⋯ + a_{k+1} S e_{k+1} = 0` with the
+  -- `aᵢ` not all `0`.
+  have hdep : ¬ LinearIndependent 𝕜
+      (fun i => (⟨S (family i), LinearMap.mem_range_self S _⟩ : LinearMap.range S)) := by
+    intro h
+    have := h.fintype_card_le_finrank
+    rw [Fintype.card_fin] at this
     omega
-  have hinter : LinearMap.ker S ⊓ W ≠ ⊥ := by
-    intro hbot
-    have hsup := Submodule.finrank_sup_add_finrank_inf_eq (LinearMap.ker S) W
-    rw [hbot, finrank_bot, add_zero, hWdim] at hsup
-    have hle2 : finrank 𝕜 ((LinearMap.ker S ⊔ W : Submodule 𝕜 V)) ≤ finrank 𝕜 V :=
-      Submodule.finrank_le _
-    omega
-  obtain ⟨v, hvmem, hvne⟩ := Submodule.exists_mem_ne_zero_of_ne_bot hinter
-  have hSv : S v = 0 := LinearMap.mem_ker.mp hvmem.1
-  have hvW : v ∈ W := hvmem.2
+  obtain ⟨a, ha, i0, hi0⟩ := Fintype.not_linearIndependent_iff.mp hdep
+  -- `v = a₁ e₁ + ⋯ + a_{k+1} e_{k+1}` is nonzero, lies in `W`, and `S v = 0`
+  set v := ∑ i, a i • family i with hv
+  have hvne : v ≠ 0 := fun h0 => hi0 (Fintype.linearIndependent_iff.mp hli a h0 i0)
+  have hSv : S v = 0 := by
+    have := congrArg Subtype.val ha
+    simpa [hv, map_sum, map_smul] using this
+  have hvW : v ∈ W := Submodule.sum_mem _ fun i _ =>
+    Submodule.smul_mem _ _ (Submodule.subset_span ⟨i, rfl⟩)
   have hperp : ∀ j : Fin (finrank 𝕜 V), k + 1 ≤ (j : ℕ) →
       ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 = 0 := by
     intro j hj
@@ -462,8 +548,8 @@ theorem le_opNorm_sub_of_rank_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finr
 /-- 7.92 The best rank-{lit}`≤ k` approximation of {lit}`T` is the truncated SVD: the minimum
 of `‖T − S‖` over operators with {lit}`dim range S ≤ k` is the {lit}`(k+1)`-th largest
 singular value. -/
-theorem isLeast_opNorm_sub (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
-    IsLeast {r : ℝ | ∃ S : V →ₗ[𝕜] V, finrank 𝕜 (LinearMap.range S) ≤ k ∧ opNorm (T - S) = r}
+theorem isLeast_opNorm_sub (T : V →ₗ[𝕜] W) {k : ℕ} (hk : k < finrank 𝕜 V) :
+    IsLeast {r : ℝ | ∃ S : V →ₗ[𝕜] W, finrank 𝕜 (LinearMap.range S) ≤ k ∧ opNorm (T - S) = r}
       (singularValues T (svSortPerm T ⟨k, hk⟩)) := by
   refine ⟨⟨truncSVD T k, finrank_range_truncSVD_le T k,
     le_antisymm (opNorm_sub_truncSVD_le T hk) (le_opNorm_sub_truncSVD T hk)⟩, ?_⟩
@@ -478,10 +564,11 @@ Suppose {lit}`T ∈ ℒ(V)`. Then there is an isometry (unitary operator) {lit}`
 the positive operator {lit}`R = √(T* T)` (with {lit}`R ∘ R = T* T`) such that
 {lit}`T = S ∘ R`.
 
-*Construction.* Let {lit}`e = svdBasis T` and let {lit}`fₖ = svdImage T k` be the
-orthonormal image frame (7E). Because {lit}`R eₖ = sₖ eₖ` (the positive square root
-acts as {lit}`√(sₖ²)` on the {lit}`T* T`-eigenbasis, 7C {name}`LADR.Section_7C.sqrt_eigenvector`),
-we have {lit}`(S ∘ R) eₖ = sₖ S eₖ`. Extending the orthonormal list
+*Construction* (Axler's). Let {lit}`e = svdBasis T` and let {lit}`fₖ = svdImage T k` be the
+orthonormal image frame (7E). The operator {lit}`R v = s₁⟨v, e₁⟩e₁ + ⋯ + sₙ⟨v, eₙ⟩eₙ` is
+positive (its matrix in {lit}`e` is diagonal with nonnegative entries, 7.38) and
+{lit}`R² = T* T` (both send {lit}`eₖ` to {lit}`sₖ² eₖ`), so it is {lit}`√(T* T)` (7.39), and
+{lit}`(S ∘ R) eₖ = sₖ S eₖ`. Extending the orthonormal list
 {lit}`{fₖ : sₖ ≠ 0}` to a full orthonormal basis {lit}`fFull` of {lit}`V`
 ({name}`Orthonormal.exists_orthonormalBasis_extension_of_card_eq`) and defining
 {lit}`S eₖ = fFull k` makes {lit}`S` an isometry (it maps an orthonormal basis to
@@ -489,15 +576,23 @@ an orthonormal basis) with {lit}`(S ∘ R) eₖ = sₖ fₖ = T eₖ`. -/
 theorem polarDecomposition (T : V →ₗ[𝕜] V) :
     ∃ S R : V →ₗ[𝕜] V, Isometry S ∧ R.IsPositive ∧
       R ∘ₗ R = T† ∘ₗ T ∧ T = S ∘ₗ R := by
-  obtain ⟨R, hRpos, hRR⟩ := exists_positive_sqrt (adjComp_self_isPositive T)
-  -- `R eₖ = sₖ eₖ`.
+  -- Axler's `√(T* T)`: the operator `R v = s₁⟨v, e₁⟩e₁ + ⋯`, i.e. `R eₖ = sₖ eₖ`.
+  set R := (svdBasis T).toBasis.constr 𝕜
+    (fun i => (singularValues T i : 𝕜) • svdBasis T i) with hRdef
   have hRe : ∀ i, R (svdBasis T i) = (singularValues T i : 𝕜) • svdBasis T i := by
     intro i
-    have h1 : (R ∘ₗ R) (svdBasis T i)
-        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) • svdBasis T i := by
-      rw [hRR]; exact adjComp_apply_svdBasis T i
-    have h2 := sqrt_eigenvector hRpos (sq_nonneg (singularValues T i)) h1
-    rwa [Real.sqrt_sq (singularValues_nonneg T i)] at h2
+    have h : R ((svdBasis T).toBasis i) = (singularValues T i : 𝕜) • svdBasis T i := by
+      rw [hRdef]; simp
+    rwa [OrthonormalBasis.coe_toBasis] at h
+  -- `R` is positive (diagonal with nonnegative entries, 7.38) and `R² = T* T`.
+  have hRdiag : HasNonnegDiagonalMatrix R := ⟨_, svdBasis T, singularValues T,
+    singularValues_nonneg T, toMatrixOrthonormal_eq_diagonal _ hRe⟩
+  have hRpos : R.IsPositive := ((tfae_isPositive R).out 3 1).mp hRdiag
+  have hRR : R ∘ₗ R = T† ∘ₗ T := by
+    apply (svdBasis T).toBasis.ext
+    intro i
+    rw [OrthonormalBasis.coe_toBasis, LinearMap.comp_apply, hRe, map_smul, hRe, smul_smul,
+      adjComp_apply_svdBasis, ← RCLike.ofReal_mul, sq]
   -- Extend the orthonormal image frame to a full orthonormal basis `fFull`.
   have hcard : finrank 𝕜 V = Fintype.card (Fin (finrank 𝕜 V)) := (Fintype.card_fin _).symm
   have horth : Orthonormal 𝕜
