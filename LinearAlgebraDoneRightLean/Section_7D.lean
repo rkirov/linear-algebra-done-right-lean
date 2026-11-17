@@ -57,38 +57,24 @@ theorem isometry_norm_map {S : V →ₗ[𝕜] W} (h : Isometry S) (v : V) : ‖S
 {lit}`V` to an orthonormal list {lit}`g₁, …, gₙ` in {lit}`W`, then {lit}`S` is an
 isometry.
 
-We prove the sharper fact that such an {lit}`S` *preserves inner products*: writing
-{lit}`u, v` in the basis {lit}`e` and using the orthonormality of the {lit}`gₖ`
-collapses the double sum to {name}`OrthonormalBasis.sum_inner_mul_inner`. -/
+Axler's proof: write {lit}`v = ⟨v, e₁⟩e₁ + ⋯ + ⟨v, eₙ⟩eₙ` (7.46, i.e. 6.30(a)), so
+{lit}`‖v‖² = |⟨v, e₁⟩|² + ⋯ + |⟨v, eₙ⟩|²` (7.47, 6.30(b)). Applying {lit}`S` gives
+{lit}`S v = ⟨v, e₁⟩g₁ + ⋯ + ⟨v, eₙ⟩gₙ`, so {lit}`‖S v‖²` is the same sum (7.48, 6.24). -/
 
 omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
-theorem isometry_of_orthonormal_image {ι : Type*} [Fintype ι] [DecidableEq ι]
-    (b : OrthonormalBasis ι 𝕜 V) (S : V →ₗ[𝕜] W)
-    (h : Orthonormal 𝕜 (fun i => S (b i))) (u v : V) :
-    ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜 := by
-  have hSu : S u = ∑ i, ⟪b i, u⟫_𝕜 • S (b i) := by
-    conv_lhs => rw [← b.sum_repr' u]
-    rw [map_sum]; exact Finset.sum_congr rfl fun i _ => map_smul _ _ _
-  have hSv : S v = ∑ i, ⟪b i, v⟫_𝕜 • S (b i) := by
-    conv_lhs => rw [← b.sum_repr' v]
-    rw [map_sum]; exact Finset.sum_congr rfl fun i _ => map_smul _ _ _
-  rw [hSu, hSv, sum_inner, ← b.sum_inner_mul_inner u v]
-  refine Finset.sum_congr rfl fun i _ => ?_
-  rw [inner_sum, Finset.sum_eq_single i]
-  · rw [inner_smul_left, inner_smul_right, (orthonormal_iff_ite.mp h) i i, ite_eq_left rfl,
-      mul_one, inner_conj_symm]
-  · intro j _ hij
-    rw [inner_smul_left, inner_smul_right, (orthonormal_iff_ite.mp h) i j,
-      ite_eq_right (Ne.symm hij), mul_zero, mul_zero]
-  · intro hi; exact absurd (Finset.mem_univ i) hi
-
-omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
-/-- 7.45, as stated by Axler: the map is an isometry. -/
+@[avoiding LinearMap.norm_map_iff_inner_map_map]
 theorem isometry_of_orthonormal_image_isometry {ι : Type*} [Fintype ι] [DecidableEq ι]
     (b : OrthonormalBasis ι 𝕜 V) (S : V →ₗ[𝕜] W)
-    (h : Orthonormal 𝕜 (fun i => S (b i))) : Isometry S :=
-  (isometry_iff_norm S).mpr <| (LinearMap.norm_map_iff_inner_map_map S).mpr fun u v =>
-    isometry_of_orthonormal_image b S h u v
+    (h : Orthonormal 𝕜 (fun i => S (b i))) : Isometry S := by
+  refine (isometry_iff_norm S).mpr fun v => ?_
+  -- 7.46 with S applied: S v = ⟨v, e₁⟩ S e₁ + ⋯ + ⟨v, eₙ⟩ S eₙ
+  have hSv : S v = ∑ i, ⟪b i, v⟫_𝕜 • S (b i) := by
+    conv_lhs => rw [LADR.Section_6B.orthonormalBasis_repr b v]
+    rw [map_sum]; exact Finset.sum_congr rfl fun i _ => map_smul _ _ _
+  -- 7.47 and 7.48: both squared norms equal ∑ |⟨v, eₖ⟩|²
+  have h2 : ‖S v‖ ^ 2 = ‖v‖ ^ 2 := by
+    rw [hSv, LADR.Section_6B.norm_sq_sum_orthonormal h, LADR.Section_6B.parseval b v]
+  exact (sq_eq_sq₀ (norm_nonneg _) (norm_nonneg _)).mp h2
 
 /-! 7.49 Characterizations of isometries
 
@@ -100,17 +86,39 @@ of {lit}`W`, the following are equivalent:
 (d) {lit}`S e₁, …, S eₙ` is an orthonormal list;
 (e) the columns of {lit}`ℳ(S, e, f)` form an orthonormal list in {lit}`𝔽ᵐ`.
 
-(a) ⟺ (c) is {name}`LinearMap.norm_map_iff_inner_map_map`. We prove (c) ⟺ (b),
-(a) ⟺ (d), and (d) ⟺ (e) below, then collect all five into a single
-{lit}`TFAE` list. Condition (e) is the matrix restatement of (d): column
-{lit}`k` of {lit}`ℳ(S, e, f)` is the coordinate vector of {lit}`S eₖ` in the
-basis {lit}`f`. -/
+Axler proves the cycle (a) ⟹ (b) ⟹ (c) ⟹ (d) ⟹ (e) ⟹ (a). (a) ⟹ (b): for an
+isometry, {lit}`⟨(I − S*S)v, v⟩ = ‖v‖² − ‖Sv‖² = 0`, so the self-adjoint operator
+{lit}`I − S*S` is {lit}`0` by 7.16. (b) ⟹ (c): {lit}`⟨Su, Sv⟩ = ⟨S*Su, v⟩ = ⟨u, v⟩`.
+(c) ⟹ (d) is immediate. (d) ⟺ (e) is 7.50: column {lit}`k` of {lit}`ℳ(S, e, f)` is the
+coordinate vector of {lit}`S eₖ` in the basis {lit}`f`. (d) ⟹ (a) is Example 7.45. -/
+
+/-- (a) ⟹ (b): an isometry satisfies {lit}`S* S = I`, by 7.16 applied to the
+self-adjoint operator {lit}`I − S* S`. -/
+@[avoiding LinearMap.norm_map_iff_inner_map_map]
+theorem adjoint_comp_self_of_isometry {S : V →ₗ[𝕜] W} (h : Isometry S) : S† ∘ₗ S = 1 := by
+  have hsym : (1 - S† ∘ₗ S : V →ₗ[𝕜] V).IsSymmetric := by
+    intro u v
+    simp only [LinearMap.sub_apply, Module.End.one_apply, LinearMap.comp_apply, inner_sub_left,
+      inner_sub_right, LinearMap.adjoint_inner_left, LinearMap.adjoint_inner_right]
+  -- ⟨(I − S*S)v, v⟩ = ‖v‖² − ‖Sv‖² = 0
+  have hzero : ∀ v, ⟪(1 - S† ∘ₗ S : V →ₗ[𝕜] V) v, v⟫_𝕜 = 0 := by
+    intro v
+    rw [LinearMap.sub_apply, Module.End.one_apply, LinearMap.comp_apply, inner_sub_left,
+      LinearMap.adjoint_inner_left, inner_self_eq_norm_sq_to_K, inner_self_eq_norm_sq_to_K,
+      isometry_norm_map h v, sub_self]
+  have h0 := (LADR.Section_7A.symmetric_inner_map_self_eq_zero hsym).mp hzero
+  exact (sub_eq_zero.mp h0).symm
 
 omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
-/-- (a) ⟺ (c): an isometry is exactly an inner-product-preserving map. -/
-theorem isometry_iff_inner (S : V →ₗ[𝕜] W) :
-    Isometry S ↔ ∀ u v, ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜 :=
-  (isometry_iff_norm S).trans (LinearMap.norm_map_iff_inner_map_map S)
+/-- (c) ⟹ (a): preserving inner products preserves {lit}`‖v‖² = ⟨v, v⟩`. -/
+theorem isometry_of_inner {S : V →ₗ[𝕜] W} (h : ∀ u v, ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜) :
+    Isometry S := by
+  refine (isometry_iff_norm S).mpr fun v => ?_
+  have h2 : ‖S v‖ ^ 2 = ‖v‖ ^ 2 := by
+    have := h v v
+    rw [inner_self_eq_norm_sq_to_K, inner_self_eq_norm_sq_to_K] at this
+    exact_mod_cast this
+  exact (sq_eq_sq₀ (norm_nonneg _) (norm_nonneg _)).mp h2
 
 /-- (c) ⟺ (b): preserving inner products is equivalent to {lit}`S* S = I`. -/
 theorem inner_iff_adjoint_comp (S : V →ₗ[𝕜] W) :
@@ -127,11 +135,15 @@ theorem inner_iff_adjoint_comp (S : V →ₗ[𝕜] W) :
 /-- (a) ⟺ (b). -/
 theorem isometry_iff_adjoint_comp (S : V →ₗ[𝕜] W) :
     Isometry S ↔ S† ∘ₗ S = 1 :=
-  (isometry_iff_inner S).trans (inner_iff_adjoint_comp S)
+  ⟨adjoint_comp_self_of_isometry, fun h => isometry_of_inner ((inner_iff_adjoint_comp S).mpr h)⟩
 
-omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
+/-- (a) ⟺ (c): an isometry is exactly an inner-product-preserving map. -/
+theorem isometry_iff_inner (S : V →ₗ[𝕜] W) :
+    Isometry S ↔ ∀ u v, ⟪S u, S v⟫_𝕜 = ⟪u, v⟫_𝕜 :=
+  (isometry_iff_adjoint_comp S).trans (inner_iff_adjoint_comp S).symm
+
 /-- (a) ⟺ (d): {lit}`S` is an isometry iff it carries some (hence any) orthonormal
-basis to an orthonormal list. -/
+basis to an orthonormal list. Forward is (a) ⟹ (c) ⟹ (d); backward is 7.45. -/
 theorem isometry_iff_orthonormal_image {ι : Type*} [Fintype ι] [DecidableEq ι]
     (b : OrthonormalBasis ι 𝕜 V) (S : V →ₗ[𝕜] W) :
     Isometry S ↔ Orthonormal 𝕜 (fun i => S (b i)) := by
@@ -237,13 +249,14 @@ noncomputable def rotationMatrix (θ : ℝ) : Matrix (Fin 2) (Fin 2) ℝ :=
 
 theorem rotationMatrix_mem_unitaryGroup (θ : ℝ) :
     rotationMatrix θ ∈ Matrix.unitaryGroup (Fin 2) ℝ := by
-  rw [Matrix.mem_unitaryGroup_iff']
-  ext i j
-  fin_cases i <;> fin_cases j <;>
-    simp [rotationMatrix, Matrix.mul_apply, Fin.sum_univ_two,
-      Matrix.star_eq_conjTranspose] <;>
-    ring_nf <;>
-    linarith [Real.sin_sq_add_cos_sq θ, Real.cos_sq_add_sin_sq θ]
+  -- check both `Qᴴ Q = I` and `Q Qᴴ = I` by direct computation
+  refine Unitary.mem_iff.mpr ⟨?_, ?_⟩ <;>
+  · ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rotationMatrix, Matrix.mul_apply, Fin.sum_univ_two,
+        Matrix.star_eq_conjTranspose] <;>
+      ring_nf <;>
+      linarith [Real.sin_sq_add_cos_sq θ, Real.cos_sq_add_sin_sq θ]
 
 /-! 7.53 Characterizations of unitary operators
 
@@ -254,14 +267,14 @@ For {lit}`S ∈ ℒ(V)` with orthonormal basis {lit}`e`, the following are equiv
 
 Conditions (a) and (b) are the same statement in mathlib: membership in
 {name}`unitary` *is* {lit}`S* S = S S* = I` ({lit}`mem_unitary_iff_adjoint`, above).
-We prove (a) ⟺ (d) and (a) ⟺ (f), and the two matrix conditions, then collect all
-six into a single {lit}`TFAE` list. Statement (c) is the reading of (b) as
-"{lit}`S*` is the two-sided inverse", spelled with {name}`Ring.inverse` on the ring
-{lit}`ℒ(V)`. In (d) the orthonormal list {lit}`S e₁, …, S eₙ` is indexed by the
-basis index type, so being orthonormal already makes it a basis. Condition (e) is
-the rows-versus-columns exchange (Exercise 13): the columns of {lit}`ℳ(S, e)` are
-orthonormal iff {lit}`ℳᴴ ℳ = I`, the rows iff {lit}`ℳ ℳᴴ = I`, and for a square
-matrix those two agree ({name}`Matrix.unitaryGroup`). -/
+We prove (a) ⟺ (d), (a) ⟺ (f), and (f) ⟺ (e), then collect all six into a single
+{lit}`TFAE` list. Statement (c) is the reading of (b) as "{lit}`S*` is the two-sided
+inverse", spelled with {name}`Ring.inverse` on the ring {lit}`ℒ(V)`. In (d) the
+orthonormal list {lit}`S e₁, …, S eₙ` is indexed by the basis index type, so being
+orthonormal already makes it a basis. For (e) we follow Axler: {lit}`S*` is unitary
+exactly when it is an isometry, i.e. (7.49) when the columns of {lit}`ℳ(S*, e)` are
+orthonormal; and {lit}`ℳ(S*, e) = ℳ(S, e)ᴴ` (7.9), whose columns are the complex
+conjugates of the rows of {lit}`ℳ(S, e)`. -/
 
 /-- (c): for a unitary operator, {lit}`S*` is a two-sided inverse of {lit}`S`. -/
 theorem mem_unitary_inverse {S : V →ₗ[𝕜] V} (h : S ∈ unitary (V →ₗ[𝕜] V)) :
@@ -327,6 +340,7 @@ theorem orthonormal_rows_iff {n m : Type*} [Fintype n] [DecidableEq m]
     exact if_congr eq_comm rfl rfl
 
 /-- 7.53 in full: all six conditions of the book, as one {name}`List.TFAE`. -/
+@[avoiding Matrix.mem_unitaryGroup_iff, Matrix.mem_unitaryGroup_iff']
 theorem tfae_mem_unitary {ι : Type*} [Fintype ι] [DecidableEq ι]
     (e : OrthonormalBasis ι 𝕜 V) (S : V →ₗ[𝕜] V) :
     [S ∈ unitary (V →ₗ[𝕜] V),
@@ -340,11 +354,14 @@ theorem tfae_mem_unitary {ι : Type*} [Fintype ι] [DecidableEq ι]
   tfae_have 1 ↔ 2 := mem_unitary_iff_adjoint S
   tfae_have 2 ↔ 3 := adjoint_comp_iff_isUnit S
   tfae_have 1 ↔ 4 := mem_unitary_iff_orthonormal_image e S
-  tfae_have 4 ↔ 5 := by
-    rw [orthonormal_image_iff_orthonormal_columns e e S, orthonormal_columns_iff,
-      orthonormal_rows_iff, ← Matrix.star_eq_conjTranspose, ← Matrix.mem_unitaryGroup_iff',
-      Matrix.mem_unitaryGroup_iff, Matrix.star_eq_conjTranspose]
   tfae_have 1 ↔ 6 := mem_unitary_adjoint_iff S
+  -- (f) ⟺ (e): S* is unitary iff it is an isometry iff the columns of ℳ(S*) are
+  -- orthonormal (7.49); ℳ(S*) = ℳ(S)ᴴ (7.9), whose columns are the conjugated rows of ℳ(S).
+  tfae_have 6 ↔ 5 := by
+    rw [mem_unitary_iff_isometry, isometry_iff_orthonormal_image e,
+      orthonormal_image_iff_orthonormal_columns e e, orthonormal_columns_iff,
+      orthonormal_rows_iff, LADR.Section_7A.toMatrix_adjoint_eq_conjTranspose e e,
+      Matrix.conjTranspose_conjTranspose]
   tfae_finish
 
 /-! 7.54 Eigenvalues of unitary operators have absolute value 1.
@@ -437,16 +454,11 @@ For a square matrix {lit}`Q`: (a) the columns of {lit}`Q` are orthonormal, i.e.
 {lit}`v ∈ 𝔽ⁿ`; (d) {lit}`Q* Q = Q Q* = I`, i.e. {lit}`Q ∈ Matrix.unitaryGroup`.
 
 Axler states this result but leaves its proof to Exercise 17 ("whose proof will be left as
-an exercise for the reader"). We prove it outright, because assembling it is routine once
-its one substantive ingredient is available — the square-matrix exchange
-{lit}`Q* Q = I ⟺ Q Q* = I`, which is itself Exercise 13 (stated as
-{lit}`exercise_7D_13` and left to the reader there) and which mathlib supplies as
-{name}`Matrix.mem_unitaryGroup_iff'` / {name}`Matrix.mem_unitaryGroup_iff`. The remaining
-steps come from the text: (a) ⟺ {lit}`Q* Q = I` and (b) ⟺ {lit}`Q Q* = I` are
-{lit}`orthonormal_columns_iff` / {lit}`orthonormal_rows_iff`; (d) is unitary membership
-unfolded ({lit}`mem_unitaryGroup_iff_conjTranspose`, definitional via
-{name}`Unitary.mem_iff`); and (c) ⟺ (a) is 7.49 for the operator
-{name}`Matrix.toEuclideanLin` {lit}`Q` in the standard basis. -/
+an exercise for the reader"). We prove it outright, because it is the operator results
+read in the standard basis of {lit}`𝔽ⁿ`, where the operator {lit}`v ↦ Q v`
+({name}`Matrix.toEuclideanLin`) has matrix {lit}`Q`: (c) ⟺ (a) is 7.49 (a) ⟺ (e);
+(c) ⟺ (d) is "isometry = unitary" on {lit}`𝔽ⁿ` (7.51) together with 7.9; and
+(d) ⟺ (b) is 7.53 (a) ⟺ (e). -/
 
 /-- (d) as an equation pair. Definitional: membership in {name}`unitary` *is* the
 conjunction of the two equations ({name}`Unitary.mem_iff`), with
@@ -456,19 +468,45 @@ theorem mem_unitaryGroup_iff_conjTranspose (Q : Matrix n n 𝕜) :
   rw [← Matrix.star_eq_conjTranspose]
   exact Unitary.mem_iff
 
+/-- A matrix is unitary iff the operator {lit}`v ↦ Q v` on {lit}`𝔽ⁿ` is: in the standard
+(orthonormal) basis that operator has matrix {lit}`Q` and its adjoint has matrix
+{lit}`Qᴴ` (7.9), so {lit}`S* S = S S* = I` reads {lit}`Qᴴ Q = Q Qᴴ = I`. -/
+theorem mem_unitaryGroup_iff_toEuclideanLin (Q : Matrix n n 𝕜) :
+    Q ∈ Matrix.unitaryGroup n 𝕜 ↔
+      Matrix.toEuclideanLin Q ∈ unitary (EuclideanSpace 𝕜 n →ₗ[𝕜] EuclideanSpace 𝕜 n) := by
+  set b := EuclideanSpace.basisFun n 𝕜
+  have hM : ∀ T U : EuclideanSpace 𝕜 n →ₗ[𝕜] EuclideanSpace 𝕜 n,
+      T ∘ₗ U = 1 ↔ LinearMap.toMatrix b.toBasis b.toBasis T *
+        LinearMap.toMatrix b.toBasis b.toBasis U = 1 := by
+    intro T U
+    rw [← LinearMap.toMatrix_comp, ← LinearMap.toMatrix_one b.toBasis]
+    exact (LinearMap.toMatrix b.toBasis b.toBasis).injective.eq_iff.symm
+  rw [mem_unitaryGroup_iff_conjTranspose, mem_unitary_iff_adjoint, hM, hM,
+    LADR.Section_7A.toMatrix_adjoint_eq_conjTranspose b b, toMatrix_toEuclideanLin]
+
+/-- 7.57, following the book: apply 7.49 and 7.53 to the operator {lit}`v ↦ Q v`,
+whose matrix in the standard basis is {lit}`Q`. -/
+@[avoiding Matrix.mem_unitaryGroup_iff, Matrix.mem_unitaryGroup_iff']
 theorem tfae_mem_unitaryGroup (Q : Matrix n n 𝕜) :
     [(Orthonormal 𝕜 fun j => (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 n)),
       (Orthonormal 𝕜 fun i => (WithLp.toLp 2 (Q.row i) : EuclideanSpace 𝕜 n)),
       Isometry (Matrix.toEuclideanLin Q),
       Q ∈ Matrix.unitaryGroup n 𝕜].TFAE := by
-  tfae_have 1 ↔ 4 := by
-    rw [orthonormal_columns_iff, ← Matrix.star_eq_conjTranspose, Matrix.mem_unitaryGroup_iff']
-  tfae_have 2 ↔ 4 := by
-    rw [orthonormal_rows_iff, ← Matrix.star_eq_conjTranspose, Matrix.mem_unitaryGroup_iff]
+  set b := EuclideanSpace.basisFun n 𝕜
+  -- (c) ⟺ (a): 7.49 (a) ⟺ (e) in the standard basis
   tfae_have 3 ↔ 1 := by
-    rw [isometry_iff_orthonormal_image (EuclideanSpace.basisFun n 𝕜) (Matrix.toEuclideanLin Q),
-      orthonormal_image_iff_orthonormal_columns (EuclideanSpace.basisFun n 𝕜)
-        (EuclideanSpace.basisFun n 𝕜) (Matrix.toEuclideanLin Q), toMatrix_toEuclideanLin]
+    rw [isometry_iff_orthonormal_image b (Matrix.toEuclideanLin Q),
+      orthonormal_image_iff_orthonormal_columns b b (Matrix.toEuclideanLin Q),
+      toMatrix_toEuclideanLin]
+  -- (c) ⟺ (d): on 𝔽ⁿ an isometry is the same as a unitary operator (7.51)
+  tfae_have 3 ↔ 4 := by
+    rw [mem_unitaryGroup_iff_toEuclideanLin, mem_unitary_iff_isometry]
+  -- (d) ⟺ (b): 7.53 (a) ⟺ (e) in the standard basis
+  tfae_have 4 ↔ 2 := by
+    have h := (tfae_mem_unitary b (Matrix.toEuclideanLin Q)).out 1 5
+    rw [toMatrix_toEuclideanLin] at h
+    rw [mem_unitaryGroup_iff_toEuclideanLin]
+    exact h
   tfae_finish
 
 /-- {lit}`R` has only positive numbers on its diagonal, in the sense Axler uses for
@@ -489,14 +527,16 @@ theorem hasPosRealDiag_iff {m : Type*} (R : Matrix m m 𝕜) :
 If {lit}`A` is a square matrix with linearly independent columns, then
 {lit}`A = QR` with {lit}`Q` unitary and {lit}`R` upper triangular with positive
 diagonal. Following Axler, the construction is Gram–Schmidt applied to the columns
-of {lit}`A`: with {lit}`e` the resulting orthonormal basis (mathlib's
+of {lit}`A`: with {lit}`e` the resulting orthonormal basis (packaged as mathlib's
 {name}`InnerProductSpace.gramSchmidtOrthonormalBasis`), take {lit}`Q` to have
-columns {lit}`eⱼ` and {lit}`Rⱼₖ = ⟨eⱼ, aₖ⟩`. Then {lit}`A = QR` (orthonormal
-expansion of each column), {lit}`Q` is unitary (its columns are orthonormal),
-{lit}`R` is upper triangular ({name}`InnerProductSpace.gramSchmidtOrthonormalBasis_inv_triangular`),
-and the diagonal {lit}`Rₖₖ = ‖gramSchmidt aₖ‖ > 0` is a positive real.
-*Uniqueness* is {lit}`QR_unique` below, via the lemma that a unitary upper-triangular
-matrix with positive diagonal is the identity ({lit}`unitary_upperTri_eq_one`). -/
+columns {lit}`eⱼ` and {lit}`Rⱼₖ = ⟨vₖ, eⱼ⟩`. Then {lit}`A = QR` (orthonormal
+expansion of each column, 6.30(a)), {lit}`Q` is unitary (its columns are orthonormal),
+{lit}`R` is upper triangular because {lit}`span(v₁, …, vₖ) = span(e₁, …, eₖ)` (7.59) is
+orthogonal to {lit}`eⱼ` for {lit}`j > k`, and the diagonal
+{lit}`Rₖₖ = ‖gramSchmidt vₖ‖ > 0` is a positive real.
+*Uniqueness* ({lit}`QR_unique` below) is Axler's argument: in any QR factorization the
+columns of the unitary factor satisfy the conditions of Exercise 6B.10, so they are the
+Gram–Schmidt list. -/
 
 /-- The diagonal Gram–Schmidt coefficient: {lit}`⟨ê i, f i⟩ = ‖gramSchmidt f i‖`,
 a positive real. This is the entry that becomes the (positive) diagonal of {lit}`R`
@@ -527,6 +567,8 @@ theorem gramSchmidtNormed_inner_self {E : Type*} [NormedAddCommGroup E]
 /-- 7.58 QR factorization (existence). A square matrix with linearly independent
 columns factors as {lit}`A = QR` with {lit}`Q` unitary, {lit}`R` upper triangular,
 and the diagonal of {lit}`R` a positive real. -/
+@[avoiding InnerProductSpace.gramSchmidtOrthonormalBasis_inv_triangular,
+  Matrix.mem_unitaryGroup_iff']
 theorem QR_factorization {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜)
     (hA : LinearIndependent 𝕜 A.col) :
     ∃ Q R : Matrix (Fin N) (Fin N) 𝕜, Q ∈ Matrix.unitaryGroup (Fin N) 𝕜 ∧
@@ -541,28 +583,34 @@ theorem QR_factorization {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜)
   have h : Module.finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)) = Fintype.card (Fin N) := by
     simp [finrank_euclideanSpace]
   set e := InnerProductSpace.gramSchmidtOrthonormalBasis h f with he
+  -- since the columns are independent, `e` is exactly the Gram–Schmidt list (6.32)
+  have hei : ∀ l, e l = InnerProductSpace.gramSchmidtNormed 𝕜 f l := fun l =>
+    InnerProductSpace.gramSchmidtOrthonormalBasis_apply h (by
+      have hlen := InnerProductSpace.gramSchmidtNormed_unit_length l hf
+      intro hz; rw [hz, norm_zero] at hlen; norm_num at hlen)
   refine ⟨Matrix.of fun k j => e j k, Matrix.of fun j i => inner 𝕜 (e j) (f i),
     ?_, ?_, ?_, ?_⟩
-  · rw [Matrix.mem_unitaryGroup_iff']
-    ext i j
-    simp only [Matrix.mul_apply, Matrix.star_apply, Matrix.of_apply, Matrix.one_apply,
-      RCLike.star_def]
-    have hortho := orthonormal_iff_ite.mp e.orthonormal i j
-    rw [PiLp.inner_apply] at hortho
-    simp only [RCLike.inner_apply] at hortho
-    rw [← hortho]
-    exact Finset.sum_congr rfl fun x _ => mul_comm _ _
-  · intro i j hji
+  · -- `Q` has orthonormal columns `e₁, …, eₙ`, so it is unitary (7.57)
+    refine ((tfae_mem_unitaryGroup _).out 1 4).mp ?_
+    have hcol : (fun j => (WithLp.toLp 2 ((Matrix.of fun k j => e j k).col j) :
+        EuclideanSpace 𝕜 (Fin N))) = ⇑e := by
+      funext j; ext k; simp
+    rw [hcol]; exact e.orthonormal
+  · -- 7.59: `vⱼ ∈ span(e₁, …, eⱼ)`, and `eᵢ` is orthogonal to that span when `j < i`
+    intro i j hji
     simp only [Matrix.of_apply]
-    exact InnerProductSpace.gramSchmidtOrthonormalBasis_inv_triangular h f hji
+    have hmem : f j ∈ Submodule.span 𝕜 (InnerProductSpace.gramSchmidtNormed 𝕜 f '' Set.Iic j) := by
+      rw [LADR.Section_6B.span_gramSchmidtNormed_initial]
+      exact Submodule.subset_span ⟨j, Set.mem_Iic.mpr le_rfl, rfl⟩
+    have hle : Submodule.span 𝕜 (InnerProductSpace.gramSchmidtNormed 𝕜 f '' Set.Iic j) ≤
+        (𝕜 ∙ e i)ᗮ := by
+      rw [Submodule.span_le]
+      rintro _ ⟨l, hl, rfl⟩
+      rw [SetLike.mem_coe, Submodule.mem_orthogonal_singleton_iff_inner_left, ← hei l]
+      exact e.orthonormal.2 (ne_of_lt (lt_of_le_of_lt (Set.mem_Iic.mp hl) hji))
+    exact (Submodule.mem_orthogonal_singleton_iff_inner_right).mp (hle hmem)
   · intro i
-    have hne : InnerProductSpace.gramSchmidtNormed 𝕜 f i ≠ 0 := by
-      have hlen : ‖InnerProductSpace.gramSchmidtNormed 𝕜 f i‖ = 1 :=
-        InnerProductSpace.gramSchmidtNormed_unit_length i hf
-      intro hz; rw [hz, norm_zero] at hlen; norm_num at hlen
-    have hei : e i = InnerProductSpace.gramSchmidtNormed 𝕜 f i :=
-      InnerProductSpace.gramSchmidtOrthonormalBasis_apply h hne
-    simp only [Matrix.of_apply, hei, gramSchmidtNormed_inner_self hf i]
+    simp only [Matrix.of_apply, hei i, gramSchmidtNormed_inner_self hf i]
     have hpos : 0 < ‖InnerProductSpace.gramSchmidt 𝕜 f i‖ :=
       norm_pos_iff.mpr (InnerProductSpace.gramSchmidt_ne_zero i hf)
     exact ⟨by rw [RCLike.ofReal_re]; exact hpos, by rw [RCLike.ofReal_im]⟩
@@ -579,106 +627,229 @@ theorem QR_factorization {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜)
     rw [← hLk]
     exact Finset.sum_congr rfl fun x _ => mul_comm _ _
 
-/-- A unitary upper-triangular matrix with positive real diagonal is the identity.
-Since {lit}`U⁻¹ = U*` is upper triangular ({name}`Matrix.blockTriangular_inv_of_blockTriangular`)
-while {lit}`U*` is lower triangular, {lit}`U` is diagonal; being unitary with
-positive real diagonal then forces {lit}`U = I`. This is the key to QR uniqueness. -/
-theorem unitary_upperTri_eq_one {N : ℕ} (U : Matrix (Fin N) (Fin N) 𝕜)
-    (hU : U ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hUT : U.BlockTriangular id)
-    (hdiag : HasPosRealDiag U) : U = 1 := by
-  have hmem1 : star U * U = 1 := (Matrix.mem_unitaryGroup_iff').mp hU
-  have hmem2 : U * star U = 1 := (Matrix.mem_unitaryGroup_iff).mp hU
-  let : Invertible U := ⟨star U, hmem1, hmem2⟩
-  have hUinv : U⁻¹ = star U := Matrix.inv_eq_left_inv hmem1
-  have hup : U⁻¹.BlockTriangular id := Matrix.blockTriangular_inv_of_blockTriangular hUT
-  rw [hUinv] at hup
-  have hoff : ∀ i j, i ≠ j → U i j = 0 := by
-    intro i j hij
-    rcases lt_or_gt_of_ne hij with h | h
-    · have hz := hup h
-      rw [Matrix.star_apply, star_eq_zero] at hz
-      exact hz
-    · exact hUT h
-  ext i j
-  rcases eq_or_ne i j with rfl | hij
-  · have hentry : (star U * U) i i = 1 := by rw [hmem1]; simp
-    rw [Matrix.mul_apply] at hentry
-    have hsum : ∑ k, (star U) i k * U k i = (star U) i i * U i i := by
-      refine Finset.sum_eq_single i (fun k _ hk => ?_) (fun h => absurd (Finset.mem_univ i) h)
-      rw [Matrix.star_apply, star_eq_zero.mpr (hoff k i hk), zero_mul]
-    rw [hsum, Matrix.star_apply, RCLike.star_def, RCLike.conj_mul] at hentry
-    have hnorm : ‖U i i‖ = 1 := by
-      have h2 : ‖U i i‖ ^ 2 = 1 := by exact_mod_cast hentry
-      rw [← Real.sqrt_sq (norm_nonneg _), h2, Real.sqrt_one]
-    obtain ⟨hre, him⟩ := hdiag i
-    have hval : U i i = ((RCLike.re (U i i) : ℝ) : 𝕜) := by
-      conv_lhs => rw [← RCLike.re_add_im (U i i)]
-      rw [him, RCLike.ofReal_zero, zero_mul, add_zero]
-    have hre1 : RCLike.re (U i i) = 1 := by
-      have h1 : |RCLike.re (U i i)| = 1 := by
-        rw [← RCLike.norm_ofReal (K := 𝕜), ← hval, hnorm]
-      rwa [abs_of_pos hre] at h1
-    rw [Matrix.one_apply_eq, hval, hre1, RCLike.ofReal_one]
-  · rw [hoff i j hij, Matrix.one_apply_ne hij]
+omit [FiniteDimensional 𝕜 V] in
+/-- The inductive step of Exercise 6B.10 (below): if {lit}`e` has the same initial spans
+as {lit}`v`, and
+{lit}`eₖ` and {lit}`fₖ` are both orthogonal to {lit}`e₁, …, eₖ₋₁`, then {lit}`eₖ` is a multiple
+of {lit}`fₖ`. Write {lit}`W = span(e₁, …, eₖ₋₁)`, {lit}`vₖ = fₖ + w` and {lit}`eₖ = a vₖ + u` with
+{lit}`u, w ∈ W`: then {lit}`eₖ - a fₖ = a w + u` is in {lit}`W` and also orthogonal to {lit}`W`. -/
+theorem gramSchmidt_unique_step {m : ℕ} (v e : Fin m → V)
+    (hspan : ∀ k, Submodule.span 𝕜 (e '' {i | i ≤ k}) = Submodule.span 𝕜 (v '' {i | i ≤ k}))
+    (k : Fin m)
+    (hfe : ∀ i, i < k → ⟪e i, InnerProductSpace.gramSchmidt 𝕜 v k⟫_𝕜 = 0)
+    (hee : ∀ i, i < k → ⟪e i, e k⟫_𝕜 = 0) :
+    ∃ a : 𝕜, e k = a • InnerProductSpace.gramSchmidt 𝕜 v k := by
+  set f := InnerProductSpace.gramSchmidt 𝕜 v k with hf
+  set W := Submodule.span 𝕜 (e '' Set.Iio k) with hW
+  -- anything orthogonal to `e₁, …, eₖ₋₁` is orthogonal to their span `W`
+  have hperp : ∀ y, (∀ i, i < k → ⟪e i, y⟫_𝕜 = 0) → ∀ x ∈ W, ⟪x, y⟫_𝕜 = 0 := by
+    intro y hy x hx
+    induction hx using Submodule.span_induction with
+    | mem x hx => obtain ⟨i, hi, rfl⟩ := hx; exact hy i hi
+    | zero => simp
+    | add _ _ _ _ h₁ h₂ => rw [inner_add_left, h₁, h₂, add_zero]
+    | smul c _ _ h => rw [inner_smul_left, h, mul_zero]
+  have hfW : ∀ x ∈ W, ⟪x, f⟫_𝕜 = 0 := hperp f hfe
+  have heW : ∀ x ∈ W, ⟪x, e k⟫_𝕜 = 0 := hperp (e k) hee
+  have hsub : ∀ i, i < k → Submodule.span 𝕜 (v '' {j | j ≤ i}) ≤ W := fun i hi => by
+    rw [← hspan i]
+    exact Submodule.span_mono (Set.image_mono fun j hj => lt_of_le_of_lt hj hi)
+  -- `vₖ = fₖ + w` with `w ∈ W`
+  obtain ⟨w, hwW, hvf⟩ : ∃ w ∈ W, v k = f + w := by
+    refine ⟨_, Submodule.sum_mem _ fun j hj => ?_, InnerProductSpace.gramSchmidt_def' 𝕜 v k⟩
+    rw [Submodule.starProjection_singleton]
+    exact Submodule.smul_mem _ _
+      (hsub j (Finset.mem_Iio.mp hj) (LADR.Section_6B.gramSchmidt_mem_span_of_le v le_rfl))
+  -- `eₖ = a vₖ + u` with `u ∈ W`
+  have hek : e k ∈ Submodule.span 𝕜 (insert (v k) (v '' Set.Iio k)) := by
+    have h : e k ∈ Submodule.span 𝕜 (v '' {i | i ≤ k}) :=
+      hspan k ▸ Submodule.subset_span ⟨k, le_refl k, rfl⟩
+    rwa [← Set.image_insert_eq, Set.Iio_insert]
+  obtain ⟨a, u, hu, hau⟩ := Submodule.mem_span_insert.mp hek
+  have huW : u ∈ W := by
+    refine Submodule.span_le.mpr ?_ hu
+    rintro _ ⟨i, hi, rfl⟩
+    exact hsub i hi (Submodule.subset_span ⟨i, le_refl i, rfl⟩)
+  -- the part of `eₖ - a fₖ` in `W` is also orthogonal to `W`, so `eₖ = a fₖ`
+  have hr : a • w + u = 0 := by
+    have hrW : a • w + u ∈ W := add_mem (Submodule.smul_mem _ _ hwW) huW
+    have hrr : e k - a • f = a • w + u := by rw [hau, hvf, smul_add]; abel
+    rw [← inner_self_eq_zero (𝕜 := 𝕜)]
+    nth_rw 2 [← hrr]
+    rw [inner_sub_right, inner_smul_right, heW _ hrW, hfW _ hrW, mul_zero, sub_zero]
+  exact ⟨a, by rw [hau, hvf, smul_add, add_assoc, hr, add_zero]⟩
 
-/-- 7.58 QR factorization (uniqueness). The unitary/upper-triangular/positive-diagonal
-factors of a QR factorization are unique. Following Axler: if {lit}`A = Q₁R₁ = Q₂R₂`,
-then {lit}`U = Q₂* Q₁ = R₂ R₁⁻¹` is unitary, upper triangular, and has positive
-diagonal, so {lit}`U = I` by {name}`unitary_upperTri_eq_one`; hence {lit}`Q₁ = Q₂` and
-{lit}`R₁ = R₂`. -/
+omit [FiniteDimensional 𝕜 V] in
+open scoped ComplexOrder in
+/-- Exercise 6B.10: the orthonormal list produced by Gram–Schmidt (6.32) is the *unique*
+orthonormal list {lit}`e₁, …, eₘ` with {lit}`⟨vₖ, eₖ⟩ > 0` and
+{lit}`span(v₁, …, vₖ) = span(e₁, …, eₖ)` for each {lit}`k`. Axler's proof of uniqueness in
+7.58 cites this exercise, so we prove it here in the main text. -/
+theorem eq_gramSchmidtNormed_of_span {m : ℕ} (v : Fin m → V) (hv : LinearIndependent 𝕜 v)
+    (e : Fin m → V) (he : Orthonormal 𝕜 e)
+    (hpos : ∀ k, 0 < ⟪e k, v k⟫_𝕜)
+    (hspan : ∀ k, Submodule.span 𝕜 (e '' {i | i ≤ k}) =
+      Submodule.span 𝕜 (v '' {i | i ≤ k})) :
+    e = InnerProductSpace.gramSchmidtNormed 𝕜 v := by
+  -- we will proceed by induction
+  -- assume ei = gram-schmidt for all i < k
+  -- enough to show that there is a unique choice for ek under the conditions
+  -- 1. ek is in span(v₁, …, vₖ) = span(e₁, …, eₖ₋₁, vk)
+  -- 2. ek is orthogonal to e₁, …, eₖ₋₁
+  -- 3. ⟨vk, ek⟩ > 0
+  -- 4. ‖ek‖ = 1
+  -- let W = span(e₁, …, eₖ₋₁); by 2, ek ⟂ W, and by induction (ei = fi/‖fi‖) also fk ⟂ W
+  -- the Gram-Schmidt recursion gives vk = fk + w with w ∈ W
+  -- by 1, ek = a vk + u with u ∈ W, so ek - a fk = a w + u
+  -- this is in W and also orthogonal to W, so it is 0, i.e. ek = a fk
+  -- vk = fk + w and fk ⟂ w give ⟨vk, fk⟩ = ‖fk‖², and fk ≠ 0 by linear independence of vi
+  -- by 3, 0 < ⟨vk, ek⟩ = ā ‖fk‖², so a is Real and positive, which fixes the phase of a
+  -- by 4, 1 = ‖ek‖ = a ‖fk‖, so a = 1/‖fk‖
+  funext k
+  induction k using WellFoundedLT.induction with | ind k ih
+  set f := InnerProductSpace.gramSchmidt 𝕜 v k with hf
+  have hf0 : f ≠ 0 := LADR.Section_6B.gramSchmidt_ne_zero_of_linearIndependent hv k
+  obtain ⟨a, hea⟩ : ∃ a : 𝕜, e k = a • f := gramSchmidt_unique_step v e hspan k
+    (fun i hi => by
+      rw [ih i hi, InnerProductSpace.gramSchmidtNormed, inner_smul_left,
+        LADR.Section_6B.gramSchmidt_orthogonal_of_lt v hi, mul_zero])
+    (fun i hi => he.2 hi.ne)
+  -- `⟨vₖ, fₖ⟩ = ‖fₖ‖²`, so positivity of `⟨vₖ, eₖ⟩` says `a` is a positive real `t`
+  have hfv : ⟪f, v k⟫_𝕜 = ((‖f‖ ^ 2 : ℝ) : 𝕜) := by
+    rw [InnerProductSpace.gramSchmidt_def' 𝕜 v k, ← hf, inner_add_right, inner_sum,
+      Finset.sum_eq_zero, add_zero, inner_self_eq_norm_sq_to_K]
+    · push_cast; rfl
+    · intro j hj
+      rw [Submodule.starProjection_singleton, inner_smul_right,
+        inner_eq_zero_symm.mp (LADR.Section_6B.gramSchmidt_orthogonal_of_lt v (Finset.mem_Iio.mp hj)), mul_zero]
+  have hnf : 0 < ‖f‖ := norm_pos_iff.mpr hf0
+  have hp := hpos k
+  rw [hea, inner_smul_left, hfv] at hp
+  obtain ⟨x, hx, hxa⟩ := RCLike.pos_iff_exists_ofReal.mp hp
+  have hta : a = ((x / ‖f‖ ^ 2 : ℝ) : 𝕜) := by
+    have hc : (starRingEnd 𝕜) a = ((x / ‖f‖ ^ 2 : ℝ) : 𝕜) := by
+      have hne : ((‖f‖ ^ 2 : ℝ) : 𝕜) ≠ 0 := RCLike.ofReal_ne_zero.mpr (by positivity)
+      rw [RCLike.ofReal_div, hxa, mul_div_cancel_right₀ _ hne]
+    rw [← RCLike.conj_conj a, hc, RCLike.conj_ofReal]
+  set t := x / ‖f‖ ^ 2 with ht
+  have htpos : 0 < t := by positivity
+  -- `‖eₖ‖ = 1` gives `t = 1/‖fₖ‖`
+  have hnorm : t * ‖f‖ = 1 := by
+    have h1 := he.1 k
+    rw [hea, norm_smul, hta, RCLike.norm_ofReal, abs_of_pos htpos] at h1
+    exact h1
+  have htf : t = ‖f‖⁻¹ := eq_inv_of_mul_eq_one_left hnorm
+  rw [hea, hta, htf, InnerProductSpace.gramSchmidtNormed, RCLike.ofReal_inv]
+
+
+
+/-- Column {lit}`k` of {lit}`QR` is the linear combination of the columns of {lit}`Q` with
+coefficients from column {lit}`k` of {lit}`R` (3.51(a)). -/
+theorem col_mul_eq_sum {N : ℕ} (Q R : Matrix (Fin N) (Fin N) 𝕜) (k : Fin N) :
+    (WithLp.toLp 2 ((Q * R).col k) : EuclideanSpace 𝕜 (Fin N)) =
+      ∑ j, R j k • (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 (Fin N)) := by
+  ext i
+  simp [Matrix.mul_apply, mul_comm]
+
+/-- If {lit}`R` is upper triangular with nonzero diagonal, the columns {lit}`q₁, …, qₙ` of
+{lit}`Q` and the columns {lit}`v₁, …, vₙ` of {lit}`QR` have the same initial spans:
+{lit}`vₖ = R₁ₖq₁ + ⋯ + Rₖₖqₖ`, and conversely {lit}`qₖ` is recovered from {lit}`vₖ` and
+{lit}`q₁, …, qₖ₋₁` because {lit}`Rₖₖ ≠ 0`. -/
+theorem span_cols_eq_of_upperTriangular {N : ℕ} (Q R : Matrix (Fin N) (Fin N) 𝕜)
+    (hRt : R.BlockTriangular id) (hRd : HasPosRealDiag R) (k : Fin N) :
+    Submodule.span 𝕜 ((fun j => (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 (Fin N))) ''
+        {i | i ≤ k}) =
+      Submodule.span 𝕜 ((fun j => (WithLp.toLp 2 ((Q * R).col j) : EuclideanSpace 𝕜 (Fin N))) ''
+        {i | i ≤ k}) := by
+  set q := fun j => (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 (Fin N)) with hq
+  set f := fun j => (WithLp.toLp 2 ((Q * R).col j) : EuclideanSpace 𝕜 (Fin N)) with hf
+  -- fᵢ = ∑_{j ≤ i} R j i • q j
+  have hfi : ∀ i, f i = ∑ j ∈ Finset.Iic i, R j i • q j := by
+    intro i
+    show WithLp.toLp 2 ((Q * R).col i) = _
+    rw [col_mul_eq_sum]
+    refine (Finset.sum_subset (Finset.subset_univ _) fun j _ hj => ?_).symm
+    rw [Finset.mem_Iic, not_le] at hj
+    rw [hRt hj, zero_smul]
+  have hRne : ∀ i, R i i ≠ 0 := fun i h => by have := (hRd i).1; rw [h] at this; simp at this
+  apply le_antisymm
+  · -- qₖ = (R k k)⁻¹ (fₖ − ∑_{j<k} R j k qⱼ), by strong induction
+    have hmem : ∀ k, q k ∈ Submodule.span 𝕜 (f '' {i | i ≤ k}) := by
+      intro k
+      induction k using WellFoundedLT.induction with | ind k ih
+      have hsplit : f k = R k k • q k + ∑ j ∈ Finset.Iio k, R j k • q j := by
+        rw [hfi, ← Finset.Iio_insert, Finset.sum_insert Finset.notMem_Iio_self]
+      have hqk : q k = (R k k)⁻¹ • (f k - ∑ j ∈ Finset.Iio k, R j k • q j) := by
+        rw [hsplit, add_sub_cancel_right, smul_smul, inv_mul_cancel₀ (hRne k), one_smul]
+      rw [hqk]
+      refine Submodule.smul_mem _ _ (Submodule.sub_mem _ (Submodule.subset_span ⟨k, Set.mem_ofPred.mpr le_rfl, rfl⟩)
+        (Submodule.sum_mem _ fun j hj => Submodule.smul_mem _ _ ?_))
+      have hjk : j < k := Finset.mem_Iio.mp hj
+      exact Submodule.span_mono (Set.image_mono fun i (hi : i ≤ j) => le_trans hi hjk.le) (ih j hjk)
+    rw [Submodule.span_le]
+    rintro _ ⟨i, hi, rfl⟩
+    exact Submodule.span_mono (Set.image_mono fun l (hl : l ≤ i) => le_trans hl hi) (hmem i)
+  · rw [Submodule.span_le]
+    rintro _ ⟨i, hi, rfl⟩
+    rw [SetLike.mem_coe, hfi]
+    exact Submodule.sum_mem _ fun j hj => Submodule.smul_mem _ _
+      (Submodule.subset_span ⟨j, le_trans (Finset.mem_Iic.mp hj) hi, rfl⟩)
+
+
+/-- The columns of {lit}`A`, as vectors of {lit}`𝔽ⁿ` with the Euclidean inner product. -/
+theorem linearIndependent_toLp_col {N : ℕ} {A : Matrix (Fin N) (Fin N) 𝕜}
+    (hA : LinearIndependent 𝕜 A.col) :
+    LinearIndependent 𝕜 fun i => (WithLp.toLp 2 (A.col i) : EuclideanSpace 𝕜 (Fin N)) :=
+  hA.map' (WithLp.linearEquiv 2 𝕜 (Fin N → 𝕜)).symm.toLinearMap
+    (LinearMap.ker_eq_bot.mpr (WithLp.linearEquiv 2 𝕜 (Fin N → 𝕜)).symm.injective)
+
+/-- The key step of Axler's uniqueness proof in 7.58: in any QR factorization of {lit}`A`,
+the columns {lit}`q₁, …, qₙ` of {lit}`Q` satisfy {lit}`span(v₁, …, vₖ) = span(q₁, …, qₖ)`
+and {lit}`⟨vₖ, qₖ⟩ = Rₖₖ > 0`, so by Exercise 6B.10 they are the Gram–Schmidt list of the
+columns {lit}`v₁, …, vₙ` of {lit}`A`. -/
+theorem cols_eq_gramSchmidtNormed {N : ℕ} (A Q R : Matrix (Fin N) (Fin N) 𝕜)
+    (hA : LinearIndependent 𝕜 A.col)
+    (hQ : Q ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hRt : R.BlockTriangular id)
+    (hRd : HasPosRealDiag R) (hAQR : A = Q * R) :
+    (fun j => (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 (Fin N))) =
+      InnerProductSpace.gramSchmidtNormed 𝕜
+        (fun j => (WithLp.toLp 2 (A.col j) : EuclideanSpace 𝕜 (Fin N))) := by
+  have hf := linearIndependent_toLp_col hA
+  subst hAQR
+  have horth : Orthonormal 𝕜 fun j => (WithLp.toLp 2 (Q.col j) : EuclideanSpace 𝕜 (Fin N)) :=
+    ((tfae_mem_unitaryGroup Q).out 4 1).mp hQ
+  refine eq_gramSchmidtNormed_of_span _ hf _ horth (fun k => ?_)
+    (span_cols_eq_of_upperTriangular Q R hRt hRd)
+  -- ⟨qₖ, vₖ⟩ = Rₖₖ > 0, since vₖ = ∑ⱼ Rⱼₖ qⱼ
+  rw [col_mul_eq_sum, inner_sum, Finset.sum_eq_single k
+    (fun j _ hjk => by rw [inner_smul_right, horth.2 (Ne.symm hjk), mul_zero])
+    (fun h => absurd (Finset.mem_univ k) h), inner_smul_right,
+    orthonormal_iff_ite.mp horth k k, ite_eq_left rfl, mul_one]
+  exact (hasPosRealDiag_iff R).mp hRd k
+
+/-- 7.58 QR factorization (uniqueness). Following Axler: the columns of both unitary
+factors are the Gram–Schmidt list of the columns of {lit}`A`
+({name}`cols_eq_gramSchmidtNormed`), so {lit}`Q₁ = Q₂`, and then
+{lit}`R₁ = Q₁* A = Q₂* A = R₂`. -/
+@[avoiding Matrix.blockTriangular_inv_of_blockTriangular, Matrix.det_of_isUpperTriangular]
 theorem QR_unique {N : ℕ} (A Q₁ R₁ Q₂ R₂ : Matrix (Fin N) (Fin N) 𝕜)
+    (hA : LinearIndependent 𝕜 A.col)
     (hQ₁ : Q₁ ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hR₁t : R₁.BlockTriangular id)
     (hR₁d : HasPosRealDiag R₁) (hA₁ : A = Q₁ * R₁)
     (hQ₂ : Q₂ ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hR₂t : R₂.BlockTriangular id)
     (hR₂d : HasPosRealDiag R₂) (hA₂ : A = Q₂ * R₂) :
     Q₁ = Q₂ ∧ R₁ = R₂ := by
-  have diagval : ∀ z : 𝕜, RCLike.im z = 0 → z = ((RCLike.re z : ℝ) : 𝕜) := by
-    intro z hz
-    conv_lhs => rw [← RCLike.re_add_im z]
-    rw [hz, RCLike.ofReal_zero, zero_mul, add_zero]
-  have hR₁ne : ∀ i, R₁ i i ≠ 0 := by
-    intro i h; have := (hR₁d i).1; rw [h] at this; simp at this
-  have hdet1 : R₁.det ≠ 0 := by
-    rw [Matrix.det_of_isUpperTriangular hR₁t]
-    exact Finset.prod_ne_zero_iff.mpr (fun i _ => hR₁ne i)
-  let : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
-  set U := star Q₂ * Q₁ with hUdef
-  have hQ₂s1 : star Q₂ * Q₂ = 1 := (Matrix.mem_unitaryGroup_iff').mp hQ₂
-  have hQ₂s2 : Q₂ * star Q₂ = 1 := (Matrix.mem_unitaryGroup_iff).mp hQ₂
-  have hUunit : U ∈ Matrix.unitaryGroup (Fin N) 𝕜 := mul_mem (Unitary.star_mem hQ₂) hQ₁
-  have hUR : U * R₁ = R₂ := by
-    have h : Q₁ * R₁ = Q₂ * R₂ := by rw [← hA₁, ← hA₂]
-    rw [hUdef, Matrix.mul_assoc, h, ← Matrix.mul_assoc, hQ₂s1, Matrix.one_mul]
-  have hUeq : U = R₂ * R₁⁻¹ := by
-    rw [← hUR, Matrix.mul_assoc, Matrix.mul_inv_of_invertible, Matrix.mul_one]
-  have hR₁invt : R₁⁻¹.BlockTriangular id := Matrix.blockTriangular_inv_of_blockTriangular hR₁t
-  have hUt : U.BlockTriangular id := hUeq ▸ hR₂t.mul hR₁invt
-  have hUd : HasPosRealDiag U := by
-    intro i
-    have hprod : (U * R₁) i i = U i i * R₁ i i := by
-      rw [Matrix.mul_apply]
-      refine Finset.sum_eq_single i (fun k _ hk => ?_) (fun h => absurd (Finset.mem_univ i) h)
-      rcases lt_or_gt_of_ne hk with hlt | hgt
-      · rw [hUt hlt, zero_mul]
-      · rw [hR₁t hgt, mul_zero]
-    rw [hUR] at hprod
-    obtain ⟨hr1, hi1⟩ := hR₁d i
-    obtain ⟨hr2, hi2⟩ := hR₂d i
-    have hR1v := diagval _ hi1
-    have hR2v := diagval _ hi2
-    have ha : ((RCLike.re (R₁ i i) : ℝ) : 𝕜) ≠ 0 := by rw [← hR1v]; exact hR₁ne i
-    have hUii : U i i = ((RCLike.re (R₂ i i) / RCLike.re (R₁ i i) : ℝ) : 𝕜) := by
-      rw [RCLike.ofReal_div, eq_div_iff ha, ← hR1v, ← hR2v]
-      exact hprod.symm
-    refine ⟨?_, ?_⟩
-    · rw [hUii, RCLike.ofReal_re]; positivity
-    · rw [hUii, RCLike.ofReal_im]
-  have hU1 : U = 1 := unitary_upperTri_eq_one U hUunit hUt hUd
-  refine ⟨?_, ?_⟩
-  · calc Q₁ = Q₂ * (star Q₂ * Q₁) := by rw [← Matrix.mul_assoc, hQ₂s2, Matrix.one_mul]
-      _ = Q₂ * 1 := by rw [← hUdef, hU1]
-      _ = Q₂ := Matrix.mul_one Q₂
-  · rw [← hUR, hU1, Matrix.one_mul]
+  have h := (cols_eq_gramSchmidtNormed A Q₁ R₁ hA hQ₁ hR₁t hR₁d hA₁).trans
+    (cols_eq_gramSchmidtNormed A Q₂ R₂ hA hQ₂ hR₂t hR₂d hA₂).symm
+  have hQ : Q₁ = Q₂ := by
+    ext i j
+    simpa using congrArg (fun g => g j i) h
+  refine ⟨hQ, ?_⟩
+  have hR : ∀ Q R : Matrix (Fin N) (Fin N) 𝕜, Q ∈ Matrix.unitaryGroup (Fin N) 𝕜 →
+      A = Q * R → R = Qᴴ * A := fun Q R hQ h => by
+    rw [h, ← Matrix.mul_assoc, ((mem_unitaryGroup_iff_conjTranspose Q).mp hQ).1, Matrix.one_mul]
+  rw [hR Q₁ R₁ hQ₁ hA₁, hR Q₂ R₂ hQ₂ hA₂, hQ]
+
 
 /-- 7.58 QR factorization, existence and uniqueness in one statement: a square matrix
 with linearly independent columns has a *unique* pair {lit}`(Q, R)` with {lit}`Q`
@@ -692,7 +863,7 @@ theorem QR_factorization_existsUnique {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜
   obtain ⟨Q, R, hQ, hRt, hRd, hAQR⟩ := QR_factorization A hA
   refine ⟨(Q, R), ⟨hQ, hRt, hRd, hAQR⟩, ?_⟩
   rintro ⟨Q', R'⟩ ⟨hQ', hR't, hR'd, hAQR'⟩
-  obtain ⟨hQeq, hReq⟩ := QR_unique A Q' R' Q R hQ' hR't hR'd hAQR' hQ hRt hRd hAQR
+  obtain ⟨hQeq, hReq⟩ := QR_unique A Q' R' Q R hA hQ' hR't hR'd hAQR' hQ hRt hRd hAQR
   simp only [Prod.mk.injEq]
   exact ⟨hQeq, hReq⟩
 
@@ -732,7 +903,8 @@ theorem QR_7_60 :
   have hs : (0 : ℝ) < Real.sqrt 10 := Real.sqrt_pos.mpr (by norm_num)
   have hs2 : Real.sqrt 10 * Real.sqrt 10 = 10 := Real.mul_self_sqrt (by norm_num)
   refine ⟨?_, ?_, ?_, ?_⟩
-  · rw [Matrix.mem_unitaryGroup_iff', Matrix.star_eq_conjTranspose]
+  · -- the columns of `Q` are orthonormal, so `Q` is unitary (7.57)
+    refine ((tfae_mem_unitaryGroup _).out 1 4).mp ((orthonormal_columns_iff _).mpr ?_)
     ext i j
     fin_cases i <;> fin_cases j <;>
       simp [Q_7_60, Matrix.mul_apply, Fin.sum_univ_three] <;>
@@ -756,39 +928,37 @@ end Matrices
 /-! 7.61 Positive invertible operator
 
 A self-adjoint {lit}`T ∈ ℒ(V)` is a positive invertible operator iff
-{lit}`⟨T v, v⟩ > 0` for every nonzero {lit}`v`. Using a positive square root
-{lit}`R` of {lit}`T` (7.39, from
-{module -checked}`LinearAlgebraDoneRightLean.Section_7C`), we have
-{lit}`⟨T v, v⟩ = ‖R v‖²`, so positivity of {lit}`⟨T v, v⟩` for nonzero {lit}`v` is
-exactly injectivity of {lit}`R`, equivalently of {lit}`T`. On a finite-dimensional
-space injectivity is invertibility. -/
+{lit}`⟨T v, v⟩ > 0` for every nonzero {lit}`v`. We write "invertible" as "injective",
+which on a finite-dimensional space is the same thing (3.65).
 
-theorem positive_invertible_iff {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
-    Function.Injective T ↔ ∀ v : V, v ≠ 0 → 0 < RCLike.re ⟪T v, v⟫_𝕜 := by
-  obtain ⟨R, hR, hRT⟩ := LADR.Section_7C.exists_positive_sqrt hT
-  have hval : ∀ v, RCLike.re ⟪T v, v⟫_𝕜 = ‖R v‖ ^ 2 := by
-    intro v
-    rw [← hRT]
-    simp only [LinearMap.comp_apply]
-    rw [hR.isSymmetric (R v) v, inner_self_eq_norm_sq_to_K, ← RCLike.ofReal_pow, RCLike.ofReal_re]
-  have hRinj : Function.Injective T → Function.Injective R := by
-    intro hinj a b hab
-    apply hinj
-    rw [← hRT]
-    simp only [LinearMap.comp_apply, hab]
+Axler's proof: if {lit}`T` is positive and invertible and {lit}`v ≠ 0`, then
+{lit}`T v ≠ 0`, so {lit}`⟨T v, v⟩ ≠ 0` by 7.43, and it is {lit}`≥ 0` because {lit}`T` is
+positive. Conversely, {lit}`⟨T v, v⟩ > 0` for {lit}`v ≠ 0` makes {lit}`T` positive and
+forces {lit}`T v ≠ 0`, so {lit}`T` is injective. -/
+
+theorem positive_invertible_iff {T : V →ₗ[𝕜] V} (hT : T.IsSymmetric) :
+    (T.IsPositive ∧ Function.Injective T) ↔ ∀ v : V, v ≠ 0 → 0 < RCLike.re ⟪T v, v⟫_𝕜 := by
+  -- ⟨T v, v⟩ is real because T is self-adjoint
+  have hreal : ∀ v, ((RCLike.re ⟪T v, v⟫_𝕜 : ℝ) : 𝕜) = ⟪T v, v⟫_𝕜 := fun v =>
+    RCLike.conj_eq_iff_re.mp (by rw [inner_conj_symm, hT])
   constructor
-  · intro hinj v hv
-    rw [hval]
-    have hRv : R v ≠ 0 := fun h => hv (hRinj hinj (h.trans (map_zero R).symm))
-    exact pow_pos (norm_pos_iff.mpr hRv) 2
-  · intro hpos a b hab
-    by_contra hne
-    have hd : a - b ≠ 0 := sub_ne_zero.mpr hne
-    have hgt := hpos (a - b) hd
-    have hTz : ⟪T (a - b), a - b⟫_𝕜 = 0 := by
-      rw [map_sub, hab, sub_self, inner_zero_left]
-    rw [hTz, map_zero] at hgt
-    exact lt_irrefl 0 hgt
+  · rintro ⟨hpos, hinj⟩ v hv
+    have hTv : T v ≠ 0 := fun h => hv (hinj (h.trans (map_zero T).symm))
+    have hne : RCLike.re ⟪T v, v⟫_𝕜 ≠ 0 := fun h => hTv
+      (LADR.Section_7C.apply_eq_zero_of_isPositive_of_inner_eq_zero hpos
+        (by rw [← hreal, h, RCLike.ofReal_zero]))
+    exact lt_of_le_of_ne (hpos.2 v) (Ne.symm hne)
+  · intro h
+    refine ⟨⟨hT, fun v => ?_⟩, ?_⟩
+    · rcases eq_or_ne v 0 with rfl | hv
+      · simp
+      · exact (h v hv).le
+    · rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+      intro v hv
+      by_contra hv0
+      have := h v hv0
+      rw [hv, inner_zero_left, map_zero] at this
+      exact lt_irrefl 0 this
 
 /-! 7.62 Definition: positive definite matrix
 
@@ -804,11 +974,54 @@ with the Euclidean dot product ({name}`Matrix.posDef_iff_dotProduct_mulVec`) and
 together. -/
 
 open scoped ComplexOrder in
+/-- Definition 7.62 in operator language: {lit}`B` is positive definite iff the operator
+{lit}`x ↦ B x` on {lit}`𝔽ⁿ` is self-adjoint with {lit}`⟨B x, x⟩ > 0` for {lit}`x ≠ 0`. -/
+theorem posDef_iff_toEuclideanLin {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜) :
+    B.PosDef ↔ B.toEuclideanLin.IsSymmetric ∧
+      ∀ x : EuclideanSpace 𝕜 (Fin N), x ≠ 0 → 0 < RCLike.re ⟪B.toEuclideanLin x, x⟫_𝕜 := by
+  rw [Matrix.posDef_iff_dotProduct_mulVec, ← Matrix.isSymmetric_toEuclideanLin_iff]
+  refine and_congr_right fun hsym => ?_
+  -- ⟨B x, x⟩ = ⟨x, B x⟩ = xᴴ B x, and it is real
+  have hq : ∀ x : EuclideanSpace 𝕜 (Fin N),
+      ⟪B.toEuclideanLin x, x⟫_𝕜 = star (WithLp.ofLp x) ⬝ᵥ (B *ᵥ WithLp.ofLp x) := by
+    intro x
+    rw [hsym]
+    simp [PiLp.inner_apply, RCLike.inner_apply, dotProduct, Matrix.toLpLin_apply]
+    exact Finset.sum_congr rfl fun _ _ => mul_comm _ _
+  have him : ∀ x : EuclideanSpace 𝕜 (Fin N), RCLike.im ⟪B.toEuclideanLin x, x⟫_𝕜 = 0 := by
+    intro x
+    have hreal : ((RCLike.re ⟪B.toEuclideanLin x, x⟫_𝕜 : ℝ) : 𝕜) = ⟪B.toEuclideanLin x, x⟫_𝕜 :=
+      RCLike.conj_eq_iff_re.mp (by rw [inner_conj_symm, hsym])
+    rw [← hreal, RCLike.ofReal_im]
+  constructor
+  · intro h x hx
+    have := h (x := WithLp.ofLp x) (fun h0 => hx (by simpa using congrArg (WithLp.toLp 2) h0))
+    rw [hq]
+    exact (RCLike.pos_iff.mp this).1
+  · intro h x hx
+    have h1 := h (WithLp.toLp 2 x) (fun h0 => hx (by simpa using congrArg WithLp.ofLp h0))
+    have h2 := him (WithLp.toLp 2 x)
+    rw [hq, WithLp.ofLp_toLp] at h1 h2
+    exact RCLike.pos_iff.mpr ⟨h1, h2⟩
+
+open scoped ComplexOrder in
+/-- A positive definite matrix is invertible: by 7.61 the operator {lit}`x ↦ B x` is
+injective. -/
+theorem PosDef.mulVec_injective {N : ℕ} {B : Matrix (Fin N) (Fin N) 𝕜} (hB : B.PosDef) :
+    Function.Injective B.mulVec := by
+  obtain ⟨hsym, hpos⟩ := (posDef_iff_toEuclideanLin B).mp hB
+  have h := ((positive_invertible_iff hsym).mpr hpos).2
+  intro x y hxy
+  have := @h (WithLp.toLp 2 x) (WithLp.toLp 2 y) (by simp [Matrix.toLpLin_apply, hxy])
+  simpa using congrArg WithLp.ofLp this
+
+open scoped ComplexOrder in
 /-- 7.63 Cholesky factorization (existence). Every positive definite matrix {lit}`B`
 factors as {lit}`B = Rᴴ * R` with {lit}`R` upper triangular and positive real diagonal.
-Following Axler: the positive square root of {lit}`B` supplies an invertible {lit}`A` with
-{lit}`Aᴴ * A = B`; a QR factorization {lit}`A = Q * R` then gives
-`B = Rᴴ * Qᴴ * Q * R = Rᴴ * R`. -/
+Following Axler: {lit}`B` is a positive invertible operator (7.61), so its positive square
+root supplies an invertible {lit}`A` with {lit}`Aᴴ * A = B` (7.38); a QR factorization
+{lit}`A = Q * R` (7.58) then gives `B = Rᴴ * Qᴴ * Q * R = Rᴴ * R`. -/
+@[avoiding Matrix.isPositive_toEuclideanLin_iff, Matrix.PosDef.isUnit]
 theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
     (hB : B.PosDef) :
     ∃ R : Matrix (Fin N) (Fin N) 𝕜, R.BlockTriangular id ∧
@@ -820,15 +1033,9 @@ theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
     intro M P; ext v
     simp only [LinearMap.comp_apply, Matrix.toLpLin_apply, WithLp.ofLp_toLp,
       Matrix.mulVec_mulVec]
-  -- `Bop = toEuclideanLin B` is a positive operator, and it is injective since `B` is
-  -- positive *definite*, hence invertible.
-  have hBoppos : B.toEuclideanLin.IsPositive :=
-    Matrix.isPositive_toEuclideanLin_iff.mpr hB.posSemidef
-  have hBopinj : Function.Injective B.toEuclideanLin := by
-    have hmv : Function.Injective B.mulVec := Matrix.mulVec_injective_iff_isUnit.mpr hB.isUnit
-    intro u v huv
-    refine WithLp.ofLp_injective 2 (hmv ?_)
-    simpa only [Matrix.toLpLin_apply, WithLp.ofLp_toLp] using congrArg WithLp.ofLp huv
+  -- `Bop = toEuclideanLin B` is a positive invertible operator (7.61).
+  obtain ⟨hBsym, hBq⟩ := (posDef_iff_toEuclideanLin B).mp hB
+  obtain ⟨hBoppos, hBopinj⟩ := (positive_invertible_iff hBsym).mpr hBq
   -- positive square root `Rop` with `Rop ∘ Rop = Bop`.
   obtain ⟨Rop, hRoppos, hRopRop⟩ := LADR.Section_7C.exists_positive_sqrt hBoppos
   have hRopinj : Function.Injective Rop := by
@@ -869,68 +1076,47 @@ theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
     apply Matrix.toEuclideanLin.injective
     rw [hmul, Matrix.toEuclideanLin_conjTranspose_eq_adjoint, hARop,
       (LADR.Section_7C.isPositive_iff_symmetric_nonneg Rop).mp hRoppos |>.1.adjoint_eq, hRopRop]
-  have hQuni : Qᴴ * Q = 1 := by
-    rw [← Matrix.star_eq_conjTranspose]; exact (Matrix.mem_unitaryGroup_iff').mp hQ
+  have hQuni : Qᴴ * Q = 1 := ((mem_unitaryGroup_iff_conjTranspose Q).mp hQ).1
   rw [← hAA, hAQR, Matrix.conjTranspose_mul, Matrix.mul_assoc, ← Matrix.mul_assoc Qᴴ Q R,
     hQuni, Matrix.one_mul]
 
-/-- 7.63 Cholesky factorization (uniqueness). The upper-triangular positive-diagonal
-factor is unique: if `B = R₁ᴴ * R₁ = R₂ᴴ * R₂` with both {lit}`Rₖ` upper triangular with
-positive diagonal, then {lit}`R₁ = R₂`. Following Axler's QR uniqueness argument,
-{lit}`U = R₂ * R₁⁻¹` is unitary (from {lit}`R₁ᴴ R₁ = R₂ᴴ R₂`), upper triangular, and has
-positive diagonal, so {lit}`U = I` by {name}`unitary_upperTri_eq_one`. -/
-theorem cholesky_unique {N : ℕ} (B R₁ R₂ : Matrix (Fin N) (Fin N) 𝕜)
+open scoped ComplexOrder in
+/-- 7.63 Cholesky factorization (uniqueness). Following Axler: if {lit}`B = Aᴴ A` with
+{lit}`A` invertible (here {lit}`A = R₁`) and {lit}`B = Sᴴ S` with {lit}`S = R₂` upper
+triangular with positive diagonal, then {lit}`S` is invertible because {lit}`B` is
+(Exercise 3D.11), {lit}`A S⁻¹` is unitary because
+{lit}`(A S⁻¹)ᴴ (A S⁻¹) = (Sᴴ)⁻¹ B S⁻¹ = I`, and {lit}`A = (A S⁻¹) S` is a QR factorization of
+{lit}`A`; uniqueness of the QR factorization (7.58) gives {lit}`S = R₁`. -/
+@[avoiding Matrix.blockTriangular_inv_of_blockTriangular, Matrix.det_of_isUpperTriangular]
+theorem cholesky_unique {N : ℕ} (B R₁ R₂ : Matrix (Fin N) (Fin N) 𝕜) (hB : B.PosDef)
     (hR₁t : R₁.BlockTriangular id)
     (hR₁d : HasPosRealDiag R₁) (hB₁ : B = R₁ᴴ * R₁)
     (hR₂t : R₂.BlockTriangular id)
     (hR₂d : HasPosRealDiag R₂) (hB₂ : B = R₂ᴴ * R₂) :
     R₁ = R₂ := by
-  have diagval : ∀ z : 𝕜, RCLike.im z = 0 → z = ((RCLike.re z : ℝ) : 𝕜) := by
-    intro z hz
-    conv_lhs => rw [← RCLike.re_add_im z]
-    rw [hz, RCLike.ofReal_zero, zero_mul, add_zero]
-  have hR₁ne : ∀ i, R₁ i i ≠ 0 := fun i h => by have := (hR₁d i).1; rw [h] at this; simp at this
-  have hdet1 : R₁.det ≠ 0 := by
-    rw [Matrix.det_of_isUpperTriangular hR₁t]
-    exact Finset.prod_ne_zero_iff.mpr (fun i _ => hR₁ne i)
-  let : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
-  set U := R₂ * R₁⁻¹ with hUdef
-  have hUR : U * R₁ = R₂ := by
-    rw [hUdef, Matrix.mul_assoc, Matrix.inv_mul_of_invertible, Matrix.mul_one]
-  have hUunit : U ∈ Matrix.unitaryGroup (Fin N) 𝕜 := by
-    rw [Matrix.mem_unitaryGroup_iff', Matrix.star_eq_conjTranspose]
-    have hBeq : R₂ᴴ * R₂ = R₁ᴴ * R₁ := by rw [← hB₂, ← hB₁]
-    rw [hUdef, Matrix.conjTranspose_mul]
-    rw [show (R₁⁻¹)ᴴ * R₂ᴴ * (R₂ * R₁⁻¹) = (R₁⁻¹)ᴴ * (R₂ᴴ * R₂) * R₁⁻¹ by
-      simp only [Matrix.mul_assoc], hBeq]
-    rw [show (R₁⁻¹)ᴴ * (R₁ᴴ * R₁) * R₁⁻¹ = (R₁⁻¹)ᴴ * R₁ᴴ * (R₁ * R₁⁻¹) by
-      simp only [Matrix.mul_assoc]]
-    rw [Matrix.mul_inv_of_invertible, Matrix.mul_one, ← Matrix.conjTranspose_mul,
-      Matrix.mul_inv_of_invertible, Matrix.conjTranspose_one]
-  have hR₁invt : R₁⁻¹.BlockTriangular id := Matrix.blockTriangular_inv_of_blockTriangular hR₁t
-  have hUt : U.BlockTriangular id := hUdef ▸ hR₂t.mul hR₁invt
-  have hUd : HasPosRealDiag U := by
-    intro i
-    have hprod : (U * R₁) i i = U i i * R₁ i i := by
-      rw [Matrix.mul_apply]
-      refine Finset.sum_eq_single i (fun k _ hk => ?_) (fun h => absurd (Finset.mem_univ i) h)
-      rcases lt_or_gt_of_ne hk with hlt | hgt
-      · rw [hUt hlt, zero_mul]
-      · rw [hR₁t hgt, mul_zero]
-    rw [hUR] at hprod
-    obtain ⟨hr1, hi1⟩ := hR₁d i
-    obtain ⟨hr2, hi2⟩ := hR₂d i
-    have hR1v := diagval _ hi1
-    have hR2v := diagval _ hi2
-    have ha : ((RCLike.re (R₁ i i) : ℝ) : 𝕜) ≠ 0 := by rw [← hR1v]; exact hR₁ne i
-    have hUii : U i i = ((RCLike.re (R₂ i i) / RCLike.re (R₁ i i) : ℝ) : 𝕜) := by
-      rw [RCLike.ofReal_div, eq_div_iff ha, ← hR1v, ← hR2v]
-      exact hprod.symm
-    refine ⟨?_, ?_⟩
-    · rw [hUii, RCLike.ofReal_re]; positivity
-    · rw [hUii, RCLike.ofReal_im]
-  have hU1 : U = 1 := unitary_upperTri_eq_one U hUunit hUt hUd
-  rw [← hUR, hU1, Matrix.one_mul]
+  -- `B` is invertible (7.61), hence so is any `R` with `B = Rᴴ R` (Exercise 3D.11)
+  have hRinj : ∀ R : Matrix (Fin N) (Fin N) 𝕜, B = Rᴴ * R → Function.Injective R.mulVec :=
+    fun R hR x y hxy => hB.mulVec_injective (by rw [hR, ← Matrix.mulVec_mulVec,
+      ← Matrix.mulVec_mulVec, hxy])
+  have hR₁ind : LinearIndependent 𝕜 R₁.col := Matrix.linearIndependent_col_iff_isUnit.mpr
+    (Matrix.mulVec_injective_iff_isUnit.mp (hRinj R₁ hB₁))
+  have hR₂u : IsUnit R₂.det := (Matrix.isUnit_iff_isUnit_det R₂).mp
+    (Matrix.mulVec_injective_iff_isUnit.mp (hRinj R₂ hB₂))
+  -- `U = R₁ R₂⁻¹` is unitary and `R₁ = U R₂`
+  set U := R₁ * R₂⁻¹ with hUdef
+  have hUR : U * R₂ = R₁ := by
+    rw [hUdef, Matrix.mul_assoc, Matrix.nonsing_inv_mul _ hR₂u, Matrix.mul_one]
+  have hUU : Uᴴ * U = 1 := by
+    calc Uᴴ * U = (R₂⁻¹)ᴴ * (R₁ᴴ * R₁) * R₂⁻¹ := by
+          rw [hUdef, Matrix.conjTranspose_mul]; simp only [Matrix.mul_assoc]
+      _ = (R₂ * R₂⁻¹)ᴴ * (R₂ * R₂⁻¹) := by
+          rw [← hB₁, hB₂, Matrix.conjTranspose_mul]; simp only [Matrix.mul_assoc]
+      _ = 1 := by rw [Matrix.mul_nonsing_inv _ hR₂u, Matrix.conjTranspose_one, Matrix.one_mul]
+  have hU : U ∈ Matrix.unitaryGroup (Fin N) 𝕜 :=
+    ((tfae_mem_unitaryGroup U).out 1 4).mp ((orthonormal_columns_iff U).mpr hUU)
+  -- `R₁ = I R₁ = U R₂` are two QR factorizations of `R₁`
+  exact (QR_unique R₁ 1 R₁ U R₂ hR₁ind (one_mem _) hR₁t hR₁d (Matrix.one_mul R₁).symm
+    hU hR₂t hR₂d hUR.symm).2
 
 open scoped ComplexOrder in
 /-- 7.63 Cholesky factorization, existence and uniqueness in one statement: a positive
@@ -944,7 +1130,7 @@ theorem cholesky_factorization_existsUnique {N : ℕ} (B : Matrix (Fin N) (Fin N
   obtain ⟨R, hRt, hRd, hBR⟩ := cholesky_factorization B hB
   refine ⟨R, ⟨hRt, hRd, hBR⟩, ?_⟩
   rintro R' ⟨hR't, hR'd, hBR'⟩
-  exact cholesky_unique B R' R hR't hR'd hBR' hRt hRd hBR
+  exact cholesky_unique B R' R hB hR't hR'd hBR' hRt hRd hBR
 
 /-! # Exercises 7D -/
 
