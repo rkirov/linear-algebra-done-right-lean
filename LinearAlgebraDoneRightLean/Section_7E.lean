@@ -1064,39 +1064,6 @@ theorem svd_7_79 :
     fin_cases k <;>
       simp [hT0, hT1, hT2, he0, he1, f_7_79, RCLike.real_smul_eq_coe_mul]
 
-/-- The {lit}`(k,l)` entry of {lit}`A` read off the SVD of {lit}`Matrix.toEuclideanLin A`:
-`A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the {lit}`sᵢ = 0` terms vanish).
-
-This is the entrywise form of 7.71, and it exists only as a step in the proof of 7.80
-below: that proof compares {lit}`A k l` with {lit}`(B D Cᴴ) k l`, whose expansion is
-exactly the right-hand side here. Axler does it inline; it is separated out because
-getting from the SVD formula to a single entry (apply it to
-{lit}`EuclideanSpace.single l 1`, then read coordinate {lit}`k`) takes long enough to
-obscure the entry comparison. -/
-theorem toEuclideanLin_entry_eq_svd {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜)
-    (k : Fin p) (l : Fin n) :
-    A k l = ∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin n))),
-      (singularValues (Matrix.toEuclideanLin A) i : 𝕜)
-      * (starRingEnd 𝕜) (svdBasis (Matrix.toEuclideanLin A) i l)
-      * svdImage (Matrix.toEuclideanLin A) i k := by
-  set T := Matrix.toEuclideanLin A with hTdef
-  have hL := congrArg (⇑(EuclideanSpace.equiv (Fin p) 𝕜))
-    (svd_apply T (EuclideanSpace.single l (1 : 𝕜)))
-  rw [map_sum] at hL
-  simp only [map_smul] at hL
-  have hLk := congrFun hL k
-  simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at hLk
-  have hAkl : A k l = (⇑(EuclideanSpace.equiv (Fin p) 𝕜)
-      (T (EuclideanSpace.single l (1:𝕜)))) k := by
-    rw [hTdef, Matrix.toLpLin_apply]
-    simp [EuclideanSpace.single, Matrix.mulVec_single]
-  rw [hAkl, hLk]
-  refine Finset.sum_congr rfl fun i _ => ?_
-  rw [EuclideanSpace.inner_single_right]
-  simp only [show ∀ (w : EuclideanSpace 𝕜 (Fin p)) (m : Fin p),
-    ⇑(EuclideanSpace.equiv (Fin p) 𝕜) w m = w m from fun _ _ => rfl, one_mul]
-  ring
-
 /-- Axler's index set {lit}`1, …, m` in 7.80: the indices carrying a *positive* singular
 value of {lit}`A`. Its cardinality is {lit}`A.rank`
 ({lit}`rank_eq_card_posSingularIdx`), so using it as the middle index of the
@@ -1116,6 +1083,64 @@ theorem rank_eq_card_posSingularIdx {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜
       (EuclideanSpace.basisFun (Fin n) 𝕜).toBasis,
     ← Matrix.toEuclideanLin_eq_toLin_orthonormal]
   exact (card_pos_singularValues_eq_finrank_range _).symm
+
+/-- The operator {lit}`x ↦ A x` on coordinates. -/
+theorem ofLp_toEuclideanLin_apply {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) (x : EuclideanSpace 𝕜 (Fin n)) :
+    WithLp.ofLp (Matrix.toEuclideanLin A x) = A *ᵥ WithLp.ofLp x := by
+  simp [Matrix.toLpLin_apply]
+
+/-- First step of Axler's proof of 7.80: {lit}`A C = B D`, checked column by column
+({lit}`A eₖ = T eₖ = sₖ fₖ`). -/
+theorem matrix_svd_AC {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) :
+    A * (Matrix.of fun k (i : posSingularIdx A) => svdBasis (Matrix.toEuclideanLin A) i.1 k) =
+      (Matrix.of fun k (i : posSingularIdx A) => svdImage (Matrix.toEuclideanLin A) i.1 k) *
+        Matrix.diagonal fun i : posSingularIdx A =>
+          (singularValues (Matrix.toEuclideanLin A) i.1 : 𝕜) := by
+  ext k i
+  -- column `i`: `A eᵢ = T eᵢ = sᵢ fᵢ`
+  have h := congrFun (congrArg WithLp.ofLp (svdBasis_image_eq (Matrix.toEuclideanLin A) i.1)) k
+  rw [ofLp_toEuclideanLin_apply] at h
+  rw [Matrix.mul_diagonal, Matrix.of_apply, Matrix.mul_apply]
+  simp only [Matrix.of_apply]
+  simp only [Matrix.mulVec, dotProduct, PiLp.smul_apply] at h
+  rw [h, smul_eq_mul, mul_comm]
+
+/-- Second step of Axler's proof of 7.80: {lit}`A C C* = A`. Check on the basis {lit}`e`:
+for {lit}`eⱼ ∈ span(e₁, …, eₘ)` we have {lit}`C C* eⱼ = eⱼ`, while for the remaining
+{lit}`eⱼ ∈ span(e₁, …, eₘ)⟂` both {lit}`C* eⱼ = 0` and {lit}`A eⱼ = 0` (from 7.81). -/
+theorem matrix_svd_ACC {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) :
+    A * (Matrix.of fun k (i : posSingularIdx A) => svdBasis (Matrix.toEuclideanLin A) i.1 k) *
+      (Matrix.of fun k (i : posSingularIdx A) => svdBasis (Matrix.toEuclideanLin A) i.1 k)ᴴ = A := by
+  set T := Matrix.toEuclideanLin A
+  set C : Matrix (Fin n) (posSingularIdx A) 𝕜 := Matrix.of fun k i => svdBasis T i.1 k with hC
+  -- `C* eⱼ` is the `j`-th standard basis vector if `sⱼ ≠ 0` and `0` otherwise
+  have hCe : ∀ j, Cᴴ *ᵥ WithLp.ofLp (svdBasis T j) = fun i => if i.1 = j then 1 else 0 := by
+    intro j; funext i
+    rw [← orthonormal_iff_ite.mp (svdBasis T).orthonormal i.1 j, PiLp.inner_apply]
+    simp [Matrix.mulVec, dotProduct, hC, Matrix.conjTranspose_apply, RCLike.inner_apply]
+    exact Finset.sum_congr rfl fun _ _ => mul_comm _ _
+  apply Matrix.toEuclideanLin.injective
+  apply (svdBasis T).toBasis.ext
+  intro j
+  rw [OrthonormalBasis.coe_toBasis]
+  apply WithLp.ofLp_injective 2
+  rw [ofLp_toEuclideanLin_apply, ofLp_toEuclideanLin_apply, ← Matrix.mulVec_mulVec, ← Matrix.mulVec_mulVec, hCe]
+  by_cases hj : singularValues T j = 0
+  · -- `eⱼ ⊥ span(e₁, …, eₘ)`: `C* eⱼ = 0` and `A eⱼ = T eⱼ = sⱼ fⱼ = 0`
+    have h0 : (fun i : posSingularIdx A => if i.1 = j then (1 : 𝕜) else 0) = 0 := by
+      funext i; exact ite_eq_right (fun h => i.2 (by rw [h]; exact hj))
+    have hT0 := congrArg WithLp.ofLp (svdBasis_image_eq T j)
+    rw [ofLp_toEuclideanLin_apply] at hT0
+    rw [h0, Matrix.mulVec_zero, Matrix.mulVec_zero, hT0, hj]
+    simp
+  · -- `eⱼ ∈ span(e₁, …, eₘ)`: `C C* eⱼ = eⱼ`
+    have h1 : (fun i : posSingularIdx A => if i.1 = j then (1 : 𝕜) else 0) = Pi.single ⟨j, hj⟩ 1 := by
+      funext i; by_cases h : i.1 = j
+      · have : i = ⟨j, hj⟩ := Subtype.ext h
+        subst this; simp
+      · rw [ite_eq_right h, Pi.single_eq_of_ne (fun h' => h (congrArg Subtype.val h'))]
+    rw [h1, Matrix.mulVec_single_one]
+    congr 1
 
 /-- 7.80 Matrix version of the SVD, in Axler's generality: a {lit}`p`-by-{lit}`n` matrix
 {lit}`A` of rank {lit}`m` factors as {lit}`A = B D Cᴴ` where {lit}`B` is
@@ -1169,25 +1194,10 @@ theorem matrix_svd {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) :
     exact ⟨by rw [RCLike.ofReal_re]
               exact lt_of_le_of_ne (singularValues_nonneg T i.1) (Ne.symm i.2),
       by rw [RCLike.ofReal_im]⟩
-  · ext k l
-    rw [Matrix.mul_assoc, Matrix.mul_apply, toEuclideanLin_entry_eq_svd A k l]
-    rw [show (∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin n))),
-        (singularValues T i : 𝕜) * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k)
-        = ∑ i : posSingularIdx A,
-          (singularValues T i.1 : 𝕜) * (starRingEnd 𝕜) (svdBasis T i.1 l) * svdImage T i.1 k
-      from ?_]
-    · refine Finset.sum_congr rfl fun i _ => ?_
-      rw [Matrix.mul_apply, Finset.sum_eq_single i]
-      · rw [Matrix.diagonal_apply_eq, Matrix.of_apply, Matrix.conjTranspose_apply,
-          Matrix.of_apply, RCLike.star_def]; ring
-      · intro b _ hb; rw [Matrix.diagonal_apply_ne _ (Ne.symm hb), zero_mul]
-      · intro h; exact absurd (Finset.mem_univ i) h
-    · rw [← Finset.sum_subtype (Finset.univ.filter fun i => singularValues T i ≠ 0)
-        (fun x => by simp [hTdef]) fun i => (singularValues T i : 𝕜)
-          * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k]
-      exact (Finset.sum_filter_of_ne fun i _ hne => by
-        intro hz
-        exact hne (by rw [hz, RCLike.ofReal_zero, zero_mul, zero_mul])).symm
+  · -- Axler: `A C = B D` and `A C C* = A`, so `A = A C C* = B D C*`
+    have h := matrix_svd_ACC A
+    rw [matrix_svd_AC A] at h
+    exact h.symm
 
 /-! # Exercises 7E -/
 
