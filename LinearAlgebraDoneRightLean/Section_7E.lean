@@ -37,37 +37,59 @@ For {lit}`T ∈ ℒ(V, W)`: (a) {lit}`T* T` is a positive operator on {lit}`V`;
 because the whole section rests on it — the singular values of 7.65 are defined from the
 eigenvalues of {lit}`T* T`, which (a) makes nonnegative.
 
-All four parts are in mathlib, whose own docstrings cite this result by number:
-{name}`LinearMap.isPositive_adjoint_comp_self`, {name}`LinearMap.ker_adjoint_comp_self`
-(7.64(b)), {name}`LinearMap.range_adjoint_comp_self` (7.64(c)) and
-{name}`LinearMap.finrank_range_adjoint` (part of 7.64(d)), so the items below record
-Axler's statements in his phrasing. -/
+mathlib has all four parts ({name}`LinearMap.isPositive_adjoint_comp_self`,
+{name}`LinearMap.ker_adjoint_comp_self`, {name}`LinearMap.range_adjoint_comp_self`,
+{name}`LinearMap.finrank_range_adjoint`); we give Axler's proofs. -/
 
-/-- 7.64(a) {lit}`T* T` is a positive operator on {lit}`V`, for any {lit}`T ∈ ℒ(V, W)`.
-The endomorphism case is {name}`LADR.Section_7C.adjoint_comp_self_isPositive`. -/
+/-- 7.64(a) {lit}`T* T` is a positive operator on {lit}`V`, for any {lit}`T ∈ ℒ(V, W)`:
+{lit}`(T* T)* = T* (T*)* = T* T`, and {lit}`⟨T* T v, v⟩ = ⟨T v, T v⟩ = ‖T v‖² ≥ 0`. -/
+@[avoiding LinearMap.isPositive_adjoint_comp_self]
 theorem adjComp_self_isPositive (T : V →ₗ[𝕜] W) :
-    (LinearMap.adjoint T ∘ₗ T).IsPositive :=
-  LinearMap.isPositive_adjoint_comp_self T
+    (T† ∘ₗ T).IsPositive := by
+  constructor
+  · intro x y
+    simp only [LinearMap.comp_apply]
+    rw [LinearMap.adjoint_inner_left, ← LinearMap.adjoint_inner_right]
+  · intro x
+    simp only [LinearMap.comp_apply, LinearMap.adjoint_inner_left]
+    rw [inner_self_eq_norm_sq_to_K]
+    simp
 
 /-- 7.64(b) {lit}`null (T* T) = null T`. Axler's proof: {lit}`T* T v = 0` gives
 {lit}`‖T v‖² = ⟨T* T v, v⟩ = 0`; the other inclusion is immediate. -/
+@[avoiding LinearMap.ker_adjoint_comp_self]
 theorem ker_adjComp_self (T : V →ₗ[𝕜] W) :
-    LinearMap.ker (LinearMap.adjoint T ∘ₗ T) = LinearMap.ker T :=
-  LinearMap.ker_adjoint_comp_self T
+    LinearMap.ker (T† ∘ₗ T) = LinearMap.ker T := by
+  ext v
+  simp only [LinearMap.mem_ker, LinearMap.comp_apply]
+  constructor
+  · intro h
+    have : ⟪T v, T v⟫_𝕜 = 0 := by rw [← LinearMap.adjoint_inner_right, h, inner_zero_right]
+    exact inner_self_eq_zero.mp this
+  · intro h; rw [h, map_zero]
 
 /-- 7.64(c) {lit}`range (T* T) = range T*`. Axler's proof: {lit}`T* T` is self-adjoint by
-(a), so {lit}`range (T* T) = (null (T* T))⟂ = (null T)⟂ = range T*` using (b) and 7.6. -/
+(a), so {lit}`range (T* T) = (null (T* T))⟂ = (null T)⟂ = range T*` using 7.6 and (b). -/
+@[avoiding LinearMap.range_adjoint_comp_self]
 theorem range_adjComp_self (T : V →ₗ[𝕜] W) :
-    LinearMap.range (LinearMap.adjoint T ∘ₗ T) = LinearMap.range (LinearMap.adjoint T) :=
-  LinearMap.range_adjoint_comp_self T
+    LinearMap.range (T† ∘ₗ T) = LinearMap.range T† := by
+  have hsa : (T† ∘ₗ T)† = T† ∘ₗ T := by
+    rw [LinearMap.adjoint_comp, LinearMap.adjoint_adjoint]
+  rw [LADR.Section_7A.range_eq_orthogonal_ker_adjoint, hsa, ker_adjComp_self,
+    LADR.Section_7A.range_adjoint]
 
-/-- 7.64(d) {lit}`dim range T = dim range T* = dim range (T* T)`; the second equality is
-(c). -/
+/-- 7.64(d) {lit}`dim range T = dim range T* = dim range (T* T)`. Axler's proof:
+{lit}`dim range T* = dim (null T)⟂ = dim V − dim null T = dim range T` by 7.6, 6.51 and
+the fundamental theorem of linear maps (3.21); the second equality is (c). -/
+@[avoiding LinearMap.finrank_range_adjoint]
 theorem finrank_range_adjComp_self (T : V →ₗ[𝕜] W) :
-    finrank 𝕜 (LinearMap.range T) = finrank 𝕜 (LinearMap.range (LinearMap.adjoint T)) ∧
-      finrank 𝕜 (LinearMap.range (LinearMap.adjoint T)) =
-        finrank 𝕜 (LinearMap.range (LinearMap.adjoint T ∘ₗ T)) :=
-  ⟨(LinearMap.finrank_range_adjoint T).symm, by rw [range_adjComp_self]⟩
+    finrank 𝕜 (LinearMap.range T) = finrank 𝕜 (LinearMap.range T†) ∧
+      finrank 𝕜 (LinearMap.range T†) =
+        finrank 𝕜 (LinearMap.range (T† ∘ₗ T)) := by
+  refine ⟨?_, by rw [range_adjComp_self]⟩
+  rw [LADR.Section_7A.range_adjoint, LADR.Section_6C.finrank_orthogonal]
+  have := LADR.Section_3B.finrank_ker_add_finrank_range T
+  omega
 
 /-! 7.65 Definition: singular values
 
@@ -76,55 +98,69 @@ the eigenvalues of the positive operator {lit}`T* T` (positive by 7.64(a) /
 {lit}`adjComp_self_isPositive`), each repeated according to
 the dimension of the corresponding eigenspace.
 
-We index the singular values by the orthonormal eigenbasis {lit}`e` of {lit}`T* T`
-supplied by the spectral theorem ({name}`LinearMap.IsSymmetric.eigenvectorBasis`),
-so {lit}`singularValues T : Fin (finrank 𝕜 V) → ℝ` with
-{lit}`singularValues T i = √(λᵢ)` where {lit}`λᵢ` is the eigenvalue of
-{lit}`T* T` on {lit}`eᵢ`. This captures the multiset of singular values *with
-multiplicity* (one value per basis vector), and it captures Axler's ordering too:
-mathlib's {name}`LinearMap.IsSymmetric.eigenvalues` are sorted in decreasing order
-({name}`LinearMap.IsSymmetric.eigenvalues_antitone`) and {lit}`√` is monotone, so
-{lit}`singularValues T` is already Axler's decreasing list
+We index the singular values by an orthonormal eigenbasis {lit}`e` of {lit}`T* T`
+supplied by the spectral theorem (7.29/7.31, in the form
+{name}`LADR.Section_7B.exists_orthonormalBasis_eigenvectors_antitone`), with the
+eigenvalues listed in decreasing order: {lit}`singularValues T : Fin (finrank 𝕜 V) → ℝ`
+with {lit}`singularValues T i = √(λᵢ)` where {lit}`λᵢ` is the eigenvalue of {lit}`T* T`
+on {lit}`eᵢ`. This captures the multiset of singular values *with multiplicity* (one
+value per basis vector), and Axler's decreasing order since {lit}`√` is monotone
 ({lit}`singularValues_antitone` below). -/
 
+/-- The spectral theorem for {lit}`T* T`, sorted: the data from which 7.65 reads off the
+singular values. -/
+theorem exists_svdBasis (T : V →ₗ[𝕜] W) :
+    ∃ (e : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) (μ : Fin (finrank 𝕜 V) → ℝ),
+      Antitone μ ∧ ∀ i, (T† ∘ₗ T) (e i) = ((μ i : ℝ) : 𝕜) • e i :=
+  LADR.Section_7B.exists_orthonormalBasis_eigenvectors_antitone _
+    (adjComp_self_isPositive T).isSymmetric
+
 /-- The orthonormal eigenbasis of {lit}`T* T` used throughout this section. -/
-noncomputable def svdBasis (T : V →ₗ[𝕜] W) :
+@[irreducible] noncomputable def svdBasis (T : V →ₗ[𝕜] W) :
     OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V :=
-  (adjComp_self_isPositive T).isSymmetric.eigenvectorBasis rfl
+  (exists_svdBasis T).choose
+
+/-- The eigenvalues of {lit}`T* T` on {lit}`svdBasis T`, in decreasing order. -/
+@[irreducible] noncomputable def svdEigenvalues (T : V →ₗ[𝕜] W) : Fin (finrank 𝕜 V) → ℝ :=
+  (exists_svdBasis T).choose_spec.choose
+
+theorem svdEigenvalues_antitone (T : V →ₗ[𝕜] W) : Antitone (svdEigenvalues T) := by
+  unfold svdEigenvalues
+  exact (exists_svdBasis T).choose_spec.choose_spec.1
+
+theorem adjComp_apply_svdBasis_eigenvalue (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
+    (T† ∘ₗ T) (svdBasis T i) = ((svdEigenvalues T i : ℝ) : 𝕜) • svdBasis T i := by
+  unfold svdBasis svdEigenvalues
+  exact (exists_svdBasis T).choose_spec.choose_spec.2 i
 
 /-- The singular values of {lit}`T`, indexed by {lit}`svdBasis T`. -/
 noncomputable def singularValues (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) : ℝ :=
-  Real.sqrt ((adjComp_self_isPositive T).isSymmetric.eigenvalues rfl i)
+  Real.sqrt (svdEigenvalues T i)
 
 theorem singularValues_nonneg (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
     0 ≤ singularValues T i :=
   Real.sqrt_nonneg _
 
 /-- 7.65 The singular values are listed in decreasing order, as Axler's definition
-requires: mathlib sorts the eigenvalues of a self-adjoint operator decreasingly and
-{lit}`√` preserves that. -/
+requires: the eigenvalues were sorted decreasingly and {lit}`√` preserves that. -/
 theorem singularValues_antitone (T : V →ₗ[𝕜] W) : Antitone (singularValues T) :=
-  fun _ _ hij =>
-    Real.sqrt_le_sqrt ((adjComp_self_isPositive T).isSymmetric.eigenvalues_antitone rfl hij)
+  fun _ _ hij => Real.sqrt_le_sqrt (svdEigenvalues_antitone T hij)
 
-/-- The eigenvalues of the positive operator {lit}`T* T` are nonnegative (7.64(a)). -/
+/-- The eigenvalues of the positive operator {lit}`T* T` are nonnegative (7.64(a), 7.38). -/
 theorem eigenvalues_nonneg (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
-    0 ≤ (adjComp_self_isPositive T).isSymmetric.eigenvalues rfl i := by
+    0 ≤ svdEigenvalues T i := by
   have hpos := adjComp_self_isPositive T
-  have hev : HasEigenvalue (LinearMap.adjoint T ∘ₗ T)
-      ((hpos.isSymmetric.eigenvalues rfl i : ℝ) : 𝕜) :=
-    hpos.isSymmetric.hasEigenvalue_eigenvalues rfl i
+  have hev : HasEigenvalue (T† ∘ₗ T) ((svdEigenvalues T i : ℝ) : 𝕜) :=
+    Module.End.hasEigenvalue_of_hasEigenvector
+      (LADR.Section_7B.hasEigenvector_of_orthonormalBasis _ (adjComp_apply_svdBasis_eigenvalue T i))
   have := (LADR.Section_7C.eigenvalue_nonneg hpos hev).1
   rwa [RCLike.ofReal_re] at this
 
 omit [FiniteDimensional 𝕜 V] in
 /-- Eigenspace dimensions from *any* diagonalizing orthonormal basis: if
 {lit}`S bᵢ = dᵢ bᵢ` for an orthonormal basis {lit}`b`, then {lit}`dim E(μ, S)` is the number
-of indices with {lit}`dᵢ = μ`. mathlib has this only for its own
-{name}`LinearMap.IsSymmetric.eigenvectorBasis`
-({name}`LinearMap.IsSymmetric.card_filter_eigenvalues_eq`), whereas Examples 7.66 and 7.67
-diagonalize {lit}`T* T` by a basis exhibited by hand — which is also how Axler reads the
-eigenvalues off. -/
+of indices with {lit}`dᵢ = μ`. Examples 7.66 and 7.67 diagonalize {lit}`T* T` by a basis
+exhibited by hand, which is also how Axler reads the eigenvalues off. -/
 theorem finrank_eigenspace_of_orthonormalBasis {m : ℕ} {S : V →ₗ[𝕜] V}
     (b : OrthonormalBasis (Fin m) 𝕜 V) (d : Fin m → 𝕜) (hb : ∀ i, S (b i) = d i • b i)
     (μ : 𝕜) :
@@ -175,10 +211,9 @@ omit [FiniteDimensional 𝕜 V] in
 with eigenvalues {lit}`d` in one orthonormal basis and with {lit}`d'` in another, then
 {lit}`d` and {lit}`d'` agree as multisets — with multiplicity, and even for bases of different
 index types. Both counts are eigenspace dimensions
-({name}`finrank_eigenspace_of_orthonormalBasis`). Taking one basis to be mathlib's
-{name}`LinearMap.IsSymmetric.eigenvectorBasis` identifies a hand-exhibited eigenvalue list
-with {name}`LinearMap.IsSymmetric.eigenvalues`, which is how Examples 7.66 and 7.67 read the
-singular values off. -/
+({name}`finrank_eigenspace_of_orthonormalBasis`). Taking one basis to be
+{name}`svdBasis` identifies a hand-exhibited eigenvalue list with {name}`svdEigenvalues`,
+which is how Examples 7.66 and 7.67 read the singular values off. -/
 theorem eigenvalues_multiset_eq_of_orthonormalBases {m m' : ℕ} {S : V →ₗ[𝕜] V}
     (b : OrthonormalBasis (Fin m) 𝕜 V) (d : Fin m → ℝ)
     (hb : ∀ i, S (b i) = ((d i : ℝ) : 𝕜) • b i)
@@ -202,8 +237,7 @@ theorem eigenvalues_multiset_eq_of_orthonormalBases {m m' : ℕ} {S : V →ₗ[�
 
 /-- The square of a singular value recovers the eigenvalue of {lit}`T* T`. -/
 theorem singularValues_sq (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
-    (singularValues T i) ^ 2 =
-      (adjComp_self_isPositive T).isSymmetric.eigenvalues rfl i :=
+    (singularValues T i) ^ 2 = svdEigenvalues T i :=
   Real.sq_sqrt (eigenvalues_nonneg T i)
 
 /-- The spectral theorem applied to the positive operator {lit}`T* T`: the eigenbasis
@@ -211,10 +245,10 @@ vectors satisfy {lit}`T* T eₖ = sₖ² eₖ`. Axler numbers this equation 7.72
 of 7.70, but it is available as soon as 7.65's eigenbasis exists and 7.68/7.69 below rest on
 it, so it is stated here with the rest of the 7.65 machinery. -/
 theorem adjComp_apply_svdBasis (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) :
-    (LinearMap.adjoint T ∘ₗ T) (svdBasis T i) =
+    (T† ∘ₗ T) (svdBasis T i) =
       (((singularValues T i) ^ 2 : ℝ) : 𝕜) • svdBasis T i := by
   rw [singularValues_sq]
-  exact (adjComp_self_isPositive T).isSymmetric.apply_eigenvectorBasis rfl i
+  exact adjComp_apply_svdBasis_eigenvalue T i
 
 theorem svdBasis_ne_zero (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V)) : svdBasis T i ≠ 0 := by
   intro h
@@ -295,11 +329,11 @@ theorem conjTranspose_mul_A_7_66 :
 {lit}`T* T(z₁, z₂, z₃, z₄) = (9z₁, 4z₂, 0, 9z₄)`, so the standard basis diagonalizes
 {lit}`T* T`. -/
 theorem adjComp_T_7_66_apply (z : EuclideanSpace 𝕜 (Fin 4)) :
-    (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 0 = 9 * z 0 ∧
-      (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 1 = 4 * z 1 ∧
-      (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 2 = 0 ∧
-      (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) z 3 = 9 * z 3 := by
-  have hadj : LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) = Matrix.toEuclideanLin (A_7_66 (𝕜 := 𝕜))ᴴ := by
+    (T_7_66† ∘ₗ T_7_66) z 0 = 9 * z 0 ∧
+      (T_7_66† ∘ₗ T_7_66) z 1 = 4 * z 1 ∧
+      (T_7_66† ∘ₗ T_7_66) z 2 = 0 ∧
+      (T_7_66† ∘ₗ T_7_66) z 3 = 9 * z 3 := by
+  have hadj : (T_7_66 (𝕜 := 𝕜))† = Matrix.toEuclideanLin (A_7_66 (𝕜 := 𝕜))ᴴ := by
     rw [T_7_66, Matrix.toEuclideanLin_conjTranspose_eq_adjoint]
   rw [LinearMap.comp_apply, hadj, T_7_66, Matrix.toLpLin_apply, Matrix.toLpLin_apply,
     WithLp.ofLp_toLp, Matrix.mulVec_mulVec, conjTranspose_mul_A_7_66]
@@ -309,9 +343,9 @@ theorem adjComp_T_7_66_apply (z : EuclideanSpace 𝕜 (Fin 4)) :
 /-- 7.66 {lit}`T* T` *is* the diagonal operator {lit}`diag(9, 4, 0, 9)`: the operator form of
 {name}`conjTranspose_mul_A_7_66`, which is what lets the eigenvalues be read off. -/
 theorem adjComp_T_7_66_eq :
-    LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66 =
+    (T_7_66 (𝕜 := 𝕜))† ∘ₗ T_7_66 =
       Matrix.toEuclideanLin (Matrix.diagonal ![(9 : 𝕜), 4, 0, 9]) := by
-  have hadj : LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) = Matrix.toEuclideanLin (A_7_66 (𝕜 := 𝕜))ᴴ := by
+  have hadj : (T_7_66 (𝕜 := 𝕜))† = Matrix.toEuclideanLin (A_7_66 (𝕜 := 𝕜))ᴴ := by
     rw [T_7_66, Matrix.toEuclideanLin_conjTranspose_eq_adjoint]
   have hmul : ∀ M P : Matrix (Fin 4) (Fin 4) 𝕜,
       (M * P).toEuclideanLin = M.toEuclideanLin ∘ₗ P.toEuclideanLin := by
@@ -323,7 +357,7 @@ theorem adjComp_T_7_66_eq :
 /-- 7.66 The eigenvalues of {lit}`T* T` are exactly {lit}`9, 4, 0`, read off the diagonal
 form {name}`adjComp_T_7_66_eq` via {name}`spectrum_diagonal`. -/
 theorem hasEigenvalue_adjComp_T_7_66 (μ : 𝕜) :
-    HasEigenvalue (LinearMap.adjoint T_7_66 ∘ₗ T_7_66) μ ↔ μ = 9 ∨ μ = 4 ∨ μ = 0 := by
+    HasEigenvalue (T_7_66† ∘ₗ T_7_66) μ ↔ μ = 9 ∨ μ = 4 ∨ μ = 0 := by
   rw [adjComp_T_7_66_eq, Module.End.hasEigenvalue_iff_mem_spectrum,
     Matrix.toEuclideanLin_eq_toLin_orthonormal, Matrix.spectrum_toLin, spectrum_diagonal]
   constructor
@@ -337,7 +371,7 @@ theorem hasEigenvalue_adjComp_T_7_66 (μ : 𝕜) :
 {lit}`dim E(0, T* T) = 1`, which is what turns the eigenvalue *set* into Axler's list
 {lit}`3, 3, 2, 0` with multiplicity. -/
 theorem adjComp_T_7_66_apply_basisFun (i : Fin 4) :
-    (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) (EuclideanSpace.basisFun (Fin 4) 𝕜 i)
+    ((T_7_66 (𝕜 := 𝕜))† ∘ₗ T_7_66) (EuclideanSpace.basisFun (Fin 4) 𝕜 i)
       = ![(9 : 𝕜), 4, 0, 9] i • EuclideanSpace.basisFun (Fin 4) 𝕜 i := by
   rw [adjComp_T_7_66_eq]
   ext k
@@ -346,14 +380,14 @@ theorem adjComp_T_7_66_apply_basisFun (i : Fin 4) :
       Matrix.cons_val_two, Matrix.cons_val_three, Matrix.vecHead, Matrix.vecTail]
 
 theorem finrank_eigenspace_adjComp_T_7_66 :
-    finrank 𝕜 (Module.End.eigenspace (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) 9) = 2 ∧
+    finrank 𝕜 (Module.End.eigenspace ((T_7_66 (𝕜 := 𝕜))† ∘ₗ T_7_66) 9) = 2 ∧
       finrank 𝕜
-          (Module.End.eigenspace (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) 4) = 1 ∧
+          (Module.End.eigenspace ((T_7_66 (𝕜 := 𝕜))† ∘ₗ T_7_66) 4) = 1 ∧
       finrank 𝕜
-          (Module.End.eigenspace (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) 0) = 1 := by
+          (Module.End.eigenspace ((T_7_66 (𝕜 := 𝕜))† ∘ₗ T_7_66) 0) = 1 := by
   classical
   have key : ∀ μ : 𝕜,
-      finrank 𝕜 (Module.End.eigenspace (LinearMap.adjoint (T_7_66 (𝕜 := 𝕜)) ∘ₗ T_7_66) μ)
+      finrank 𝕜 (Module.End.eigenspace ((T_7_66 (𝕜 := 𝕜))† ∘ₗ T_7_66) μ)
         = Fintype.card {i // ![(9 : 𝕜), 4, 0, 9] i = μ} := fun μ =>
     finrank_eigenspace_of_orthonormalBasis (EuclideanSpace.basisFun (Fin 4) 𝕜) _
       adjComp_T_7_66_apply_basisFun μ
@@ -381,15 +415,14 @@ theorem finrank_eigenspace_adjComp_T_7_66 :
           Matrix.vecTail]
 
 /-- 7.66 The singular values of {lit}`T` are {lit}`3, 3, 2, 0` — as a multiset, i.e. with
-multiplicity, which is how 7.65 lists them. (This pin's
-{name}`LinearMap.IsSymmetric.eigenvalues` are sorted decreasingly, so
-{name}`singularValues` is in fact already Axler's decreasing list; the multiset form avoids
-transporting along {lit}`finrank 𝕜 (EuclideanSpace 𝕜 (Fin 4)) = 4`.) -/
+multiplicity, which is how 7.65 lists them. ({name}`singularValues` is already Axler's
+decreasing list; the multiset form avoids transporting along
+{lit}`finrank 𝕜 (EuclideanSpace 𝕜 (Fin 4)) = 4`.) -/
 theorem singularValues_T_7_66 :
     Multiset.map (singularValues (T_7_66 (𝕜 := 𝕜))) Finset.univ.val = {3, 3, 2, 0} := by
   classical
   set T := T_7_66 (𝕜 := 𝕜) with hT
-  set S := LinearMap.adjoint T ∘ₗ T with hS
+  set S := T† ∘ₗ T with hS
   -- the standard basis diagonalizes `S` with eigenvalues `9, 4, 0, 9`
   have hstd : ∀ i, S (EuclideanSpace.basisFun (Fin 4) 𝕜 i)
       = ((![(9 : ℝ), 4, 0, 9] i : ℝ) : 𝕜) • EuclideanSpace.basisFun (Fin 4) 𝕜 i := by
@@ -476,10 +509,10 @@ theorem conjTranspose_mul_A_7_67 :
 {lit}`!![1,1,0,0; 1,1,0,0; 0,0,0,0; 0,0,0,25]`, the operator form of
 {name}`conjTranspose_mul_A_7_67`. -/
 theorem adjComp_T_7_67_eq :
-    LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67 =
+    (T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67 =
       Matrix.toEuclideanLin (!![1, 1, 0, 0; 1, 1, 0, 0; 0, 0, 0, 0; 0, 0, 0, 25] :
         Matrix (Fin 4) (Fin 4) 𝕜) := by
-  have hadj : LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) = Matrix.toEuclideanLin (A_7_67 (𝕜 := 𝕜))ᴴ := by
+  have hadj : (T_7_67 (𝕜 := 𝕜))† = Matrix.toEuclideanLin (A_7_67 (𝕜 := 𝕜))ᴴ := by
     rw [T_7_67, Matrix.toEuclideanLin_conjTranspose_eq_adjoint]
   have hmul : ∀ (M : Matrix (Fin 4) (Fin 3) 𝕜) (P : Matrix (Fin 3) (Fin 4) 𝕜),
       (M * P).toEuclideanLin = M.toEuclideanLin ∘ₗ P.toEuclideanLin := by
@@ -521,7 +554,7 @@ theorem basis_7_67_apply (i : Fin 4) : ⇑(basis_7_67 (𝕜 := 𝕜)) i = u_7_67
 /-- The eigen-equations for {lit}`u_7_67`: {lit}`T* T uᵢ = dᵢ uᵢ` with
 {lit}`d = (2, 0, 0, 25)`. -/
 theorem adjComp_T_7_67_apply_basis (i : Fin 4) :
-    (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) (⇑(basis_7_67 (𝕜 := 𝕜)) i)
+    ((T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67) (⇑(basis_7_67 (𝕜 := 𝕜)) i)
       = ((![(2 : ℝ), 0, 0, 25] i : ℝ) : 𝕜) • ⇑(basis_7_67 (𝕜 := 𝕜)) i := by
   rw [adjComp_T_7_67_eq, basis_7_67_apply]
   ext k
@@ -532,27 +565,27 @@ theorem adjComp_T_7_67_apply_basis (i : Fin 4) :
 /-- 7.67 The eigenvalues of {lit}`T* T` are {lit}`25, 2, 0`, with
 {lit}`dim E(25, T* T) = 1`, {lit}`dim E(2, T* T) = 1` and {lit}`dim E(0, T* T) = 2`. -/
 theorem eigenvalues_adjComp_T_7_67 :
-    (∀ μ : 𝕜, HasEigenvalue (LinearMap.adjoint T_7_67 ∘ₗ T_7_67) μ ↔ μ = 25 ∨ μ = 2 ∨ μ = 0) ∧
+    (∀ μ : 𝕜, HasEigenvalue (T_7_67† ∘ₗ T_7_67) μ ↔ μ = 25 ∨ μ = 2 ∨ μ = 0) ∧
       finrank 𝕜
-          (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) 25) = 1 ∧
+          (Module.End.eigenspace ((T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67) 25) = 1 ∧
       finrank 𝕜
-          (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) 2) = 1 ∧
+          (Module.End.eigenspace ((T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67) 2) = 1 ∧
       finrank 𝕜
-          (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) 0) = 2 := by
+          (Module.End.eigenspace ((T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67) 0) = 2 := by
   classical
   have key : ∀ μ : 𝕜,
-      finrank 𝕜 (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) μ)
+      finrank 𝕜 (Module.End.eigenspace ((T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67) μ)
         = Fintype.card {i // ((![(2 : ℝ), 0, 0, 25] i : ℝ) : 𝕜) = μ} := fun μ =>
     finrank_eigenspace_of_orthonormalBasis basis_7_67 _ adjComp_T_7_67_apply_basis μ
   have hfilter : ∀ (μ : 𝕜) (t : Finset (Fin 4)),
       (Finset.univ.filter fun i => ((![(2 : ℝ), 0, 0, 25] i : ℝ) : 𝕜) = μ) = t →
-      finrank 𝕜 (Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) μ)
+      finrank 𝕜 (Module.End.eigenspace ((T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67) μ)
         = t.card := by
     intro μ t ht
     rw [key, Fintype.card_subtype, ht]
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro μ
-    have hbot : Module.End.eigenspace (LinearMap.adjoint (T_7_67 (𝕜 := 𝕜)) ∘ₗ T_7_67) μ = ⊥
+    have hbot : Module.End.eigenspace ((T_7_67 (𝕜 := 𝕜))† ∘ₗ T_7_67) μ = ⊥
         ↔ Fintype.card {i // ((![(2 : ℝ), 0, 0, 25] i : ℝ) : 𝕜) = μ} = 0 := by
       rw [← key μ, Submodule.finrank_eq_zero]
     rw [Module.End.hasEigenvalue_iff, ne_eq, hbot, Fintype.card_eq_zero_iff,
@@ -592,7 +625,7 @@ theorem singularValues_T_7_67 :
   classical
   set T := T_7_67 (𝕜 := 𝕜) with hT
   have hmul := eigenvalues_multiset_eq_of_orthonormalBases
-    (S := LinearMap.adjoint T ∘ₗ T) (svdBasis T) (fun i => singularValues T i ^ 2)
+    (S := T† ∘ₗ T) (svdBasis T) (fun i => singularValues T i ^ 2)
     (fun i => adjComp_apply_svdBasis T i) basis_7_67 ![(2 : ℝ), 0, 0, 25]
     (by rw [hT]; exact adjComp_T_7_67_apply_basis)
   have hsq := congrArg (Multiset.map Real.sqrt) hmul
@@ -630,19 +663,19 @@ theorem singularValues_T_7_67 :
 /-- The pointwise reading of 7.64(b) ({name}`ker_adjComp_self`): {lit}`T* T v = 0 ⟺ T v = 0`.
 Convenient in the arguments below. -/
 theorem adjComp_eq_zero_iff (T : V →ₗ[𝕜] W) (v : V) :
-    (LinearMap.adjoint T ∘ₗ T) v = 0 ↔ T v = 0 := by
+    (T† ∘ₗ T) v = 0 ↔ T v = 0 := by
   rw [← LinearMap.mem_ker, ← LinearMap.mem_ker, ker_adjComp_self]
 
 /-- If all singular values are nonzero then {lit}`T* T` is injective. -/
 theorem adjComp_injective (T : V →ₗ[𝕜] W) (hs : ∀ i, singularValues T i ≠ 0) :
-    Function.Injective (LinearMap.adjoint T ∘ₗ T) := by
+    Function.Injective (T† ∘ₗ T) := by
   rw [← LinearMap.ker_eq_bot, Submodule.eq_bot_iff]
   intro v hv
   rw [LinearMap.mem_ker] at hv
   have hzero : ∀ i, ⟪svdBasis T i, v⟫_𝕜 = 0 := by
     intro i
     have hsym := (adjComp_self_isPositive T).isSymmetric
-    have h1 : ⟪svdBasis T i, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+    have h1 : ⟪svdBasis T i, (T† ∘ₗ T) v⟫_𝕜
         = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪svdBasis T i, v⟫_𝕜 := by
       rw [← hsym (svdBasis T i) v, adjComp_apply_svdBasis, inner_smul_left, RCLike.conj_ofReal]
     rw [hv, inner_zero_right] at h1
@@ -665,14 +698,14 @@ theorem injective_iff_singularValues_ne_zero (T : V →ₗ[𝕜] W) :
   constructor
   · intro hinj i hzero
     have hz : (((singularValues T i) ^ 2 : ℝ) : 𝕜) = 0 := by rw [hzero]; norm_num
-    have hzero2 : (LinearMap.adjoint T ∘ₗ T) (svdBasis T i) = 0 := by
+    have hzero2 : (T† ∘ₗ T) (svdBasis T i) = 0 := by
       rw [adjComp_apply_svdBasis, hz, zero_smul]
     have hTe : T (svdBasis T i) = 0 := (adjComp_eq_zero_iff T _).mp hzero2
     have hv0 : svdBasis T i = 0 := hinj (by rw [hTe, map_zero])
     exact svdBasis_ne_zero T i hv0
   · intro hs a b hab
     have h0 : T (a - b) = 0 := by rw [map_sub, hab, sub_self]
-    have h1 : (LinearMap.adjoint T ∘ₗ T) (a - b) = 0 := (adjComp_eq_zero_iff T _).mpr h0
+    have h1 : (T† ∘ₗ T) (a - b) = 0 := (adjComp_eq_zero_iff T _).mpr h0
     have h2 : a - b = 0 := adjComp_injective T hs (by rw [h1, map_zero])
     exact sub_eq_zero.mp h2
 
@@ -706,14 +739,14 @@ theorem card_pos_singularValues_eq_finrank_range (T : V →ₗ[𝕜] W) :
     exact_mod_cast this
   have hspan : Submodule.span 𝕜
       (Set.range fun i : {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} => svdBasis T i.1)
-      = LinearMap.range (LinearMap.adjoint T ∘ₗ T) := by
+      = LinearMap.range (T† ∘ₗ T) := by
     apply le_antisymm
     · rw [Submodule.span_le]
       rintro _ ⟨i, rfl⟩
       exact ⟨(((singularValues T i.1) ^ 2 : ℝ) : 𝕜)⁻¹ • svdBasis T i.1, by
         rw [map_smul, adjComp_apply_svdBasis, smul_smul, inv_mul_cancel₀ (hsq i.1 i.2), one_smul]⟩
     · rintro _ ⟨v, rfl⟩
-      have hv : (LinearMap.adjoint T ∘ₗ T) v
+      have hv : (T† ∘ₗ T) v
           = ∑ i, ⟪svdBasis T i, v⟫_𝕜 • (((singularValues T i) ^ 2 : ℝ) : 𝕜) • svdBasis T i := by
         conv_lhs => rw [← (svdBasis T).sum_repr' v]
         rw [map_sum]
@@ -852,95 +885,105 @@ rectangular generalization). -/
 def IsRectDiagonal {p n : ℕ} (A : Matrix (Fin p) (Fin n) 𝕜) : Prop :=
   ∀ (j : Fin p) (k : Fin n), (j : ℕ) ≠ (k : ℕ) → A j k = 0
 
-/-! 7.75 Singular value decomposition of the adjoint (7.77)
+/-! 7.75 Singular value decomposition of the adjoint and pseudoinverse
 
-Given a singular value decomposition {lit}`T v = ∑ sₖ ⟨v, eₖ⟩ fₖ`, the adjoint is
-obtained by interchanging the roles of the {lit}`e`'s and {lit}`f`'s:
-{lit}`T* w = ∑ sₖ ⟨w, fₖ⟩ eₖ`. We verify this by checking
-{lit}`⟨v, T* w⟩ = ⟨T v, w⟩` for all {lit}`v` and appealing to
-{name}`ext_inner_left`. -/
-theorem adjoint_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
-    LinearMap.adjoint T w =
-      ∑ i, (singularValues T i : 𝕜) • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i := by
+Suppose the positive singular values of {lit}`T ∈ ℒ(V, W)` are {lit}`s₁, …, sₘ` and
+{lit}`e₁, …, eₘ`, {lit}`f₁, …, fₘ` are orthonormal lists in {lit}`V` and {lit}`W` with
+{lit}`T v = s₁⟨v, e₁⟩f₁ + ⋯ + sₘ⟨v, eₘ⟩fₘ` for every {lit}`v` (7.76). Then
+{lit}`T* w = s₁⟨w, f₁⟩e₁ + ⋯ + sₘ⟨w, fₘ⟩eₘ` (7.77) and
+{lit}`T† w = (⟨w, f₁⟩/s₁)e₁ + ⋯ + (⟨w, fₘ⟩/sₘ)eₘ` (7.78).
+
+We state both for any finite index type and any positive {lit}`sₖ`; Axler's proof only
+uses 7.76, orthonormality and positivity (indeed 7.77 needs only 7.76). -/
+
+/-- 7.77: {lit}`⟨T v, w⟩ = ∑ sₖ ⟨v, eₖ⟩ ⟨fₖ, w⟩ = ⟨v, ∑ sₖ ⟨w, fₖ⟩ eₖ⟩`. -/
+theorem adjoint_eq_of_svd {ι : Type*} [Fintype ι] (T : V →ₗ[𝕜] W) (s : ι → ℝ)
+    (e : ι → V) (f : ι → W) (hT : ∀ v, T v = ∑ k, (s k : 𝕜) • ⟪e k, v⟫_𝕜 • f k) (w : W) :
+    T† w = ∑ k, (s k : 𝕜) • ⟪f k, w⟫_𝕜 • e k := by
   refine ext_inner_left 𝕜 fun v => ?_
-  rw [LinearMap.adjoint_inner_right, inner_sum]
-  rw [svd_apply T v, sum_inner]
-  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [LinearMap.adjoint_inner_right, inner_sum, hT v, sum_inner]
+  refine Finset.sum_congr rfl fun k _ => ?_
   rw [inner_smul_left, inner_smul_left, inner_smul_right, inner_smul_right,
     RCLike.conj_ofReal, inner_conj_symm]
   ring
 
-/-- 7.75 Singular value decomposition of the pseudoinverse (7.78):
-{lit}`T† w = ∑ (⟨fₖ, w⟩ / sₖ) eₖ` (summed over all {lit}`k`; the {lit}`sₖ = 0`
-terms vanish). Following Axler, write {lit}`S w` for the right-hand side. The key
-identity {lit}`T* w = (T* T)(S w)` (both equal {lit}`∑ sₖ ⟨fₖ, w⟩ eₖ` by the SVD
-of the adjoint and {lit}`T* T eₖ = sₖ² eₖ`) shows {lit}`w − T(S w) ∈ ker T* =
-(range T)ᗮ`, so {lit}`T(S w) = P_(range T) w = T(T† w)` (6.69(b)); since both
-{lit}`S w` and {lit}`T† w` lie in {lit}`(ker T)ᗮ`, they are equal. -/
-theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
-    LADR.Section_6C.pinv T w
-      = ∑ i, (singularValues T i : 𝕜)⁻¹ • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i := by
-  set S := ∑ i, (singularValues T i : 𝕜)⁻¹ • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i with hSdef
-  -- svdBasis T i ∈ (ker T)ᗮ when sᵢ ≠ 0, since eᵢ = sᵢ⁻¹ • T*(fᵢ) ∈ range T*.
-  have hTf : ∀ i, singularValues T i ≠ 0 →
-      LinearMap.adjoint T (svdImage T i) = (singularValues T i : 𝕜) • svdBasis T i := by
-    intro i hi
-    rw [svdImage, ite_eq_right hi, map_smul, ← LinearMap.comp_apply, adjComp_apply_svdBasis, smul_smul]
+omit [FiniteDimensional 𝕜 W] in
+/-- 7.78. Axler's proof: for {lit}`v = ∑ (⟨w, fₖ⟩/sₖ) eₖ`, 7.76 gives {lit}`T eₖ = sₖ fₖ`,
+so {lit}`T v = ∑ ⟨w, fₖ⟩ fₖ`; since {lit}`f₁, …, fₘ` is an orthonormal basis of
+{lit}`range T`, this is {lit}`P_(range T) w` (6.57(i)). Also {lit}`v ∈ (null T)⟂`, so
+{lit}`v = T† w` by the definition of {lit}`T†` (6.68). -/
+theorem pinv_eq_of_svd {ι : Type*} [Fintype ι] (T : V →ₗ[𝕜] W) (s : ι → ℝ)
+    (hs : ∀ k, 0 < s k) (e : ι → V) (f : ι → W) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
+    (hT : ∀ v, T v = ∑ k, (s k : 𝕜) • ⟪e k, v⟫_𝕜 • f k) (w : W) :
+    LADR.Section_6C.pinv T w = ∑ k, (s k : 𝕜)⁻¹ • ⟪f k, w⟫_𝕜 • e k := by
+  classical
+  have hs0 : ∀ k, (s k : 𝕜) ≠ 0 := fun k => RCLike.ofReal_ne_zero.mpr (hs k).ne'
+  -- 7.76 gives T eⱼ = sⱼ fⱼ
+  have hTe : ∀ j, T (e j) = (s j : 𝕜) • f j := by
+    intro j
+    rw [hT, Finset.sum_eq_single j (fun k _ hkj => by rw [he.2 hkj, zero_smul, smul_zero])
+      (fun h => absurd (Finset.mem_univ j) h), orthonormal_iff_ite.mp he j j, ite_eq_left rfl,
+      one_smul]
+  -- ⟨fⱼ, ∑ cₖ fₖ⟩ = cⱼ
+  have hfsum : ∀ (c : ι → 𝕜) j, ⟪f j, ∑ k, c k • f k⟫_𝕜 = c j := fun c j =>
+    hf.inner_right_fintype c j
+  set v := ∑ k, (s k : 𝕜)⁻¹ • ⟪f k, w⟫_𝕜 • e k with hv
+  set u := ∑ k, ⟪f k, w⟫_𝕜 • f k with hu
+  have hTv : T v = u := by
+    rw [hv, map_sum]
+    refine Finset.sum_congr rfl fun k _ => ?_
+    rw [map_smul, map_smul, hTe, smul_smul, smul_smul]
     congr 1
-    have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
-    rw [RCLike.ofReal_pow]; field_simp
-  have hei_perp : ∀ i, singularValues T i ≠ 0 → svdBasis T i ∈ (LinearMap.ker T)ᗮ := by
-    intro i hi
-    have hei : svdBasis T i = (singularValues T i : 𝕜)⁻¹ • LinearMap.adjoint T (svdImage T i) := by
-      rw [hTf i hi, smul_smul, inv_mul_cancel₀ (by exact_mod_cast hi), one_smul]
-    rw [hei]
-    apply Submodule.smul_mem
+    have := hs0 k
+    field_simp
+  -- range T = span(f₁, …, fₘ)
+  have hrange : LinearMap.range T = Submodule.span 𝕜 (Set.range f) := by
+    apply le_antisymm
+    · rintro _ ⟨x, rfl⟩
+      rw [hT x]
+      exact Submodule.sum_mem _ fun k _ => Submodule.smul_mem _ _
+        (Submodule.smul_mem _ _ (Submodule.subset_span ⟨k, rfl⟩))
+    · rw [Submodule.span_le]
+      rintro _ ⟨k, rfl⟩
+      exact ⟨(s k : 𝕜)⁻¹ • e k, by rw [map_smul, hTe, smul_smul, inv_mul_cancel₀ (hs0 k),
+        one_smul]⟩
+  -- 6.57(i): P_(range T) w = ∑ ⟨w, fₖ⟩ fₖ
+  have hP : (LinearMap.range T).starProjection w = u := by
+    refine LADR.Section_6C.starProjection_eq_of_mem _ ?_ ?_
+    · rw [hrange, hu]
+      exact Submodule.sum_mem _ fun k _ => Submodule.smul_mem _ _
+        (Submodule.subset_span ⟨k, rfl⟩)
+    · rw [hrange, Submodule.mem_orthogonal]
+      intro y hy
+      induction hy using Submodule.span_induction with
+      | mem y hy =>
+        obtain ⟨j, rfl⟩ := hy
+        rw [inner_sub_right, hu, hfsum, sub_self]
+      | zero => rw [inner_zero_left]
+      | add _ _ _ _ h₁ h₂ => rw [inner_add_left, h₁, h₂, add_zero]
+      | smul c _ _ h => rw [inner_smul_left, h, mul_zero]
+  -- v ∈ (null T)⟂: each eₖ is orthogonal to null T
+  have hperp : ∀ x ∈ LinearMap.ker T, ∀ k, ⟪e k, x⟫_𝕜 = 0 := by
+    intro x hx k
+    have h0 := congrArg (fun y => ⟪f k, y⟫_𝕜) (hT x)
+    simp only [LinearMap.mem_ker.mp hx, inner_zero_right] at h0
+    rw [show (fun k => (s k : 𝕜) • ⟪e k, x⟫_𝕜 • f k) = fun k => ((s k : 𝕜) * ⟪e k, x⟫_𝕜) • f k
+      from funext fun k => smul_smul _ _ _, hfsum] at h0
+    exact (mul_eq_zero.mp h0.symm).resolve_left (hs0 k)
+  have hvmem : v ∈ (LinearMap.ker T)ᗮ := by
     rw [Submodule.mem_orthogonal]
     intro x hx
-    rw [LinearMap.adjoint_inner_right, LinearMap.mem_ker.mp hx, inner_zero_left]
-  have hS_mem : S ∈ (LinearMap.ker T)ᗮ := by
-    rw [hSdef]
-    apply Submodule.sum_mem
-    intro i _
-    by_cases hi : singularValues T i = 0
-    · rw [hi, RCLike.ofReal_zero, inv_zero, zero_smul]; exact Submodule.zero_mem _
-    · exact Submodule.smul_mem _ _ (Submodule.smul_mem _ _ (hei_perp i hi))
-  -- Key identity: T* w = (T* T)(S).
-  have hkey : LinearMap.adjoint T w = (LinearMap.adjoint T ∘ₗ T) S := by
-    rw [adjoint_svd_apply, hSdef, map_sum]
-    refine Finset.sum_congr rfl fun i _ => ?_
-    rw [map_smul, map_smul, adjComp_apply_svdBasis]
-    by_cases hi : singularValues T i = 0
-    · simp [hi]
-    · simp only [smul_smul]
-      congr 1
-      have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
-      rw [RCLike.ofReal_pow]; field_simp
-  -- Hence T(S) = P_(range T) w.
-  have hTS : T S = (LinearMap.range T).starProjection w := by
-    symm
-    apply Submodule.eq_starProjection_of_mem_of_inner_eq_zero (LinearMap.mem_range_self T S)
-    intro y hy
-    obtain ⟨x, rfl⟩ := hy
-    have hadj0 : LinearMap.adjoint T (w - T S) = 0 := by
-      rw [map_sub, hkey, LinearMap.comp_apply, sub_self]
-    rw [← LinearMap.adjoint_inner_left, hadj0, inner_zero_left]
-  -- pinv w and S both lie in (ker T)ᗮ and T maps both to P_(range T) w.
-  have hpinv_mem : LADR.Section_6C.pinv T w ∈ (LinearMap.ker T)ᗮ := by
-    show ((LADR.Section_6C.restrEquiv T).symm
-      ((LinearMap.range T).orthogonalProjectionOnto w) : V) ∈ _
-    exact SetLike.coe_mem _
-  have hTeq : T (LADR.Section_6C.pinv T w) = T S := by
-    rw [hTS, ← LinearMap.comp_apply]
-    exact LinearMap.congr_fun (LADR.Section_6C.T_comp_pinv T) w
-  have hdiff_ker : LADR.Section_6C.pinv T w - S ∈ LinearMap.ker T := by
-    rw [LinearMap.mem_ker, map_sub, hTeq, sub_self]
-  have hdiff_perp : LADR.Section_6C.pinv T w - S ∈ (LinearMap.ker T)ᗮ :=
-    Submodule.sub_mem _ hpinv_mem hS_mem
-  have hzero : ⟪LADR.Section_6C.pinv T w - S, LADR.Section_6C.pinv T w - S⟫_𝕜 = 0 :=
-    (Submodule.mem_orthogonal' _ _).mp hdiff_perp _ hdiff_ker
-  rw [← sub_eq_zero]
-  exact inner_self_eq_zero.mp hzero
+    rw [hv, inner_sum]
+    refine Finset.sum_eq_zero fun k _ => ?_
+    rw [inner_smul_right, inner_smul_right, inner_eq_zero_symm.mp (hperp x hx k), mul_zero,
+      mul_zero]
+  exact LADR.Section_6C.pinv_eq_of T hvmem (by rw [hTv, hP])
+
+/-- 7.77 for the singular value decomposition constructed in 7.70. -/
+theorem adjoint_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
+    T† w =
+      ∑ i, (singularValues T i : 𝕜) • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i :=
+  adjoint_eq_of_svd T _ _ _ (svd_apply T) w
 
 
 /-! 7.79 Example: finding a singular value decomposition
@@ -1159,7 +1202,7 @@ nonzero {lit}`v ∈ V`, {lit}`w ∈ W` with {lit}`T v = s w` and {lit}`T* w = s 
 theorem exercise_7E_2 (T : V →ₗ[𝕜] W) {s : ℝ} (hs : 0 < s) :
     (∃ i, singularValues T i = s) ↔
       ∃ (v : V) (w : W), v ≠ 0 ∧ w ≠ 0 ∧
-        T v = (s : 𝕜) • w ∧ LinearMap.adjoint T w = (s : 𝕜) • v := by
+        T v = (s : 𝕜) • w ∧ T† w = (s : 𝕜) • v := by
   sorry
 
 /-- The operator of 7E.3, to be supplied by the solver: the exercise says "give an example",
@@ -1279,14 +1322,14 @@ with eigenvalue {lit}`sₖ²`. -/
 theorem exercise_7E_8d {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
     (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
     (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) (k : Fin m) :
-    (LinearMap.adjoint T ∘ₗ T) (e k) = ((s k) ^ 2 : 𝕜) • e k := by
+    (T† ∘ₗ T) (e k) = ((s k) ^ 2 : 𝕜) • e k := by
   sorry
 
 /-- 7E.8(e) With the same data, {lit}`T T* w = ∑ sₖ² ⟨w, fₖ⟩ fₖ`. -/
 theorem exercise_7E_8e {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
     (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
     (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) (w : W) :
-    T (LinearMap.adjoint T w) = ∑ i, ((s i) ^ 2 : 𝕜) • ⟪f i, w⟫_𝕜 • f i := by
+    T (T† w) = ∑ i, ((s i) ^ 2 : 𝕜) • ⟪f i, w⟫_𝕜 • f i := by
   sorry
 
 /-- 7E.9 {lit}`T` and {lit}`T*` have the same positive singular values — as multisets, so
@@ -1295,7 +1338,7 @@ with multiplicity, as in 7E.8(c). The two lists are indexed by {lit}`Fin (dim V)
 theorem exercise_7E_9 (T : V →ₗ[𝕜] W) :
     Multiset.filter (fun r => 0 < r) (Multiset.map (singularValues T) Finset.univ.val)
       = Multiset.filter (fun r => 0 < r)
-          (Multiset.map (singularValues (LinearMap.adjoint T)) Finset.univ.val) := by
+          (Multiset.map (singularValues T†) Finset.univ.val) := by
   sorry
 
 /-- 7E.10 If {lit}`T` is invertible, then the singular values of {lit}`T⁻¹` are the
@@ -1371,10 +1414,10 @@ theorem exercise_7E_15 (T : V →ₗ[𝕜] V) (s₁ sₙ : ℝ)
     (μ : 𝕜) (hμ : HasEigenvalue T μ) : ‖μ‖ ≤ s₁ ∧ sₙ ≤ ‖μ‖ := by
   sorry
 
-/-- 7E.16 {lit}`(T*)† = (T†)*`. -/
+/-- 7E.16 {lit}`(T*)† = T†*`. -/
 theorem exercise_7E_16 (T : V →ₗ[𝕜] W) :
-    LADR.Section_6C.pinv (LinearMap.adjoint T) =
-      LinearMap.adjoint (LADR.Section_6C.pinv T) := by
+    LADR.Section_6C.pinv T† =
+      (LADR.Section_6C.pinv T)† := by
   sorry
 
 /-- 7E.17 {lit}`T` is self-adjoint iff {lit}`T†` is self-adjoint. -/
