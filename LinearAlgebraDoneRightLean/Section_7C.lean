@@ -47,21 +47,27 @@ open scoped Matrix ComplexOrder in
 /-- 7.35(a): the operator on {lit}`ℂ²` whose matrix in the standard basis is
 {lit}`!![2, -1; -1, 1]` is a positive operator, because its quadratic form equals
 {lit}`|w - z|² + |w|² ≥ 0`. -/
+@[avoiding Matrix.isPositive_toEuclideanLin_iff, Matrix.posSemidef_iff_dotProduct_mulVec]
 theorem toEuclideanLin_isPositive :
     (Matrix.toEuclideanLin (!![2, -1; -1, 1] : Matrix (Fin 2) (Fin 2) ℂ)).IsPositive := by
-  rw [Matrix.isPositive_toEuclideanLin_iff, Matrix.posSemidef_iff_dotProduct_mulVec]
-  refine ⟨?_, fun x => ?_⟩
-  · ext i j; fin_cases i <;> fin_cases j <;> simp [Matrix.conjTranspose_apply]
-  · have hval : star x ⬝ᵥ (!![2, -1; -1, 1] : Matrix (Fin 2) (Fin 2) ℂ).mulVec x
-        = ((Complex.normSq (x 0 - x 1) + Complex.normSq (x 0) : ℝ) : ℂ) := by
-      simp only [dotProduct, Fin.sum_univ_two, Matrix.mulVec, Matrix.cons_val_zero,
-        Matrix.cons_val_one, Pi.star_apply, RCLike.star_def, Matrix.of_apply,
-        Matrix.cons_val', Matrix.empty_val', Matrix.cons_val_fin_one]
-      apply Complex.ext <;>
-        simp [Complex.normSq_apply, Complex.mul_re, Complex.mul_im, Complex.sub_re, Complex.sub_im,
-          Complex.conj_re, Complex.conj_im] <;> ring
-    rw [hval]
-    exact_mod_cast add_nonneg (Complex.normSq_nonneg _) (Complex.normSq_nonneg _)
+  set T := Matrix.toEuclideanLin (!![2, -1; -1, 1] : Matrix (Fin 2) (Fin 2) ℂ)
+  -- T(w, z) = (2w - z, -w + z)
+  have h0 : ∀ x : EuclideanSpace ℂ (Fin 2), T x 0 = 2 * x 0 - x 1 := by
+    intro x; simp [T, Matrix.mulVec, dotProduct, Fin.sum_univ_two]; ring
+  have h1 : ∀ x : EuclideanSpace ℂ (Fin 2), T x 1 = -x 0 + x 1 := by
+    intro x; simp [T, Matrix.mulVec, dotProduct, Fin.sum_univ_two]
+  refine ⟨fun x y => ?_, fun x => ?_⟩
+  · -- self-adjoint: ⟨T x, y⟩ = ⟨x, T y⟩ by direct computation
+    simp only [PiLp.inner_apply, Fin.sum_univ_two, RCLike.inner_apply, h0, h1, map_sub, map_add,
+      map_neg, map_mul, map_ofNat]
+    ring
+  · -- ⟨T(w,z),(w,z)⟩ = 2|w|² - 2 Re(w̄z) + |z|² = |w - z|² + |w|²
+    have : RCLike.re ⟪T x, x⟫_ℂ = Complex.normSq (x 0 - x 1) + Complex.normSq (x 0) := by
+      simp only [PiLp.inner_apply, Fin.sum_univ_two, RCLike.inner_apply, h0, h1]
+      simp [Complex.normSq_apply, Complex.mul_re, Complex.sub_re, Complex.sub_im]
+      ring
+    rw [this]
+    exact add_nonneg (Complex.normSq_nonneg _) (Complex.normSq_nonneg _)
 
 omit [FiniteDimensional 𝕜 V] in
 /-- 7.35(b): the orthogonal projection {lit}`P_U` is a positive operator —
@@ -177,7 +183,7 @@ theorem toMatrixOrthonormal_eq_diagonal {n : ℕ} {T : V →ₗ[𝕜] V}
 
 /-- {lit}`R* R` is always a positive operator (7.38 (f) ⟹ (a)). -/
 theorem adjoint_comp_self_isPositive (R : V →ₗ[𝕜] V) :
-    (LinearMap.adjoint R ∘ₗ R).IsPositive := by
+    (R† ∘ₗ R).IsPositive := by
   constructor
   · intro x y
     simp only [LinearMap.comp_apply]
@@ -189,32 +195,35 @@ theorem adjoint_comp_self_isPositive (R : V →ₗ[𝕜] V) :
 
 omit [FiniteDimensional 𝕜 V] in
 /-- (a) ⟹ (b): every eigenvalue of a positive operator is a nonnegative real. -/
+@[avoiding LinearMap.IsSymmetric.conj_eigenvalue_eq_self]
 theorem eigenvalue_nonneg {T : V →ₗ[𝕜] V} (hT : T.IsPositive) {μ : 𝕜}
     (hμ : HasEigenvalue T μ) : 0 ≤ RCLike.re μ ∧ conj μ = μ := by
-  refine ⟨?_, hT.isSymmetric.conj_eigenvalue_eq_self hμ⟩
+  have hreal := LADR.Section_7A.eigenvalue_real T hT.isSymmetric hμ
+  refine ⟨?_, hreal⟩
   obtain ⟨v, hTv, hv⟩ := hμ.exists_hasEigenvector
   have hmem : T v = μ • v := Module.End.mem_eigenspace_iff.mp hTv
   have hpos : 0 ≤ RCLike.re ⟪T v, v⟫_𝕜 := hT.2 v
   rw [hmem, inner_smul_left, inner_self_eq_norm_sq_to_K,
-    hT.isSymmetric.conj_eigenvalue_eq_self hμ, ← RCLike.ofReal_pow, mul_comm,
+    hreal, ← RCLike.ofReal_pow, mul_comm,
     RCLike.re_ofReal_mul] at hpos
   have hvnorm : 0 < ‖v‖ ^ 2 := by positivity
   exact (mul_nonneg_iff_of_pos_left hvnorm).mp hpos
 
-/-! 7.38 (b) ⟹ (c) The spectral theorem turns "self-adjoint with nonnegative
-eigenvalues" into a diagonal matrix with nonnegative diagonal: take mathlib's
-orthonormal eigenbasis and read off the eigenvalues. -/
+/-! 7.38 (b) ⟹ (c) The spectral theorem (7.29/7.31, here
+{name}`LADR.Section_7B.exists_orthonormalBasis_eigenvectors`) turns "self-adjoint with
+nonnegative eigenvalues" into a diagonal matrix with nonnegative diagonal: the matrix
+with respect to an orthonormal basis of eigenvectors is diagonal, with the eigenvalues
+on the diagonal. -/
 
 /-- (b) ⟹ (c). -/
+@[avoiding LinearMap.IsSymmetric.eigenvectorBasis]
 theorem hasNonnegDiagonalMatrix_of_eigenvalue_nonneg {T : V →ₗ[𝕜] V}
     (hs : T.IsSymmetric) (hev : ∀ μ : 𝕜, HasEigenvalue T μ → 0 ≤ RCLike.re μ) :
     HasNonnegDiagonalMatrix T := by
-  set n := Module.finrank 𝕜 V
-  refine ⟨n, hs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n),
-    hs.eigenvalues (rfl : Module.finrank 𝕜 V = n), fun i => ?_,
-    toMatrixOrthonormal_eq_diagonal _ fun i =>
-      hs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i⟩
-  have := hev _ (hs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i)
+  obtain ⟨n, e, μ, he⟩ := LADR.Section_7B.exists_orthonormalBasis_eigenvectors T hs
+  refine ⟨n, e, μ, fun i => ?_, toMatrixOrthonormal_eq_diagonal e he⟩
+  have := hev _ (Module.End.hasEigenvalue_of_hasEigenvector
+    (LADR.Section_7B.hasEigenvector_of_orthonormalBasis e (he i)))
   rwa [RCLike.ofReal_re] at this
 
 /-! 7.38 (c) ⟹ (d) An operator that is diagonal with nonnegative diagonal
@@ -277,8 +286,8 @@ so {lit}`R² = R* R` ((e) ⟹ (f)). -/
 /-- (e) ⟹ (f): a self-adjoint square root {lit}`R` of {lit}`T` exhibits
 {lit}`T = R* R`. -/
 theorem adjoint_comp_self_eq_of_isSymmetric_isSquareRoot {T R : V →ₗ[𝕜] V}
-    (hR : R.IsSymmetric) (hRT : IsSquareRoot R T) : LinearMap.adjoint R ∘ₗ R = T := by
-  have hadj : LinearMap.adjoint R = R := by
+    (hR : R.IsSymmetric) (hRT : IsSquareRoot R T) : R† ∘ₗ R = T := by
+  have hadj : R† = R := by
     rw [← LinearMap.star_eq_adjoint]
     exact (LinearMap.isSymmetric_iff_isSelfAdjoint R).mp hR
   rw [hadj]
@@ -293,7 +302,7 @@ theorem tfae_isPositive (T : V →ₗ[𝕜] V) :
       HasNonnegDiagonalMatrix T,
       ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ IsSquareRoot R T,
       ∃ R : V →ₗ[𝕜] V, R.IsSymmetric ∧ IsSquareRoot R T,
-      ∃ R : V →ₗ[𝕜] V, LinearMap.adjoint R ∘ₗ R = T].TFAE := by
+      ∃ R : V →ₗ[𝕜] V, R† ∘ₗ R = T].TFAE := by
   tfae_have 1 → 2 := fun hT => ⟨hT.isSymmetric, fun _ hμ => eigenvalue_nonneg hT hμ⟩
   tfae_have 2 → 3 := fun h =>
     hasNonnegDiagonalMatrix_of_eigenvalue_nonneg h.1 fun μ hμ => (h.2 μ hμ).1
@@ -317,20 +326,18 @@ Key step: a positive square root {lit}`S` of {lit}`T` sends each
 {lit}`w` in {lit}`S`'s orthonormal eigenbasis forces every contributing
 {lit}`S`-eigenvalue {lit}`σ` to satisfy {lit}`σ² = c`. -/
 
+@[avoiding LinearMap.IsSymmetric.eigenvectorBasis]
 theorem sqrt_eigenvector {S : V →ₗ[𝕜] V} (hS : S.IsPositive) {w : V} {c : ℝ} (_hc : 0 ≤ c)
     (hw : (S ∘ₗ S) w = (c : 𝕜) • w) : S w = (Real.sqrt c : 𝕜) • w := by
-  set n := Module.finrank 𝕜 V
   set hSs := hS.isSymmetric
-  set e := hSs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) with he
-  set σ := hSs.eigenvalues (rfl : Module.finrank 𝕜 V = n) with hσ
+  -- the spectral theorem: an orthonormal basis of eigenvectors of S
+  obtain ⟨n, e, σ, hSe⟩ := LADR.Section_7B.exists_orthonormalBasis_eigenvectors S hSs
   have hσnn : ∀ i, 0 ≤ σ i := by
     intro i
-    have hev : HasEigenvalue S ((σ i : ℝ) : 𝕜) :=
-      hSs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i
+    have hev : HasEigenvalue S ((σ i : ℝ) : 𝕜) := Module.End.hasEigenvalue_of_hasEigenvector
+      (LADR.Section_7B.hasEigenvector_of_orthonormalBasis e (hSe i))
     have := (eigenvalue_nonneg hS hev).1
     rwa [RCLike.ofReal_re] at this
-  have hSe : ∀ i, S (e i) = (σ i : 𝕜) • e i :=
-    fun i => hSs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
   apply e.repr.injective
   ext i
   rw [OrthonormalBasis.repr_apply_apply, OrthonormalBasis.repr_apply_apply]
@@ -355,6 +362,7 @@ theorem sqrt_eigenvector {S : V →ₗ[𝕜] V} (hS : S.IsPositive) {w : V} {c :
       rw [show Real.sqrt c = σ i by rw [← hsq, Real.sqrt_sq (hσnn i)]]
   rw [hSw, inner_smul_right, hcoef]
 
+@[avoiding LinearMap.IsSymmetric.eigenvectorBasis]
 theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT : R ∘ₗ R = T)
     (hS : S.IsPositive) (hST : S ∘ₗ S = T) : R = S := by
   have hTs : T.IsSymmetric := by
@@ -368,22 +376,19 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
     · simp only [LinearMap.comp_apply]
       rw [hR.isSymmetric (R x) x, inner_self_eq_norm_sq_to_K, ← RCLike.ofReal_pow, RCLike.ofReal_re]
       positivity
-  set n := Module.finrank 𝕜 V
-  set b := hTs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) with hb
-  set μ := hTs.eigenvalues (rfl : Module.finrank 𝕜 V = n) with hμ
+  -- the spectral theorem: a basis of eigenvectors of T, on which R and S must agree
+  obtain ⟨n, b, μ, hTb⟩ := LADR.Section_7B.exists_orthonormalBasis_eigenvectors T hTs
   have hμnn : ∀ i, 0 ≤ μ i := by
     intro i
-    have hev : HasEigenvalue T ((μ i : ℝ) : 𝕜) :=
-      hTs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i
+    have hev : HasEigenvalue T ((μ i : ℝ) : 𝕜) := Module.End.hasEigenvalue_of_hasEigenvector
+      (LADR.Section_7B.hasEigenvector_of_orthonormalBasis b (hTb i))
     have := (eigenvalue_nonneg hTpos hev).1
     rwa [RCLike.ofReal_re] at this
   apply b.toBasis.ext
   intro i
   simp only [OrthonormalBasis.coe_toBasis]
-  have hwR : (R ∘ₗ R) (b i) = ((μ i : ℝ) : 𝕜) • b i := by
-    rw [hRT]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
-  have hwS : (S ∘ₗ S) (b i) = ((μ i : ℝ) : 𝕜) • b i := by
-    rw [hST]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
+  have hwR : (R ∘ₗ R) (b i) = ((μ i : ℝ) : 𝕜) • b i := by rw [hRT]; exact hTb i
+  have hwS : (S ∘ₗ S) (b i) = ((μ i : ℝ) : 𝕜) • b i := by rw [hST]; exact hTb i
   rw [sqrt_eigenvector hR (hμnn i) hwR, sqrt_eigenvector hS (hμnn i) hwS]
 
 /-! 7.41 Example: square roots of positive operators
@@ -580,7 +585,7 @@ theorem exercise_7C_8 (T : V →ₗ[𝕜] V) :
 {lit}`S* T S` is positive on {lit}`W`. -/
 theorem exercise_7C_9 {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W]
     [FiniteDimensional 𝕜 W] (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (S : W →ₗ[𝕜] V) :
-    (LinearMap.adjoint S ∘ₗ T ∘ₗ S).IsPositive := by
+    (S† ∘ₗ T ∘ₗ S).IsPositive := by
   sorry
 
 /-- 7C.10 If {lit}`T` is positive, {lit}`Tv = w` and {lit}`Tw = v`, then
@@ -622,7 +627,7 @@ theorem exercise_7C_14 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) {m : ℕ} (v :
 {lit}`AB = BA = 0`. -/
 theorem exercise_7C_15 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
     ∃ A B : V →ₗ[𝕜] V, A.IsPositive ∧ B.IsPositive ∧ T = A - B ∧
-      (A + B) ∘ₗ (A + B) = LinearMap.adjoint T ∘ₗ T ∧ A ∘ₗ B = 0 ∧ B ∘ₗ A = 0 := by
+      (A + B) ∘ₗ (A + B) = T† ∘ₗ T ∧ A ∘ₗ B = 0 ∧ B ∘ₗ A = 0 := by
   sorry
 
 /-- 7C.16 For positive {lit}`T` with positive square root {lit}`R` ({lit}`R² = T`),
