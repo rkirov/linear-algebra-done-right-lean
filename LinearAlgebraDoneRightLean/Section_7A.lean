@@ -720,7 +720,7 @@ theorem exercise_7A_4 (T : V →ₗ[𝕜] V) (U : Submodule 𝕜 V) :
     Section_5A.InvariantUnder T U ↔
       Section_5A.InvariantUnder T† Uᗮ := by
   -- assume T U invariant
-  -- take u' ∈ Uᗮ, so ⟪u', u⟫_𝕜 = 0 for all u ∈
+  -- take u' ∈ Uᗮ, so ⟪u', u⟫_𝕜 = 0 for all u ∈ U
   -- since T u ∈ U for all u ∈ U, we have ⟪u', T u⟫_𝕜 = 0 for all u ∈ U too
   -- then ⟪T† u', u⟫_𝕜 = 0 for all u ∈ U, so T† u' ∈ Uᗮ
   -- so we shown that T† maps Uᗮ into itself, i.e., Uᗮ is invariant under T†
