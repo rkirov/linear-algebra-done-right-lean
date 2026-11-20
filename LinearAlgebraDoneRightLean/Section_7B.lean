@@ -793,6 +793,7 @@ theorem exercise_7B_19a (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     ∀ w ∈ Uᗮ, T w ∈ Uᗮ := by
   sorry
 
+omit [FiniteDimensional 𝕜 V] in
 /-- 7B.19 (b) {lit}`T|U ∈ ℒ(U)` is self-adjoint. -/
 theorem exercise_7B_19b (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
