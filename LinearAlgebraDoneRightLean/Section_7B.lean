@@ -9,6 +9,9 @@ public import Mathlib.Algebra.Polynomial.Splits
 public import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
 public import Mathlib.LinearAlgebra.Matrix.ToLin
 public import Mathlib.Analysis.Matrix.Hermitian
+public import Mathlib.LinearAlgebra.Lagrange
+public import Mathlib.LinearAlgebra.Eigenspace.Minpoly
+public import Mathlib.Analysis.SpecialFunctions.Pow.Complex
 public import LinearAlgebraDoneRightLean.Section_7A
 public import LinearAlgebraDoneRightLean.Section_6B
 public import LinearAlgebraDoneRightLean.Section_6C
@@ -880,27 +883,136 @@ theorem exercise_7B_8 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ 
     IsStarNormal T ↔ ∀ (v : V) (μ : ℂ), HasEigenvector T μ v →
       ∃ ν : ℂ, HasEigenvector T† ν v := by
   -- => proven in 7A with conj λ eigenvalue for T†
-  -- <=
-  sorry
+  -- <= by Schur over C we have an orthonormal basis s.t. the matrix is
+  --    upper diagonal the matrix of T† is conjugate transpose, which is lower triangular
+  --    take the first basis vector (1, 0, ..., 0) in that basis
+  --    it is an eigenvector of T, thus it is eigenvector of T†
+  --    the non-zero entries in the first row of the upper triangular matrix
+  --    have to be zero. Continue by induction on the dimension k.
+  --    so both T and T† are diagonal in that basis, hence there is
+  --    an orthonormal basis of eigenvectors for T, hence normal.
+  constructor
+  · intro hN v μ hv
+    exact ⟨conj μ, Module.End.mem_eigenspace_iff.mpr
+      ((LADR.Section_7A.eigenvector_adjoint hN v μ).mp hv.apply_eq_smul), hv.2⟩
+  · intro hev
+    obtain ⟨n, e, he, hUT⟩ := LADR.Section_6B.exists_orthonormal_upperTriangular_complex T
+    have hflag : ∀ k, T (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) :=
+      ((LADR.Section_5C.tfae_upperTriangular he T).out 1 3).mp hUT
+    -- entries below the diagonal vanish (upper triangular)
+    have hUTz : ∀ i j : Fin n, j < i → ⟪e i, T (e j)⟫_ℂ = 0 := fun i j hji =>
+      inner_eq_zero_of_upperTriangular T e hflag hji
+    -- a column that is zero off the diagonal makes `e k` an eigenvector
+    have hTk : ∀ k, (∀ i, i ≠ k → ⟪e i, T (e k)⟫_ℂ = 0) →
+        T (e k) = ⟪e k, T (e k)⟫_ℂ • e k := fun k hcol => by
+      conv_lhs => rw [← e.sum_repr' (T (e k))]
+      exact Finset.sum_eq_single k (fun i _ hik => by rw [hcol i hik, zero_smul]) (by simp)
+    -- induction on `k`: row `k` is zero off the diagonal
+    have hrow : ∀ m : ℕ, ∀ k : Fin n, k.val = m → ∀ j, j ≠ k → ⟪e k, T (e j)⟫_ℂ = 0 := by
+      intro m
+      induction m using Nat.strong_induction_on with
+      | _ m IH =>
+        intro k hk j hjk
+        -- column `k` is zero off the diagonal: above it by induction, below it by `hUTz`
+        have hcol : ∀ i, i ≠ k → ⟪e i, T (e k)⟫_ℂ = 0 := fun i hik => by
+          rcases lt_or_gt_of_ne hik with h | h
+          · exact IH i.val (by rw [← hk]; exact Fin.lt_def.mp h) i rfl k (ne_of_lt h).symm
+          · exact hUTz i k h
+        -- so `e k` is an eigenvector of `T`, hence of `T†`, which kills row `k`
+        obtain ⟨ν, hν⟩ := hev (e k) _ (hasEigenvector_of_orthonormalBasis e (hTk k hcol))
+        rw [← LinearMap.adjoint_inner_left, hν.apply_eq_smul, inner_smul_left,
+          e.orthonormal.inner_eq_zero hjk.symm, mul_zero]
+    -- every `e k` is an eigenvector, so 7.31 (c) ⟹ (a) gives normality
+    have hbasis : HasOrthonormalEigenbasis T := ⟨n, e, fun k => ⟨_,
+      hasEigenvector_of_orthonormalBasis e (hTk k fun i hik => hrow i.val i rfl k hik.symm)⟩⟩
+    exact ((tfae_complex_spectral T).out 1 3).mpr hbasis
 
 /-- 7B.9 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff {lit}`T* = p(T)` for some
 polynomial {lit}`p ∈ 𝒫(ℂ)`. -/
 theorem exercise_7B_9 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
     IsStarNormal T ↔ ∃ p : Polynomial ℂ, T† = Polynomial.aeval T p := by
-  sorry
+  -- => by spectral theorem, there is orthonormal eigenbasis ei for T
+  --    T*ei = conj(λi) ei. Define p(z) as interpolation polynomial
+  --    with p(λi) = conj(λi) for each eigenvalue λi. This is doable because it is
+  --    a finite set of points, so there exists an interpolation polynomial.
+  --    then p(T)ei = p(λi) ei = conj(λi) ei = T* ei
+  --    but if P(T) and T* agree on the eigenbasis, they are equal as linear maps.
+  --    concretely, with μ1, ..., μm the *distinct* eigenvalues (so μa - μb ≠ 0 for a ≠ b),
+  --    p(z) = ∑ a, conj(μa) * ∏ (b ≠ a), (z - μb) / (μa - μb)
+  -- <= assume p(T) = T* and that v is eigenvector of T
+  -- then T* v = p(T) v = p(λ) v, thus v is also an eigenvector of T*
+  -- by previous exercise, T is normal.
+  constructor
+  · intro hN
+    obtain ⟨n, e, he⟩ := complex_spectral T hN
+    -- the (distinct) eigenvalues as a finite set of interpolation nodes
+    let s : Finset ℂ := Finset.univ.image fun k => ⟪e k, T (e k)⟫_ℂ
+    refine ⟨Lagrange.interpolate s id (fun z => conj z), e.toBasis.ext fun k => ?_⟩
+    set μ := ⟪e k, T (e k)⟫_ℂ
+    have hk : T (e k) = μ • e k := he k
+    have hnode : (Lagrange.interpolate s id (fun z => conj z)).eval μ = conj μ :=
+      Lagrange.eval_interpolate_at_node (fun z => conj z) Function.injective_id.injOn
+        (Finset.mem_image_of_mem _ (Finset.mem_univ k))
+    rw [OrthonormalBasis.coe_toBasis, (LADR.Section_7A.eigenvector_adjoint hN (e k) μ).mp hk,
+      Module.End.aeval_apply_of_hasEigenvector (hasEigenvector_of_orthonormalBasis e hk), hnode]
+  · rintro ⟨p, hp⟩
+    refine (exercise_7B_8 T).mpr fun v μ hv => ⟨p.eval μ, ?_, hv.2⟩
+    rw [Module.End.mem_eigenspace_iff, hp, Module.End.aeval_apply_of_hasEigenvector hv]
 
 /-- 7B.10 Every normal operator on a complex inner product space has a square
 root. -/
 theorem exercise_7B_10 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
     ∃ S : V →ₗ[ℂ] V, S ^ 2 = T := by
-  sorry
+  -- pick an orthonormal basis of eigenvectors for T that diagonalizes it (by spectral theorem)
+  -- then take a sqrt of each diagonal value to construct S
+  -- Since matrices of S^2 = matrix of T, the result holds.
+  obtain ⟨n, e, he⟩ := complex_spectral T hN
+  -- a square root of each eigenvalue (exists by the fundamental theorem of algebra, 4.12)
+  let r : Fin n → ℂ := fun k => ⟪e k, T (e k)⟫_ℂ ^ ((2 : ℕ) : ℂ)⁻¹
+  have hr : ∀ k, r k * r k = ⟪e k, T (e k)⟫_ℂ := fun k => by
+    rw [← pow_two]; exact Complex.cpow_nat_inv_pow _ two_ne_zero
+  -- `S eₖ = √λₖ eₖ`, defined on the basis
+  let S : V →ₗ[ℂ] V := e.toBasis.constr ℂ fun k => r k • e k
+  have hS : ∀ k, S (e k) = r k • e k := fun k => by
+    have := e.toBasis.constr_basis ℂ (fun k => r k • e k) k
+    rwa [OrthonormalBasis.coe_toBasis] at this
+  -- `S² eₖ = √λₖ √λₖ eₖ = λₖ eₖ = T eₖ`
+  refine ⟨S, e.toBasis.ext fun k => ?_⟩
+  rw [OrthonormalBasis.coe_toBasis, pow_two, Module.End.mul_apply, hS, map_smul, hS, smul_smul,
+    hr, ← he k]
 
 /-- 7B.11 Every self-adjoint operator on {lit}`V` has a cube root. -/
 theorem exercise_7B_11 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
     ∃ S : V →ₗ[𝕜] V, S ^ 3 = T := by
-  sorry
+  -- same as 10, but take cube roots of the eigenvalues instead of square roots
+  -- for V = ℝ, we can use spectral theorem for self-adjoint operators
+  -- for V = ℂ, we use the spectral theorem for normal operators (which includes self-adjoint operators)
+  -- every real number has a real cube root
+  have hcube : ∀ x : ℝ, ∃ c : ℝ, c ^ 3 = x := by
+    intro x
+    rcases le_total 0 x with hx | hx
+    · exact ⟨x ^ ((3 : ℕ) : ℝ)⁻¹, Real.rpow_inv_natCast_pow hx (by norm_num)⟩
+    · refine ⟨-((-x) ^ ((3 : ℕ) : ℝ)⁻¹), ?_⟩
+      rw [neg_pow, Real.rpow_inv_natCast_pow (neg_nonneg.mpr hx) (by norm_num)]
+      ring
+  choose c hc using hcube
+  -- the self-adjoint spectral theorem gives real eigenvalues for both 𝔽 = ℝ and 𝔽 = ℂ
+  obtain ⟨n, e, μ, he⟩ := exists_orthonormalBasis_eigenvectors T hT
+  -- `S eₖ = ∛λₖ eₖ`, defined on the basis
+  let S : V →ₗ[𝕜] V := e.toBasis.constr 𝕜 fun k => ((c (μ k) : ℝ) : 𝕜) • e k
+  have hS : ∀ k, S (e k) = ((c (μ k) : ℝ) : 𝕜) • e k := fun k => by
+    have := e.toBasis.constr_basis 𝕜 (fun k => ((c (μ k) : ℝ) : 𝕜) • e k) k
+    rwa [OrthonormalBasis.coe_toBasis] at this
+  -- `S³ eₖ = (∛λₖ)³ eₖ = λₖ eₖ = T eₖ`
+  refine ⟨S, e.toBasis.ext fun k => ?_⟩
+  simp only [OrthonormalBasis.coe_toBasis, pow_succ, pow_zero, one_mul, Module.End.mul_apply,
+    hS, map_smul, smul_smul]
+  rw [he k]
+  congr 1
+  have h3 : ((c (μ k) : ℝ) : 𝕜) ^ 3 = ((μ k : ℝ) : 𝕜) := by exact_mod_cast hc (μ k)
+  linear_combination h3
 
 /-- 7B.12 (Fuglede) For normal {lit}`T` on a complex inner product space, any
 {lit}`S` commuting with {lit}`T` also commutes with {lit}`T*`. -/
@@ -908,14 +1020,58 @@ theorem exercise_7B_12 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ
     [FiniteDimensional ℂ V] (T S : V →ₗ[ℂ] V) (hN : IsStarNormal T)
     (h : S ∘ₗ T = T ∘ₗ S) :
     S ∘ₗ T† = T† ∘ₗ S := by
-  sorry
+  -- use ex9, that since normal, T† = p(T), and that is ST=TS, Sp(T) = p(T)S
+  obtain ⟨p, hp⟩ := (exercise_7B_9 T).mp hN
+  rw [hp]
+  have hc : Commute S T := h
+  -- `S` commutes with `T`, hence with every `a Tⁿ`, hence with every polynomial in `T`
+  have hcp : ∀ q : Polynomial ℂ, Commute S (Polynomial.aeval T q) := by
+    intro q
+    induction q using Polynomial.induction_on' with
+    | add q₁ q₂ h₁ h₂ => rw [map_add]; exact h₁.add_right h₂
+    | monomial n a =>
+      rw [Polynomial.aeval_monomial]
+      exact (Algebra.commute_algebraMap_right a S).mul_right (hc.pow_right n)
+  exact (hcp p).eq
 
 /-- 7B.13 (Via Schur for two commuting operators) Every normal operator on a
 complex inner product space has an orthonormal basis of eigenvectors. -/
 theorem exercise_7B_13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
     [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
     ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V), ∀ k, ∃ μ : ℂ, HasEigenvector T μ (e k) := by
-  sorry
+  -- apply the exercise from chapter 5 (orthonormal version: 6B.20) to {T, T*}
+  -- since normal means they commute.
+  -- then we have a single orthonormal basis is which they are both upper triangular matrix
+  -- but matrix T* = conj transpose of matrix T, so T is also lower triangular,
+  -- which can only happen if T is diagonal.
+  have hcomm : ∀ A ∈ ({T, T†} : Set (V →ₗ[ℂ] V)), ∀ B ∈ ({T, T†} : Set (V →ₗ[ℂ] V)),
+      Commute A B := by
+    have h1 : Commute T† T := by
+      have := hN.star_comm_self; rwa [LinearMap.star_eq_adjoint] at this
+    rintro A (rfl | rfl) B (rfl | rfl)
+    · exact Commute.refl _
+    · exact h1.symm
+    · exact h1
+    · exact Commute.refl _
+  obtain ⟨n, e, he, hUT⟩ := LADR.Section_6B.exercise_6B_20 _ hcomm
+  have hflag : ∀ X ∈ ({T, T†} : Set (V →ₗ[ℂ] V)), ∀ k,
+      X (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) := fun X hX =>
+    ((LADR.Section_5C.tfae_upperTriangular he X).out 1 3).mp (hUT X hX)
+  -- `T` upper triangular: entries below the diagonal vanish
+  have hlow : ∀ i j : Fin n, j < i → ⟪e i, T (e j)⟫_ℂ = 0 := fun i j h =>
+    inner_eq_zero_of_upperTriangular T e (hflag T (by simp)) h
+  -- `T*` upper triangular, i.e. `T` lower triangular: entries above the diagonal vanish
+  have hup : ∀ i j : Fin n, j < i → ⟪e j, T (e i)⟫_ℂ = 0 := fun i j h => by
+    have := inner_eq_zero_of_upperTriangular T† e (hflag T† (by simp)) h
+    rw [LinearMap.adjoint_inner_right] at this
+    rw [← inner_conj_symm, this, map_zero]
+  -- so the matrix of `T` is diagonal: each `eₖ` is an eigenvector
+  refine ⟨n, e, fun k => ⟨_, hasEigenvector_of_orthonormalBasis e (μ := ⟪e k, T (e k)⟫_ℂ) ?_⟩⟩
+  conv_lhs => rw [← e.sum_repr' (T (e k))]
+  refine Finset.sum_eq_single k (fun i _ hik => ?_) (by simp)
+  rcases lt_or_gt_of_ne hik with h | h
+  · rw [hup k i h, zero_smul]
+  · rw [hlow i k h, zero_smul]
 
 /-- 7B.14 For {lit}`𝔽 = ℝ`, {lit}`T` is self-adjoint iff eigenvectors for distinct
 eigenvalues are orthogonal and the eigenspaces span {lit}`V`. -/
@@ -925,7 +1081,54 @@ theorem exercise_7B_14 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ
       ((∀ (μ ν : ℝ) (u v : V), μ ≠ ν → HasEigenvector T μ u → HasEigenvector T ν v →
           ⟪u, v⟫_ℝ = 0) ∧
         (⨆ μ : ℝ, Module.End.eigenspace T μ) = ⊤) := by
-  sorry
+  -- => by spectral theorem, there exists an orthonormal basis of eigenvectors
+  --    hence there are enough eigenvectors to form an orthonormal basis,
+  --    thus satisfying the second condition of the theorem.
+  --    first condition is proven as 7.22
+  -- <= from each eigenspace we can pick orthonormal eigenvectors and combine them into an orthonormal basis
+  --    by assumption we span all of V. By construction they are orthogonal within the eigenspace
+  --    and by assumption they are orthogonal across different eigenspaces.
+  --    Thus by spectral theorem condition 3) V has a basis of orthonormal eigenvectors
+  --    hence is self-adjoint.
+  constructor
+  · intro hT
+    refine ⟨fun μ ν u v hμν hu hv => LADR.Section_7A.orthogonal_eigenvectors
+      (LADR.Section_7A.symmetric_isStarNormal hT) hμν hu.apply_eq_smul hv.apply_eq_smul, ?_⟩
+    -- every vector is a combination of the orthonormal eigenbasis
+    obtain ⟨n, e, he⟩ := spectral_orthonormal_eigenbasis T hT
+    refine eq_top_iff.mpr fun x _ => ?_
+    rw [← e.sum_repr' x]
+    refine Submodule.sum_mem _ fun i _ => Submodule.smul_mem _ _ ?_
+    obtain ⟨μ, hμ⟩ := he i
+    exact Submodule.mem_iSup_of_mem μ (Module.End.mem_eigenspace_iff.mpr hμ.apply_eq_smul)
+  · rintro ⟨horth, hspan⟩
+    -- index the eigenspaces by the (finitely many) eigenvalues
+    let A : Module.End.Eigenvalues T → Submodule ℝ V := fun μ => Module.End.eigenspace T μ
+    have hsup : iSup A = ⊤ := by
+      refine eq_top_iff.mpr (hspan ▸ iSup_le fun μ => ?_)
+      by_cases hμ : HasEigenvalue T μ
+      · exact le_iSup_of_le (⟨μ, hμ⟩ : Module.End.Eigenvalues T) le_rfl
+      · rw [Module.End.hasEigenvalue_iff, not_not] at hμ
+        rw [hμ]; exact bot_le
+    -- eigenspaces for distinct eigenvalues are orthogonal (the hypothesis)
+    have hV : OrthogonalFamily ℝ (fun μ => A μ) fun μ => (A μ).subtypeₗᵢ := by
+      intro μ ν hμν u w
+      by_cases hu : (u : V) = 0
+      · simp [hu]
+      by_cases hw : (w : V) = 0
+      · simp [hw]
+      exact horth μ ν u w (fun h => hμν (Subtype.ext h)) ⟨u.2, hu⟩ ⟨w.2, hw⟩
+    have hint : DirectSum.IsInternal A :=
+      hV.isInternal_iff.mpr (by rw [hsup, Submodule.top_orthogonal_eq_bot])
+    -- glue orthonormal bases of the eigenspaces into one orthonormal basis of `V`
+    let e := hint.collectedOrthonormalBasis hV fun μ => stdOrthonormalBasis ℝ (A μ)
+    let e' := e.reindex (Fintype.equivFin _)
+    have hbasis : HasOrthonormalEigenbasis T := ⟨_, e', fun i => by
+      refine ⟨Module.End.Eigenvalues.val T ((Fintype.equivFin _).symm i).1, ?_,
+        e'.orthonormal.ne_zero i⟩
+      rw [OrthonormalBasis.reindex_apply]
+      exact hint.collectedOrthonormalBasis_mem hV _ _⟩
+    exact ((tfae_real_spectral T).out 1 3).mpr hbasis
 
 /-- 7B.15 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff eigenvectors for distinct
 eigenvalues are orthogonal and the eigenspaces span {lit}`V`. -/
@@ -935,7 +1138,46 @@ theorem exercise_7B_15 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ
       ((∀ (μ ν : ℂ) (u v : V), μ ≠ ν → HasEigenvector T μ u → HasEigenvector T ν v →
           ⟪u, v⟫_ℂ = 0) ∧
         (⨆ μ : ℂ, Module.End.eigenspace T μ) = ⊤) := by
-  sorry
+  -- equivalent proof to 14, just using the complex spectral theorem.
+  constructor
+  · intro hN
+    refine ⟨fun μ ν u v hμν hu hv => LADR.Section_7A.orthogonal_eigenvectors
+      hN hμν hu.apply_eq_smul hv.apply_eq_smul, ?_⟩
+    -- every vector is a combination of the orthonormal eigenbasis
+    obtain ⟨n, e, he⟩ := ((tfae_complex_spectral T).out 1 3).mp hN
+    refine eq_top_iff.mpr fun x _ => ?_
+    rw [← e.sum_repr' x]
+    refine Submodule.sum_mem _ fun i _ => Submodule.smul_mem _ _ ?_
+    obtain ⟨μ, hμ⟩ := he i
+    exact Submodule.mem_iSup_of_mem μ (Module.End.mem_eigenspace_iff.mpr hμ.apply_eq_smul)
+  · rintro ⟨horth, hspan⟩
+    -- index the eigenspaces by the (finitely many) eigenvalues
+    let A : Module.End.Eigenvalues T → Submodule ℂ V := fun μ => Module.End.eigenspace T μ
+    have hsup : iSup A = ⊤ := by
+      refine eq_top_iff.mpr (hspan ▸ iSup_le fun μ => ?_)
+      by_cases hμ : HasEigenvalue T μ
+      · exact le_iSup_of_le (⟨μ, hμ⟩ : Module.End.Eigenvalues T) le_rfl
+      · rw [Module.End.hasEigenvalue_iff, not_not] at hμ
+        rw [hμ]; exact bot_le
+    -- eigenspaces for distinct eigenvalues are orthogonal (the hypothesis)
+    have hV : OrthogonalFamily ℂ (fun μ => A μ) fun μ => (A μ).subtypeₗᵢ := by
+      intro μ ν hμν u w
+      by_cases hu : (u : V) = 0
+      · simp [hu]
+      by_cases hw : (w : V) = 0
+      · simp [hw]
+      exact horth μ ν u w (fun h => hμν (Subtype.ext h)) ⟨u.2, hu⟩ ⟨w.2, hw⟩
+    have hint : DirectSum.IsInternal A :=
+      hV.isInternal_iff.mpr (by rw [hsup, Submodule.top_orthogonal_eq_bot])
+    -- glue orthonormal bases of the eigenspaces into one orthonormal basis of `V`
+    let e := hint.collectedOrthonormalBasis hV fun μ => stdOrthonormalBasis ℂ (A μ)
+    let e' := e.reindex (Fintype.equivFin _)
+    have hbasis : HasOrthonormalEigenbasis T := ⟨_, e', fun i => by
+      refine ⟨Module.End.Eigenvalues.val T ((Fintype.equivFin _).symm i).1, ?_,
+        e'.orthonormal.ne_zero i⟩
+      rw [OrthonormalBasis.reindex_apply]
+      exact hint.collectedOrthonormalBasis_mem hV _ _⟩
+    exact ((tfae_complex_spectral T).out 1 3).mpr hbasis
 
 /-- 7B.16 For {lit}`𝔽 = ℂ` and {lit}`ℰ ⊆ ℒ(V)`, there is an orthonormal basis
 diagonalizing every element of {lit}`ℰ` iff all pairs in {lit}`ℰ` are commuting
@@ -945,7 +1187,34 @@ theorem exercise_7B_16 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ
     (∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V),
         ∀ T ∈ ℰ, (LinearMap.toMatrixOrthonormal e T).IsDiag) ↔
       (∀ S ∈ ℰ, ∀ T ∈ ℰ, IsStarNormal S ∧ IsStarNormal T ∧ S ∘ₗ T = T ∘ₗ S) := by
-  sorry
+  -- => by spectral theorem, if orthonormal basis exists that diagonalizes S, it is normal
+  --    and diagonal matrices commute, so the operators commute as well.
+  -- <= by previous theorem, since they all pairwise commute, there is an
+  --    orthonormal basis that make them upper-triangular simultaneously.
+  --    but since they are normal, upper-triangular implies diagonal.
+  constructor
+  · rintro ⟨n, e, hd⟩ S hS T hT
+    -- diagonal w.r.t. an orthonormal basis ⟹ normal (7.31 (b) ⟹ (a))
+    have hnorm : ∀ X ∈ ℰ, IsStarNormal X := fun X hX => by
+      have hX' : HasDiagonalMatrix X := ⟨n, e, hd X hX⟩
+      exact ((tfae_complex_spectral X).out 2 1).mp hX'
+    refine ⟨hnorm S hS, hnorm T hT, ?_⟩
+    -- diagonal matrices commute, and `M` is injective
+    apply (LinearMap.toMatrixOrthonormal e).injective
+    change LinearMap.toMatrixOrthonormal e (S * T) = LinearMap.toMatrixOrthonormal e (T * S)
+    rw [map_mul, map_mul, ← (Matrix.isDiag_iff_diagonal_diag _).mp (hd S hS),
+      ← (Matrix.isDiag_iff_diagonal_diag _).mp (hd T hT), Matrix.diagonal_mul_diagonal,
+      Matrix.diagonal_mul_diagonal]
+    congr 1
+    funext i
+    exact mul_comm _ _
+  · intro h
+    -- commuting family ⟹ simultaneously upper-triangular w.r.t. one orthonormal basis (6B.20)
+    have hcomm : ∀ S ∈ ℰ, ∀ T ∈ ℰ, Commute S T := fun S hS T hT => (h S hS T hT).2.2
+    obtain ⟨n, e, he, hUT⟩ := LADR.Section_6B.exercise_6B_20 ℰ hcomm
+    -- normal + upper-triangular w.r.t. an orthonormal basis ⟹ diagonal
+    exact ⟨n, e, fun T hT => normal_ut_diagonal T (h T hT T hT).1 e
+      (((LADR.Section_5C.tfae_upperTriangular he T).out 1 3).mp (hUT T hT))⟩
 
 /-- 7B.17 For {lit}`𝔽 = ℝ` and {lit}`ℰ ⊆ ℒ(V)`, there is an orthonormal basis
 diagonalizing every element of {lit}`ℰ` iff all pairs in {lit}`ℰ` are commuting
@@ -956,19 +1225,72 @@ theorem exercise_7B_17 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ
         ∀ T ∈ ℰ, (LinearMap.toMatrixOrthonormal e T).IsDiag) ↔
       (∀ S ∈ ℰ, ∀ T ∈ ℰ,
         LinearMap.IsSymmetric S ∧ LinearMap.IsSymmetric T ∧ S ∘ₗ T = T ∘ₗ S) := by
-  sorry
+  -- => in the basis that diagonalizes every element of ℰ,
+  --  the matrices are diagonal, so they commute and are self-adjoint (equal to their transpose)
+  -- <= exercise 5E2, states that since the pair commute, and are diagonlizable
+  --   (through spectral theorem since symmetric)
+  --    there is a basis that makes them diagonalizable simultaneously.
+  --    Then we can apply Gram-Schmidt to obtain an orthonormal basis,
+  --    now the matrix of each operator in this orthonormal basis is upper-triangular.
+  --    but since they are symmetric it has to be diagonal.
+  constructor
+  · rintro ⟨n, e, hd⟩ S hS T hT
+    -- diagonal w.r.t. an orthonormal basis ⟹ self-adjoint (7.29 (b) ⟹ (a))
+    have hsym : ∀ X ∈ ℰ, LinearMap.IsSymmetric X := fun X hX => by
+      have hX' : HasDiagonalMatrix X := ⟨n, e, hd X hX⟩
+      exact ((tfae_real_spectral X).out 2 1).mp hX'
+    refine ⟨hsym S hS, hsym T hT, ?_⟩
+    -- diagonal matrices commute, and `M` is injective
+    apply (LinearMap.toMatrixOrthonormal e).injective
+    change LinearMap.toMatrixOrthonormal e (S * T) = LinearMap.toMatrixOrthonormal e (T * S)
+    rw [map_mul, map_mul, ← (Matrix.isDiag_iff_diagonal_diag _).mp (hd S hS),
+      ← (Matrix.isDiag_iff_diagonal_diag _).mp (hd T hT), Matrix.diagonal_mul_diagonal,
+      Matrix.diagonal_mul_diagonal]
+    congr 1
+    funext i
+    exact mul_comm _ _
+  · intro h
+    -- each `T ∈ ℰ` is self-adjoint, hence diagonalizable (7.29)
+    have hdiag : ∀ T ∈ ℰ, Section_5D.IsDiagonalizable T := fun T hT => by
+      obtain ⟨n, e, he⟩ := spectral_orthonormal_eigenbasis T (h T hT T hT).1
+      have hb : Section_2B.IsBasis ℝ (⇑e) := ⟨e.orthonormal.linearIndependent, by
+        show Submodule.span ℝ (Set.range ⇑e) = ⊤
+        simpa using e.toBasis.span_eq⟩
+      exact ⟨n, ⇑e, hb, Section_5D.isDiag_matrixOf_of_eigenvectors hb T fun j => by
+        obtain ⟨μ, hμ⟩ := he j
+        exact ⟨μ, hμ.apply_eq_smul⟩⟩
+    -- 5E.2: commuting diagonalizable operators share a diagonalizing basis
+    have hcomm : ∀ S ∈ ℰ, ∀ T ∈ ℰ, Commute S T := fun S hS T hT => (h S hS T hT).2.2
+    obtain ⟨m, v, hv, hall⟩ := (Section_5E.exercise_5E_2 ℰ hdiag).mpr hcomm
+    -- Gram–Schmidt keeps every (diagonal, hence) upper-triangular matrix upper-triangular
+    obtain ⟨e, he, hUT⟩ := Section_6B.exists_orthonormal_upperTriangular_of_basis hv
+    -- self-adjoint (so normal) + upper-triangular w.r.t. an orthonormal basis ⟹ diagonal
+    exact ⟨m, e, fun T hT => normal_ut_diagonal T
+      (Section_7A.symmetric_isStarNormal (h T hT T hT).1) e
+      (((Section_5C.tfae_upperTriangular he T).out 1 3).mp
+        (hUT T fun j k hkj => hall T hT (ne_of_lt hkj).symm))⟩
 
 /-- The witness operator for 7B.18. -/
 noncomputable def exercise_7B_18_sol_T :
     EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2) :=
-  sorry
+  -- let's try 90 deg rotation as it is non-diagonalizable
+  -- as it has no real eigenvalues.
+  -- T = (0 -1; 1 0) - clearly not self-adjoint
+  -- T^2 + bT + cI = (-1 0; 0 -1) + b * (0 -1; 1 0) + c * (1 0; 0 1) =
+  -- (c-1 -b; b c-1)
+  -- we want the matrix to be non-invertible, so row1 and row2 should be linearly dependent
+  -- this gives the condition b^2 = -(c-1)^2, which can
+  -- only work with b = 0, and c = 1,
+  -- but that does satisfy b^2 < 4c.
+  -- so T^2 + I is non-invertible (acutally it is just 0)
+  Matrix.toEuclideanLin !![0, -1; 1, 0]
 
 /-- The witness coefficient {lit}`b` for 7B.18. It is part of the answer in its own
 right — nothing determines it from {lit}`exercise_7B_18_sol_T`. -/
-noncomputable def exercise_7B_18_sol_b : ℝ := sorry
+noncomputable def exercise_7B_18_sol_b : ℝ := 0
 
 /-- The witness coefficient {lit}`c` for 7B.18. -/
-noncomputable def exercise_7B_18_sol_c : ℝ := sorry
+noncomputable def exercise_7B_18_sol_c : ℝ := 1
 
 /-- 7B.18 The self-adjoint hypothesis in 7.26 cannot be dropped: there is a real
 inner product space operator {lit}`T` and {lit}`b, c` with {lit}`b² < 4c` making
@@ -979,40 +1301,121 @@ theorem exercise_7B_18 :
         exercise_7B_18_sol_b • exercise_7B_18_sol_T +
         exercise_7B_18_sol_c •
           (LinearMap.id : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2))) := by
-  sorry
+  refine ⟨by norm_num [exercise_7B_18_sol_b, exercise_7B_18_sol_c], fun hbij => ?_⟩
+  -- `T² + 0·T + 1·I = 0` for the rotation by 90°
+  have h0 : exercise_7B_18_sol_T ∘ₗ exercise_7B_18_sol_T +
+      exercise_7B_18_sol_b • exercise_7B_18_sol_T + exercise_7B_18_sol_c •
+        (LinearMap.id : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2)) = 0 := by
+    refine LinearMap.ext fun x => ?_
+    ext i
+    fin_cases i <;> simp [exercise_7B_18_sol_T, exercise_7B_18_sol_b, exercise_7B_18_sol_c,
+      Matrix.toEuclideanLin, Matrix.mulVec, dotProduct, Fin.sum_univ_two]
+  -- the zero map on `ℝ²` is not injective
+  have hne : (EuclideanSpace.single 0 (1 : ℝ) : EuclideanSpace ℝ (Fin 2)) ≠ 0 := by
+    intro h
+    have := congrArg (fun v : EuclideanSpace ℝ (Fin 2) => v 0) h
+    simp at this
+  exact hne (hbij.1 (by rw [h0, LinearMap.zero_apply, LinearMap.zero_apply]))
 
 /-- 7B.19 (a) If {lit}`T` is self-adjoint and {lit}`U` is invariant under
 {lit}`T`, then {lit}`U⟂` is invariant under {lit}`T`. -/
 theorem exercise_7B_19a (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
     ∀ w ∈ Uᗮ, T w ∈ Uᗮ := by
-  sorry
+  -- by ex4 in 7A, Uᗮ is invariant under T*, so for self-adjoint T
+  -- Uᗮ is invariant under T itself.
+  have h := (Section_7A.exercise_7A_4 T U).mp hU
+  rw [(Section_7A.isSelfAdjoint_iff T).mp hT] at h
+  exact h
 
+omit [FiniteDimensional 𝕜 V] in
 /-- 7B.19 (b) {lit}`T|U ∈ ℒ(U)` is self-adjoint. -/
 theorem exercise_7B_19b (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
     LinearMap.IsSymmetric (T.restrict hU) := by
-  sorry
+  -- self-adjoint means ⟪T v, w⟫ = ⟪v, T w⟫ for all v, w in V.
+  -- When we restrict V to U, the same condition holds for all v, w in U,
+  -- since we use the same inner product.
+  exact fun v w => hT v w
 
 /-- 7B.19 (c) {lit}`T|U⟂ ∈ ℒ(U⟂)` is self-adjoint. The invariance of {lit}`U⟂`
 needed to form the restriction is part (a). -/
 theorem exercise_7B_19c (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
     LinearMap.IsSymmetric (T.restrict (exercise_7B_19a T hT U hU)) := by
-  sorry
+  -- same argument as in part (b) for the orthogonal complement.
+  -- restiction to any invariant subspace preserves the self-adjoint property.
+  exact exercise_7B_19b T hT Uᗮ (exercise_7B_19a T hT U hU)
 
 /-- 7B.20 (a) If {lit}`T` is normal and {lit}`U` is invariant under {lit}`T`, then
 {lit}`U⟂` is invariant under {lit}`T`. -/
 theorem exercise_7B_20a (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
     ∀ w ∈ Uᗮ, T w ∈ Uᗮ := by
-  sorry
+  -- Take an orthonormal basis of U and extend it orthonormally to V
+  -- the U part is ui and rest if fi
+  -- in matrix form T has a block structure with the U part
+  -- [A C; 0 B] - with 0 by invariance of U
+  -- if we show C = 0 we are done.
+  -- but by 7.20, we know that for normal matrices
+  -- the ‖.‖^2 norm of row i equals column i (the conj in ℂ doesn't affect the norm)
+  -- summing over all the U rows and columns, we get ‖A‖^2 = ‖A‖^2 + ‖C‖^2, so ‖C‖ = 0
+  -- Hence C = 0 and Uᗮ is invariant under T.
+  -- (In Lean we avoid the basis f of Uᗮ: the squared norm of row j of C is
+  --  ‖P_{Uᗮ} (T* uⱼ)‖², by Parseval in Uᗮ.)
+  have hnorm : ∀ v, ‖T v‖ = ‖T† v‖ := (Section_7A.normal_iff_norm T).mp hN
+  let u := stdOrthonormalBasis 𝕜 U
+  -- the entries of the block A
+  set a : _ → _ → 𝕜 := fun i j => ⟪(u i : V), T (u j)⟫_𝕜 with ha
+  -- column j: `T uⱼ ∈ U`, so its squared norm is `Σᵢ |aᵢⱼ|²` (the 0 block)
+  have hcol : ∀ j, ‖T (u j)‖ ^ 2 = ∑ i, ‖a i j‖ ^ 2 := fun j => by
+    have := u.sum_sq_norm_inner_right (⟨T (u j), hU _ (u j).2⟩ : U)
+    simp only [Submodule.coe_inner] at this
+    exact this.symm
+  -- row j: `‖T* uⱼ‖² = Σᵢ |aⱼᵢ|² + ‖row j of C‖²`
+  have hrow : ∀ j, ‖T† (u j)‖ ^ 2 = ∑ i, ‖a j i‖ ^ 2 +
+      ‖Uᗮ.orthogonalProjectionOnto (T† (u j))‖ ^ 2 := fun j => by
+    rw [Submodule.norm_sq_eq_add_norm_sq_projection _ U, ← u.sum_sq_norm_inner_right]
+    congr 1
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [Submodule.inner_orthogonalProjectionOnto_eq_of_mem_left, LinearMap.adjoint_inner_right,
+      ← inner_conj_symm, RCLike.norm_conj]
+  -- 7.20 for each uⱼ, summed over the U part: ‖A‖² = ‖A‖² + ‖C‖²
+  have hC : ∑ j, ‖Uᗮ.orthogonalProjectionOnto (T† (u j))‖ ^ 2 = 0 := by
+    have h1 : ∑ j, ‖T (u j)‖ ^ 2 = ∑ j, ‖T† (u j)‖ ^ 2 :=
+      Finset.sum_congr rfl fun j _ => by rw [hnorm]
+    simp only [hcol, hrow, Finset.sum_add_distrib] at h1
+    rw [Finset.sum_comm] at h1
+    linarith
+  -- so C = 0: every row of C vanishes, i.e. `T* uⱼ ∈ U`
+  have hCj : ∀ j, T† (u j) ∈ U := fun j => by
+    have h := (Finset.sum_eq_zero_iff_of_nonneg (fun _ _ => by positivity)).mp hC j
+      (Finset.mem_univ _)
+    have h0 : Uᗮ.orthogonalProjectionOnto (T† (u j)) = 0 :=
+      norm_eq_zero.mp ((pow_eq_zero_iff two_ne_zero).mp h)
+    rw [Submodule.orthogonalProjectionOnto_eq_zero_iff, Submodule.orthogonal_orthogonal] at h0
+    exact h0
+  -- C = 0 means `⟪uᵢ, T w⟫ = ⟪T* uᵢ, w⟫ = 0` for `w ∈ Uᗮ`, i.e. `T w ∈ Uᗮ`
+  intro w hw
+  rw [Submodule.mem_orthogonal]
+  intro x hx
+  have hx' : x = ∑ i, ⟪(u i : V), x⟫_𝕜 • (u i : V) := by
+    have := congrArg Subtype.val (u.sum_repr' (⟨x, hx⟩ : U))
+    simpa using this.symm
+  rw [hx', sum_inner]
+  refine Finset.sum_eq_zero fun i _ => ?_
+  rw [inner_smul_left, ← LinearMap.adjoint_inner_left,
+    Submodule.inner_right_of_mem_orthogonal (hCj i) hw, mul_zero]
 
 /-- 7B.20 (b) {lit}`U` is invariant under {lit}`T*`. -/
 theorem exercise_7B_20b (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
     ∀ u ∈ U, T† u ∈ U := by
-  sorry
+  -- by 7Aex4, U is invariant under T implies Uᗮ is invariant under T*
+  -- so apply with Uᗮ from a) to get invariance under T* for Uᗮᗮ = U.
+  have h := (Section_7A.exercise_7A_4 T Uᗮ).mp (exercise_7B_20a T hN U hU)
+  rw [Submodule.orthogonal_orthogonal] at h
+  exact h
 
 /-- 7B.20 (c) {lit}`(T|U)* = (T*)|U`. The invariance of {lit}`U` under {lit}`T*`
 needed to form the right-hand restriction is part (b). -/
@@ -1020,26 +1423,92 @@ theorem exercise_7B_20c (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
     (T.restrict hU)† =
       T†.restrict (exercise_7B_20b T hN U hU) := by
-  sorry
+  -- (T|U)* is the unique operator that ⟨(T|U)* u, v⟩ = ⟨u, T|U v⟩ for all u, v ∈ U
+  -- but T|U is just the restriction of T to U
+  -- so ⟪u, T v⟫ = ⟪T* u, v⟫ for all u, v ∈ U, and by b) T* u is well defined.
+  -- so we can do (T*)|U without ambiguity, and it satisfies the defining property of (T|U)*.
+  exact ((LinearMap.eq_adjoint_iff (T†.restrict (exercise_7B_20b T hN U hU))
+    (T.restrict hU)).mpr fun x y => LinearMap.adjoint_inner_left T (y : V) (x : V)).symm
 
 /-- 7B.20 (d) Both {lit}`T|U ∈ ℒ(U)` and {lit}`T|U⟂ ∈ ℒ(U⟂)` are normal. -/
 theorem exercise_7B_20d (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
     (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
     IsStarNormal (T.restrict hU) ∧
       IsStarNormal (T.restrict (exercise_7B_20a T hN U hU)) := by
-  sorry
+  -- by T|U = T and c), we can move the restriction out and use normality of T.
+  -- to prove T|U is normal, use a) to prove the second part for a new U = Uᗮ.
+  have hTT : T† * T = T * T† := by
+    have := hN.star_comm_self; rwa [LinearMap.star_eq_adjoint] at this
+  -- for any T-invariant W: (T|W)* = (T*)|W by (c), and T*T = TT* restricts to W
+  have key : ∀ (W : Submodule 𝕜 V) (hW : ∀ u ∈ W, T u ∈ W), IsStarNormal (T.restrict hW) := by
+    intro W hW
+    refine ⟨?_⟩
+    rw [LinearMap.star_eq_adjoint, exercise_7B_20c T hN W hW]
+    show T†.restrict (exercise_7B_20b T hN W hW) * T.restrict hW =
+      T.restrict hW * T†.restrict (exercise_7B_20b T hN W hW)
+    ext v
+    exact congrArg (fun S : V →ₗ[𝕜] V => S v) hTT
+  exact ⟨key U hU, key Uᗮ (exercise_7B_20a T hN U hU)⟩
 
 /-- 7B.21 If {lit}`T` is self-adjoint with {lit}`2, 3` its only eigenvalues, then
 {lit}`T² − 5T + 6I = 0`. -/
 theorem exercise_7B_21 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
     (h : ∀ μ : 𝕜, HasEigenvalue T μ ↔ μ = 2 ∨ μ = 3) :
     T ∘ₗ T - (5 : 𝕜) • T + (6 : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V) = 0 := by
-  sorry
+  -- direct application of 7.27 in 7B and exercise 28 in 7A
+  -- the minimal polynomial is of form Π (x - l_i) for the distinct eigenvalues l_i
+  -- thus the minimal polynomial is (x - 2)(x - 3), giving T² - 5T + 6I = 0
+  classical
+  -- 7.27: the minimal polynomial is ∏ₖ (z - λₖ)
+  obtain ⟨m, lams, hmin⟩ := minpoly_isSymmetric_eq_prod T hT
+  -- 7A.28 (T is normal): no factor (z - λ)², so the λₖ are distinct
+  have hinj : Function.Injective fun k => ((lams k : ℝ) : 𝕜) := by
+    intro i j hij
+    by_contra hne
+    apply Section_7A.exercise_7A_28 (Section_7A.symmetric_isStarNormal hT) ((lams i : ℝ) : 𝕜)
+    have hij' : ((lams i : ℝ) : 𝕜) = ((lams j : ℝ) : 𝕜) := hij
+    have hpair : (Polynomial.X - Polynomial.C ((lams i : ℝ) : 𝕜)) *
+        (Polynomial.X - Polynomial.C ((lams j : ℝ) : 𝕜)) ∣
+          ∏ k, (Polynomial.X - Polynomial.C ((lams k : ℝ) : 𝕜)) := by
+      have := Finset.prod_dvd_prod_of_subset {i, j} Finset.univ
+        (fun k => Polynomial.X - Polynomial.C ((lams k : ℝ) : 𝕜)) (Finset.subset_univ _)
+      rwa [Finset.prod_pair hne] at this
+    rwa [← hij', ← pow_two, ← hmin] at hpair
+  -- regroup as a product over the finite set of (distinct) λₖ
+  set s : Finset 𝕜 := Finset.univ.image fun k => ((lams k : ℝ) : 𝕜)
+  have hs : minpoly 𝕜 T = ∏ a ∈ s, (Polynomial.X - Polynomial.C a) := by
+    rw [hmin, Finset.prod_image fun i _ j _ h => hinj h]
+  -- the zeros of the minimal polynomial are the eigenvalues (5.27), so `s ⊆ {2, 3}`
+  have hsub : s ⊆ {2, 3} := fun a ha => by
+    have hroot : (minpoly 𝕜 T).IsRoot a := by
+      rw [hs, Polynomial.IsRoot, Polynomial.eval_prod]
+      exact Finset.prod_eq_zero ha (by simp)
+    have := (h a).mp ((Section_5B.isEigenvalue_iff_isRoot T a).mpr hroot)
+    simpa using this
+  -- so the minimal polynomial divides `(z - 2)(z - 3)`, which therefore annihilates `T`
+  have hdvd : minpoly 𝕜 T ∣
+      (Polynomial.X - Polynomial.C (2 : 𝕜)) * (Polynomial.X - Polynomial.C 3) := by
+    have := Finset.prod_dvd_prod_of_subset s {2, 3}
+      (fun a : 𝕜 => Polynomial.X - Polynomial.C a) hsub
+    rwa [← hs, Finset.prod_pair (by norm_num : (2 : 𝕜) ≠ 3)] at this
+  obtain ⟨q, hq⟩ := hdvd
+  have h0 : Polynomial.aeval T
+      ((Polynomial.X - Polynomial.C (2 : 𝕜)) * (Polynomial.X - Polynomial.C 3)) = 0 := by
+    rw [hq, map_mul, minpoly.aeval, zero_mul]
+  -- expand `(T - 2I)(T - 3I) = T² - 5T + 6I`
+  rw [← h0]
+  simp only [map_mul, map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
+    Algebra.algebraMap_eq_smul_one, ← Module.End.mul_eq_comp, ← Module.End.one_eq_id, sub_mul,
+    mul_sub, smul_mul_assoc, mul_smul_comm, one_mul, mul_one, smul_smul]
+  module
 
 /-- The witness for 7B.22. -/
 noncomputable def exercise_7B_22_sol :
     EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3) :=
-  sorry
+  -- it has to be non-self-adjoint matrix.
+  -- so (2 1 1; 0 3 1; 0 0 3) would have 2 and 3 as the only eigenvalues and not be self-adjoint.
+  -- T² − 5T + 6I = (0 0 1; 0 0 1; 0 0 0)
+  Matrix.toEuclideanLin !![2, 1, 1; 0, 3, 1; 0, 0, 3]
 
 /-- 7B.22 There is an operator on {lit}`ℂ³` with {lit}`2, 3` its only eigenvalues
 but {lit}`T² − 5T + 6I ≠ 0`. -/
@@ -1047,14 +1516,85 @@ theorem exercise_7B_22 :
     (∀ μ : ℂ, HasEigenvalue exercise_7B_22_sol μ ↔ μ = 2 ∨ μ = 3) ∧
       exercise_7B_22_sol ∘ₗ exercise_7B_22_sol - (5 : ℂ) • exercise_7B_22_sol +
         (6 : ℂ) • (LinearMap.id : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3)) ≠ 0 := by
-  sorry
+  have hev : ∀ (μ : ℂ) (x : EuclideanSpace ℂ (Fin 3)), x ≠ 0 → exercise_7B_22_sol x = μ • x →
+      HasEigenvalue exercise_7B_22_sol μ := fun μ x hx h =>
+    Module.End.hasEigenvalue_of_hasEigenvector ⟨Module.End.mem_eigenspace_iff.mpr h, hx⟩
+  have hne : ∀ f : Fin 3 → ℂ, f ≠ 0 →
+      (WithLp.equiv 2 _).symm f ≠ (0 : EuclideanSpace ℂ (Fin 3)) :=
+    fun f hf h => hf (by simpa using congrArg (WithLp.equiv 2 _) h)
+  refine ⟨fun μ => ⟨fun hμ => ?_, ?_⟩, fun h => ?_⟩
+  · -- an eigenvector `v` of the upper-triangular matrix: solve `Tv = μv` from the bottom row up;
+    -- if `μ ∉ {2, 3}` this forces `v = 0`
+    obtain ⟨v, hv⟩ := hμ.exists_hasEigenvector
+    have hTv := hv.apply_eq_smul
+    have e0 := congrArg (fun w : EuclideanSpace ℂ (Fin 3) => w 0) hTv
+    have e1 := congrArg (fun w : EuclideanSpace ℂ (Fin 3) => w 1) hTv
+    have e2 := congrArg (fun w : EuclideanSpace ℂ (Fin 3) => w 2) hTv
+    simp [exercise_7B_22_sol, Matrix.toEuclideanLin, Matrix.mulVec, dotProduct,
+      Fin.sum_univ_three] at e0 e1 e2
+    by_contra hμ23
+    have hμ2 : μ ≠ 2 := fun h => hμ23 (Or.inl h)
+    have hμ3 : μ ≠ 3 := fun h => hμ23 (Or.inr h)
+    have h2 : v 2 = 0 := e2.resolve_left fun h => hμ3 h.symm
+    have h1 : v 1 = 0 := by
+      have : (3 - μ) * v 1 = 0 := by linear_combination e1 - h2
+      rcases mul_eq_zero.mp this with h | h
+      · exact absurd (by linear_combination -h : μ = 3) hμ3
+      · exact h
+    have h0 : v 0 = 0 := by
+      have : (2 - μ) * v 0 = 0 := by linear_combination e0 - h1 - h2
+      rcases mul_eq_zero.mp this with h | h
+      · exact absurd (by linear_combination -h : μ = 2) hμ2
+      · exact h
+    exact hv.2 (by ext i; fin_cases i <;> simp [h0, h1, h2])
+  · -- eigenvectors `(1, 0, 0)` for 2 and `(1, 1, 0)` for 3
+    rintro (rfl | rfl)
+    · refine hev 2 ((WithLp.equiv 2 _).symm ![1, 0, 0]) (hne _ (by simp)) ?_
+      ext i; fin_cases i <;> simp [exercise_7B_22_sol, Matrix.toEuclideanLin]
+    · refine hev 3 ((WithLp.equiv 2 _).symm ![1, 1, 0]) (hne _ (by simp)) ?_
+      ext i; fin_cases i <;> simp [exercise_7B_22_sol, Matrix.toEuclideanLin]; norm_num
+  · -- the (1, 3) entry of `T² − 5T + 6I` is 1: apply to `e₃` and read coordinate 1
+    have := congrArg (fun S : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3) =>
+      S ((WithLp.equiv 2 _).symm ![0, 0, 1]) 0) h
+    simp [exercise_7B_22_sol, Matrix.toEuclideanLin, dotProduct, Fin.sum_univ_three] at this
+    norm_num at this
 
 /-- 7B.23 If {lit}`T` is self-adjoint and {lit}`‖Tv − λv‖ < ε` for some unit
 {lit}`v`, then {lit}`T` has an eigenvalue within {lit}`ε` of {lit}`λ`. -/
 theorem exercise_7B_23 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (μ : 𝕜)
     (ε : ℝ) (hε : 0 < ε) (v : V) (hv : ‖v‖ = 1) (hlt : ‖T v - μ • v‖ < ε) :
     ∃ μ' : 𝕜, HasEigenvalue T μ' ∧ ‖μ - μ'‖ < ε := by
-  sorry
+  -- apply the spectral theorem (for ℝ directly, for ℂ self-adjoint implies normal)
+  -- then there is an orthonornal basis in which T is diagonal, and each entry is an eigenvalue
+  -- so T = (λ₁, λ₂, ..., λₙ) in that orthonormal basis
+  -- and Tv = (λ₁v₁, λ₂v₂, ..., λₙvₙ) in that orthonormal basis
+  -- and |Tv - λv| = |(λ₁ - λ)v₁, (λ₂ - λ)v₂, ..., (λₙ - λ)vₙ| = √∑ i, |(λᵢ - λ)vᵢ|² (since orthonormal basis)
+  -- ε > √∑ i, |(λᵢ - λ)|² |vᵢ|²
+  -- by contradiction assume that |λᵢ - λ| ≥ ε for all i
+  -- so ε > √∑ i, |(λᵢ - λ)|² |vᵢ|² ≥ √∑ i, ε² |vᵢ|² = √(ε² ∑ i, |vᵢ|²) = ε ‖v‖ = ε, contradiction
+  obtain ⟨n, e, lam, he⟩ := exists_orthonormalBasis_eigenvectors T hT
+  by_contra hcon
+  -- every λᵢ is an eigenvalue, so (by contradiction) |λᵢ - λ| ≥ ε for all i
+  have hall : ∀ i, ε ≤ ‖μ - ((lam i : ℝ) : 𝕜)‖ := fun i => le_of_not_gt fun h =>
+    hcon ⟨_, Module.End.hasEigenvalue_of_hasEigenvector
+      (hasEigenvector_of_orthonormalBasis e (he i)), h⟩
+  -- the i-th coordinate of Tv - λv is (λᵢ - λ) vᵢ
+  have hcoef : ∀ i, ⟪e i, T v - μ • v⟫_𝕜 = (((lam i : ℝ) : 𝕜) - μ) * ⟪e i, v⟫_𝕜 := fun i => by
+    rw [inner_sub_right, inner_smul_right, ← hT (e i) v, he i, inner_smul_left,
+      RCLike.conj_ofReal, sub_mul]
+  -- ‖Tv - λv‖² = ∑ |λᵢ - λ|² |vᵢ|²  and  ∑ |vᵢ|² = ‖v‖² = 1  (6.30)
+  have hsum : ‖T v - μ • v‖ ^ 2 = ∑ i, ‖((lam i : ℝ) : 𝕜) - μ‖ ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 := by
+    rw [← e.sum_sq_norm_inner_right]
+    exact Finset.sum_congr rfl fun i _ => by rw [hcoef, norm_mul, mul_pow]
+  have hv2 : ∑ i, ‖⟪e i, v⟫_𝕜‖ ^ 2 = 1 := by rw [e.sum_sq_norm_inner_right, hv, one_pow]
+  -- ∑ |λᵢ - λ|² |vᵢ|² ≥ ε² ∑ |vᵢ|² = ε²
+  have hge : ε ^ 2 ≤ ‖T v - μ • v‖ ^ 2 := by
+    rw [hsum, ← mul_one (ε ^ 2), ← hv2, Finset.mul_sum]
+    refine Finset.sum_le_sum fun i _ => mul_le_mul_of_nonneg_right ?_ (by positivity)
+    rw [norm_sub_rev]
+    exact pow_le_pow_left₀ hε.le (hall i) 2
+  have hlt2 : ‖T v - μ • v‖ ^ 2 < ε ^ 2 := pow_lt_pow_left₀ hlt (norm_nonneg _) two_ne_zero
+  linarith
 
 /-- 7B.24 (a) For {lit}`𝔽 = ℝ`, {lit}`T` is diagonalizable iff some basis gives a
 matrix equal to its transpose. -/
@@ -1063,7 +1603,62 @@ theorem exercise_7B_24a {U : Type*} [NormedAddCommGroup U] [InnerProductSpace �
     Section_5D.IsDiagonalizable T ↔
       ∃ b : Module.Basis (Fin (finrank ℝ U)) ℝ U,
         (LinearMap.toMatrix b b T).transpose = LinearMap.toMatrix b b T := by
-  sorry
+  -- => If T is diagonalizable in some basis, then in the same basis the matrix transpose
+  --    equals itself, because diag transpose is itself.
+  -- <= take the basis ei, and defined an inner product in which the basis
+  --    would be orthonormal, thus we can apply the spectral theorem to conclude T is diagonalizable.
+  --    if ⟪v, w⟫ = ⟪∑ ai ei , ∑ bi ei⟫ = ∑ ai conj(bi), then the basis is orthonormal.
+  --    the transformation is self-adjoint in this inner product, because the inner product
+  --    did not change the matrix representation in that basis, and the matrix equals it's transpose.
+  --    to prove the inner product is indeed valid, we need to check it is
+  --    1) positive definite and 2) sesquilinear and 3) conj symmetric
+  --    1 - positive definite: ⟪v, v⟫ = ∑ |ai|² ≥ 0 and = 0 iff v = 0
+  --    2 - sesquilinear: ⟪v, w⟫ = ∑ ai conj(bi) is linear in the first argument and conjugate linear in the second argument.
+  --    3 - conj symmetric ⟪v, w⟫ = conj(⟪w, v⟫) by definition of the inner product as ∑ ai conj(bi)
+  --    (In Lean `U` already carries an inner product, so instead of putting a second one on `U`
+  --    we transport `T` along the coordinate map `ψ : U ≃ ℝⁿ` of the basis; the standard inner
+  --    product on ℝⁿ is exactly "the one that makes the basis orthonormal".)
+  constructor
+  · rintro ⟨n', v, hv, hD⟩
+    have hcard : n' = finrank ℝ U := Section_2C.isBasis_card_eq_finrank v hv
+    let b' := hv.toModuleBasis.reindex (finCongr hcard)
+    -- each basis vector is an eigenvector
+    have hT' : ∀ k, ∃ c : ℝ, T (b' k) = c • b' k := fun k => by
+      refine ⟨Section_3C.matrixOf hv hv T ((finCongr hcard).symm k) ((finCongr hcard).symm k), ?_⟩
+      simp only [b', Module.Basis.reindex_apply, Section_2B.IsBasis.toModuleBasis_apply]
+      exact Section_5D.apply_eq_smul_of_isDiag hv T hD _
+    choose c hc using hT'
+    -- the diagonal matrix equals its transpose
+    refine ⟨b', ?_⟩
+    ext i j
+    simp only [Matrix.transpose_apply, LinearMap.toMatrix_apply, hc, map_smul,
+      Module.Basis.repr_self, Finsupp.smul_apply, Finsupp.single_apply]
+    by_cases hij : i = j
+    · subst hij; rfl
+    · simp [hij, Ne.symm hij]
+  · rintro ⟨b, hb⟩
+    -- the operator on ℝⁿ with matrix M(T, b), self-adjoint since the matrix is symmetric
+    let S : EuclideanSpace ℝ (Fin (finrank ℝ U)) →ₗ[ℝ] EuclideanSpace ℝ (Fin (finrank ℝ U)) :=
+      Matrix.toEuclideanLin (LinearMap.toMatrix b b T)
+    have hS : S.IsSymmetric :=
+      Matrix.isSymmetric_toEuclideanLin_iff.mpr (Matrix.isHermitian_iff_isSymm.mpr hb)
+    -- coordinates w.r.t. `b`; they intertwine `T` and `S`
+    let ψ : U ≃ₗ[ℝ] EuclideanSpace ℝ (Fin (finrank ℝ U)) :=
+      b.equivFun.trans (WithLp.linearEquiv 2 ℝ (Fin (finrank ℝ U) → ℝ)).symm
+    have key : ∀ u, S (ψ u) = ψ (T u) := fun u => by
+      ext i
+      have := congrFun (LinearMap.toMatrix_mulVec_repr b b T u) i
+      simpa [S, ψ, Matrix.toEuclideanLin] using this
+    -- real spectral theorem for `S`, then pull the eigenbasis back to `U`
+    obtain ⟨m, e, μ, he⟩ := exists_orthonormalBasis_eigenvectors S hS
+    have hTw : ∀ k, T (ψ.symm (e k)) = μ k • ψ.symm (e k) := fun k =>
+      ψ.injective (by rw [← key, ψ.apply_symm_apply, he k, map_smul, ψ.apply_symm_apply]; rfl)
+    let bw := e.toBasis.map ψ.symm
+    have hbw_apply : ∀ k, bw k = ψ.symm (e k) := fun k => by
+      simp [bw, Module.Basis.map_apply]
+    have hbw : Section_2B.IsBasis ℝ (⇑bw) := ⟨bw.linearIndependent, bw.span_eq⟩
+    exact ⟨m, ⇑bw, hbw, Section_5D.isDiag_matrixOf_of_eigenvectors hbw T fun j =>
+      ⟨μ j, by rw [hbw_apply]; exact hTw j⟩⟩
 
 /-- 7B.24 (b) For {lit}`𝔽 = ℂ`, {lit}`T` is diagonalizable iff some basis gives a
 matrix commuting with its conjugate transpose. -/
@@ -1073,7 +1668,60 @@ theorem exercise_7B_24b {U : Type*} [NormedAddCommGroup U] [InnerProductSpace �
       ∃ b : Module.Basis (Fin (finrank ℂ U)) ℂ U,
         LinearMap.toMatrix b b T * (LinearMap.toMatrix b b T).conjTranspose =
           (LinearMap.toMatrix b b T).conjTranspose * LinearMap.toMatrix b b T := by
-  sorry
+  -- same as a) just using ℂ spectral theorem instead of ℝ and same observation that adding
+  -- an inner product doesn't change the normal equaltion in matrix form.
+  constructor
+  · rintro ⟨n', v, hv, hD⟩
+    have hcard : n' = finrank ℂ U := Section_2C.isBasis_card_eq_finrank v hv
+    let b' := hv.toModuleBasis.reindex (finCongr hcard)
+    have hT' : ∀ k, ∃ c : ℂ, T (b' k) = c • b' k := fun k => by
+      refine ⟨Section_3C.matrixOf hv hv T ((finCongr hcard).symm k) ((finCongr hcard).symm k), ?_⟩
+      simp only [b', Module.Basis.reindex_apply, Section_2B.IsBasis.toModuleBasis_apply]
+      exact Section_5D.apply_eq_smul_of_isDiag hv T hD _
+    choose c hc using hT'
+    -- the matrix is diagonal, and diagonal matrices commute with their conjugate transpose
+    have hM : LinearMap.toMatrix b' b' T = Matrix.diagonal c := by
+      ext i j
+      simp only [LinearMap.toMatrix_apply, hc, map_smul, Module.Basis.repr_self,
+        Finsupp.smul_apply, Finsupp.single_apply, Matrix.diagonal_apply]
+      by_cases hij : i = j
+      · subst hij; simp
+      · simp [hij, Ne.symm hij]
+    refine ⟨b', ?_⟩
+    rw [hM, Matrix.diagonal_conjTranspose, Matrix.diagonal_mul_diagonal,
+      Matrix.diagonal_mul_diagonal]
+    congr 1
+    funext i
+    exact mul_comm _ _
+  · rintro ⟨b, hb⟩
+    -- the operator on ℂⁿ with matrix M(T, b); normal since M commutes with M* (7.9)
+    let S : EuclideanSpace ℂ (Fin (finrank ℂ U)) →ₗ[ℂ] EuclideanSpace ℂ (Fin (finrank ℂ U)) :=
+      Matrix.toEuclideanLin (LinearMap.toMatrix b b T)
+    have hmul : ∀ P Q : Matrix (Fin (finrank ℂ U)) (Fin (finrank ℂ U)) ℂ,
+        Matrix.toEuclideanLin (P * Q) = Matrix.toEuclideanLin P * Matrix.toEuclideanLin Q :=
+      fun P Q => by ext x i; simp [Matrix.toEuclideanLin, Matrix.mulVec_mulVec]
+    have hN : IsStarNormal S := by
+      refine ⟨?_⟩
+      rw [LinearMap.star_eq_adjoint, ← Matrix.toEuclideanLin_conjTranspose_eq_adjoint]
+      show _ * _ = _ * _
+      rw [← hmul, ← hmul, hb]
+    -- coordinates w.r.t. `b`; they intertwine `T` and `S`
+    let ψ : U ≃ₗ[ℂ] EuclideanSpace ℂ (Fin (finrank ℂ U)) :=
+      b.equivFun.trans (WithLp.linearEquiv 2 ℂ (Fin (finrank ℂ U) → ℂ)).symm
+    have key : ∀ u, S (ψ u) = ψ (T u) := fun u => by
+      ext i
+      have := congrFun (LinearMap.toMatrix_mulVec_repr b b T u) i
+      simpa [S, ψ, Matrix.toEuclideanLin] using this
+    -- complex spectral theorem for `S`, then pull the eigenbasis back to `U`
+    obtain ⟨m, e, he⟩ := complex_spectral S hN
+    have hTw : ∀ k, T (ψ.symm (e k)) = ⟪e k, S (e k)⟫_ℂ • ψ.symm (e k) := fun k =>
+      ψ.injective (by rw [← key, ψ.apply_symm_apply, map_smul, ψ.apply_symm_apply]; exact he k)
+    let bw := e.toBasis.map ψ.symm
+    have hbw_apply : ∀ k, bw k = ψ.symm (e k) := fun k => by
+      simp [bw, Module.Basis.map_apply]
+    have hbw : Section_2B.IsBasis ℂ (⇑bw) := ⟨bw.linearIndependent, bw.span_eq⟩
+    exact ⟨m, ⇑bw, hbw, Section_5D.isDiag_matrixOf_of_eigenvectors hbw T fun j =>
+      ⟨_, by rw [hbw_apply]; exact hTw j⟩⟩
 
 /-- 7B.25 For {lit}`T` with orthonormal eigenbasis {lit}`e` and eigenvalues
 {lit}`λ`, the pseudoinverse satisfies {lit}`T† eₖ = (1/λₖ) eₖ` if {lit}`λₖ ≠ 0`,
@@ -1081,6 +1729,46 @@ else {lit}`0`. -/
 theorem exercise_7B_25 {n : ℕ} (T : V →ₗ[𝕜] V) (e : OrthonormalBasis (Fin n) 𝕜 V)
     (lam : Fin n → 𝕜) (he : ∀ k, T (e k) = lam k • e k) (k : Fin n) :
     LADR.Section_6C.pinv T (e k) = (if lam k = 0 then 0 else (lam k)⁻¹ • e k) := by
-  sorry
+  -- the defintion of pseudoinverse is first project onto range T
+  -- and then apply the inverse of the bijection from (null T)^⊥ to range T.
+  -- in the orthogonal basis e, null T is spanned by e_k with lam k = 0
+  -- and (null T)^⊥ is spanned by e_k with lam k ≠ 0
+  -- so the projection sends e_k with lam k ≠ 0 to itself and e_k with lam k = 0 to 0
+  -- thus (Pinv T) (e k) = 0 if lam k = 0
+  -- for ek with lam k ≠ 0
+  -- first the projection is identity
+  -- then the rest of PInv is the the inverse of T (e k)
+  -- but since T (e k) = lam k • e k, the inverse is (1/lam k) • e k
+  -- (Lean: by 6.70, T† w is *the* v ∈ (null T)⟂ with T v = P_(range T) w.)
+  -- the j-th coordinate of T x is λⱼ times the j-th coordinate of x
+  have hcoord : ∀ (j : Fin n) (x : V), ⟪e j, T x⟫_𝕜 = lam j * ⟪e j, x⟫_𝕜 := fun j x => by
+    conv_lhs => rw [← e.sum_repr' x]
+    rw [map_sum, inner_sum, Finset.sum_eq_single j]
+    · rw [map_smul, he j, inner_smul_right, inner_smul_right, e.inner_eq_ite, ite_eq_left rfl,
+        mul_one, mul_comm]
+    · intro i _ hij
+      rw [map_smul, he i, inner_smul_right, inner_smul_right,
+        e.orthonormal.inner_eq_zero (Ne.symm hij), mul_zero, mul_zero]
+    · intro h; exact absurd (Finset.mem_univ j) h
+  split_ifs with h0
+  · -- λₖ = 0: eₖ ⟂ range T (⟪T x, eₖ⟫ = conj (λₖ ⟪eₖ, x⟫) = 0), so P_(range T) eₖ = 0
+    apply Section_6C.pinv_eq_of T (Submodule.zero_mem _)
+    rw [map_zero, eq_comm, Submodule.starProjection_apply_eq_zero_iff]
+    rintro _ ⟨x, rfl⟩
+    rw [← inner_conj_symm, hcoord, h0, zero_mul, map_zero]
+  · -- λₖ ≠ 0: λₖ⁻¹ eₖ ∈ (null T)⟂, T (λₖ⁻¹ eₖ) = eₖ ∈ range T, so P_(range T) eₖ = eₖ
+    have hTv : T ((lam k)⁻¹ • e k) = e k := by
+      rw [map_smul, he k, smul_smul, inv_mul_cancel₀ h0, one_smul]
+    apply Section_6C.pinv_eq_of T
+    · rw [Submodule.mem_orthogonal]
+      intro u hu
+      -- u ∈ null T has zero eₖ-coordinate, since 0 = ⟪eₖ, T u⟫ = λₖ ⟪eₖ, u⟫
+      have hu0 : ⟪e k, u⟫_𝕜 = 0 := by
+        have := hcoord k u
+        rw [LinearMap.mem_ker.mp hu, inner_zero_right] at this
+        exact (mul_eq_zero.mp this.symm).resolve_left h0
+      rw [inner_smul_right, ← inner_conj_symm, hu0, map_zero, mul_zero]
+    · rw [hTv, eq_comm, Submodule.starProjection_eq_self_iff]
+      exact ⟨_, hTv⟩
 
 end LADR.Section_7B
